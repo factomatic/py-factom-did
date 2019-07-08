@@ -1,6 +1,6 @@
+from factom import Factomd, FactomWalletd
 from did import DID, SignatureType
 from encryptor import decrypt_keys, decrypt_keys_from_ui_store
-from factom import Factomd, FactomWalletd
 
 factomd = Factomd()
 walletd = FactomWalletd()

@@ -1,11 +1,11 @@
 import hashlib
-import secrets
-import re
 import json
+import re
+import secrets
+from encryptor import encrypt_keys
 from enums import SignatureType, EntryType
 from keys import generate_key_pair
 from models import KeyModel, ServiceModel
-from encryptor import encrypt_keys
 
 __all__ = ['DID', 'SignatureType']
 
