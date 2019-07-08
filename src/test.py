@@ -1,4 +1,5 @@
 import unittest
+
 from did import DID, SignatureType
 from encryptor import decrypt_keys, decrypt_keys_from_ui_store
 

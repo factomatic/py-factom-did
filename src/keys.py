@@ -2,6 +2,7 @@ import base58
 from Crypto.PublicKey import RSA
 from ecdsa import SigningKey, SECP256k1
 import ed25519
+
 from enums import SignatureType
 from models import KeyPairModel
 

@@ -2,6 +2,7 @@ import hashlib
 import json
 import re
 import secrets
+
 from encryptor import encrypt_keys
 from enums import SignatureType, EntryType
 from keys import generate_key_pair
