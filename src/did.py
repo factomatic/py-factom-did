@@ -25,7 +25,7 @@ class DID:
 
     def add_public_key(self, alias=DEFAULT_ALIAS, type=SignatureType.EdDSA.value, controller=None):
         """
-        adds new public key to public_keys array
+        Adds new public key to public_keys array
 
         :type alias: str
         :type type: SignatureType
@@ -43,7 +43,7 @@ class DID:
 
     def add_authentication_key(self, alias, type=SignatureType.EdDSA.value, controller=None):
         """
-        adds new authentication key to authentication_keys array
+        Adds new authentication key to authentication_keys array
 
         :type alias: str
         :type type: SignatureType
@@ -61,7 +61,7 @@ class DID:
 
     def add_service(self, type, endpoint, alias):
         """
-        adds new service to services array
+        Adds new service to services array
 
         :type type: str
         :type endpoint: str
@@ -75,7 +75,7 @@ class DID:
 
     def export_entry_data(self):
         """
-        returns data to build create entry
+        Returns a dictionary with the ExtIDs and entry content that can be recorded on-chain to create the DID
         """
 
         entry_content = json.dumps(self._get_did_document())
@@ -96,14 +96,14 @@ class DID:
 
     def export_encrypted_keys(self, password):
         """
-        returns encrypted keys cipher text
+        Returns encrypted keys cipher text
         """
 
         return encrypt_keys(self.public_keys, password)
 
     def _get_did_document(self):
         """
-        returns did document
+        Returns DID Document
         """
 
         public_keys = list(map(self._build_key_entry_object, self.public_keys))
@@ -120,7 +120,7 @@ class DID:
 
     def _generate_id(self):
         """
-        generates new did id
+        Generates new DID Id
 
         :return: did_id: str
         """
@@ -132,7 +132,7 @@ class DID:
 
     def _build_key_entry_object(self, key):
         """
-        builds a key object to include in an entry
+        Builds a key object to include in an entry
 
         :type key: KeyModel
         """
@@ -146,7 +146,7 @@ class DID:
 
     def _build_service_entry_object(self, service):
         """
-        builds a key object to include in an entry
+        Builds a key object to include in an entry
 
         :type service: ServiceModel
         """
@@ -160,7 +160,7 @@ class DID:
     @staticmethod
     def _calculate_chain_id(ext_ids):
         """
-        calculates chain id by hashing each extension id, joining the hashes into a byte array and hashing the array
+        Calculates chain id by hashing each ExtID, joining the hashes into a byte array and hashing the array
 
         :type ext_ids: Array
         :return full_hash_hex: str
@@ -180,7 +180,7 @@ class DID:
 
     def _validate_key_input_params(self, alias, type, controller):
         """
-         validates public and authentication key input parameters
+         Validates public and authentication key input parameters
 
          :type alias: str
          :type type: SignatureType
@@ -204,7 +204,7 @@ class DID:
 
     def _validate_service_input_params(self, type, endpoint, alias):
         """
-        validates public and authentication key input parameters
+        Validates public and authentication key input parameters
 
         :type type: str
         :type endpoint: str
@@ -229,7 +229,7 @@ class DID:
     @staticmethod
     def _calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
         """
-        calculates entry size in bytes
+        Calculates entry size in bytes
 
         :type hex_ext_ids: Array
         :type utf8_ext_ids: Array

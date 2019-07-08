@@ -10,7 +10,7 @@ __all__ = ['encrypt_keys', 'decrypt_keys', 'decrypt_keys_from_ui_store']
 
 def encrypt_keys(keys, password):
     """
-     encrypts keys with a password and returns cipher text
+     Encrypts keys with a password and returns cipher text
 
      :type keys: KeyModel[]
      :type password: str
@@ -46,7 +46,7 @@ def encrypt_keys(keys, password):
 
 def decrypt_keys(ctx_b64, password):
     """
-    decrypts keys from cipher text and password
+    Decrypts keys from cipher text and password
 
     :type ctx_b64: str
     :type password: str
@@ -75,7 +75,7 @@ def decrypt_keys(ctx_b64, password):
 
 def decrypt_keys_from_ui_store(ctx_b64, password, salt, vector):
     """
-    decrypts keys from cipher text, password, salt and initial vector
+    Decrypts keys from cipher text, password, salt and initial vector
 
      :type ctx_b64: str
      :type password: str

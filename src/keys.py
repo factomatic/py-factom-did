@@ -10,7 +10,7 @@ __all__ = ['generate_key_pair']
 
 def generate_key_pair(type):
     """
-    generates new key pair
+    Generates new key pair
 
     :type type: str
     :return: KeyPairModel
