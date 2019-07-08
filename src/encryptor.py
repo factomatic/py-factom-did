@@ -19,7 +19,7 @@ def encrypt_keys(keys, password):
 
     keys_data = list(map(lambda k: {
         'alias': k.alias,
-        'type': k.type,
+        'type': k.signature_type,
         'privateKey': str(k.private_key, 'utf8')
     }, keys))
 

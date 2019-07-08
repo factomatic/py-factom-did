@@ -23,55 +23,51 @@ class DID:
         self.used_key_aliases = set()
         self.used_service_aliases = set()
 
-    def add_public_key(self, alias=DEFAULT_ALIAS, type=SignatureType.EdDSA.value, controller=None):
+    def add_public_key(self, alias=DEFAULT_ALIAS, signature_type=SignatureType.EdDSA.value, controller=None):
         """
         Adds new public key to public_keys array
 
         :type alias: str
-        :type type: SignatureType
+        :type signature_type: SignatureType
         :type controller: str
         """
 
         if not controller:
             controller = self.id
 
-        self._validate_key_input_params(alias, type, controller)
+        self._validate_key_input_params(alias, signature_type, controller)
 
-        key_pair = generate_key_pair(type)
-        key_model = KeyModel(alias, type, controller, key_pair.public_key, key_pair.private_key)
-        self.public_keys.append(key_model)
+        key_pair = generate_key_pair(signature_type)
+        self.public_keys.append(KeyModel(alias, signature_type, controller, key_pair.public_key, key_pair.private_key))
 
-    def add_authentication_key(self, alias, type=SignatureType.EdDSA.value, controller=None):
+    def add_authentication_key(self, alias, signature_type=SignatureType.EdDSA.value, controller=None):
         """
         Adds new authentication key to authentication_keys array
 
         :type alias: str
-        :type type: SignatureType
+        :type signature_type: SignatureType
         :type controller: str
         """
 
         if not controller:
             controller = self.id
 
-        self._validate_key_input_params(alias, type, controller)
+        self._validate_key_input_params(alias, signature_type, controller)
 
-        key_pair = generate_key_pair(type)
-        key_model = KeyModel(alias, type, controller, key_pair.public_key, key_pair.private_key)
-        self.authentication_keys.append(key_model)
+        key_pair = generate_key_pair(signature_type)
+        self.authentication_keys.append(KeyModel(alias, signature_type, controller, key_pair.public_key, key_pair.private_key))
 
-    def add_service(self, type, endpoint, alias):
+    def add_service(self, service_type, endpoint, alias):
         """
         Adds new service to services array
 
-        :type type: str
+        :type service_type: str
         :type endpoint: str
         :type alias: str
         """
 
-        self._validate_service_input_params(type, endpoint, alias)
-
-        service_model = ServiceModel(type, endpoint, alias)
-        self.services.append(service_model)
+        self._validate_service_input_params(service_type, endpoint, alias)
+        self.services.append(ServiceModel(service_type, endpoint, alias))
 
     def export_entry_data(self):
         """
@@ -127,7 +123,7 @@ class DID:
 
         self.nonce = secrets.token_hex(32)
         chain_id = self._calculate_chain_id([EntryType.Create.value, DID_METHOD_SPEC_VERSION, self.nonce])
-        did_id = 'did:fctr:' + chain_id
+        did_id = 'did:fctr:{}'.format(chain_id)
         return did_id
 
     def _build_key_entry_object(self, key):
@@ -139,7 +135,7 @@ class DID:
 
         return {
             'id': '{}#{}'.format(self.id, key.alias),
-            'type': key.type + 'VerificationKey',
+            'type': '{}VerificationKey'.format(key.signature_type),
             'controller': key.controller,
             'publicKeyBase58': str(key.public_key, 'utf8')
         }
@@ -153,7 +149,7 @@ class DID:
 
         return {
             'id': '{}#{}'.format(self.id, service.alias),
-            'type': service.type,
+            'type': service.service_type,
             'serviceEndpoint': service.endpoint
         }
 
@@ -168,22 +164,16 @@ class DID:
 
         ext_ids_hash_bytes = bytearray(b'')
         for ext_id in ext_ids:
-            ext_id_hash = hashlib.sha256()
-            ext_id_hash.update(bytes(ext_id, 'utf8'))
-            ext_ids_hash_bytes.extend(bytearray(ext_id_hash.digest()))
+            ext_ids_hash_bytes.extend(hashlib.sha256(bytes(ext_id, 'utf-8')).digest())
 
-        full_hash = hashlib.sha256()
-        full_hash.update(ext_ids_hash_bytes)
-        full_hash_hex = full_hash.hexdigest()
+        return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
 
-        return full_hash_hex
-
-    def _validate_key_input_params(self, alias, type, controller):
+    def _validate_key_input_params(self, alias, signature_type, controller):
         """
          Validates public and authentication key input parameters
 
          :type alias: str
-         :type type: SignatureType
+         :type signature_type: SignatureType
          :type controller: str
         """
 
@@ -196,22 +186,22 @@ class DID:
 
         self.used_key_aliases.add(alias)
 
-        if type not in (SignatureType.ECDSA.value, SignatureType.EdDSA.value, SignatureType.RSA.value):
-            raise ValueError('Type must be a valid SignatureType.')
+        if signature_type not in (SignatureType.ECDSA.value, SignatureType.EdDSA.value, SignatureType.RSA.value):
+            raise ValueError('Type must be a valid signature type.')
 
-        if not re.match("^did:fctr:[abcdef0-9]{64}$", controller):
+        if not re.match("^did:fctr:[a-f0-9]{64}$", controller):
             raise ValueError('Controller must be a valid DID.')
 
-    def _validate_service_input_params(self, type, endpoint, alias):
+    def _validate_service_input_params(self, service_type, endpoint, alias):
         """
         Validates public and authentication key input parameters
 
-        :type type: str
+        :type service_type: str
         :type endpoint: str
         :type alias: str
         """
 
-        if len(type) == 0:
+        if len(service_type) == 0:
             raise ValueError('Type is required.')
 
         if not re.match("^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):

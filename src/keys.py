@@ -8,22 +8,22 @@ from models import KeyPairModel
 __all__ = ['generate_key_pair']
 
 
-def generate_key_pair(type):
+def generate_key_pair(signature_type):
     """
     Generates new key pair
 
-    :type type: str
+    :type signature_type: str
     :return: KeyPairModel
     """
 
-    if type == SignatureType.EdDSA.value:
+    if signature_type == SignatureType.EdDSA.value:
         return _generate_ed_dsa_key_pair()
-    elif type == SignatureType.ECDSA.value:
+    elif signature_type == SignatureType.ECDSA.value:
         return _generate_ec_dsa_key_pair()
-    elif type == SignatureType.RSA.value:
+    elif signature_type == SignatureType.RSA.value:
         return _generate_rsa_key_pair()
     else:
-        print('Invalid signature type')
+        raise RuntimeError('Invalid signature type.')
 
 
 def _generate_ed_dsa_key_pair():
