@@ -1,7 +1,8 @@
+import codecs
 import hashlib
 import json
+import os
 import re
-import secrets
 
 from encryptor import encrypt_keys
 from enums import SignatureType, EntryType
@@ -122,7 +123,7 @@ class DID:
         :return: did_id: str
         """
 
-        self.nonce = secrets.token_hex(32)
+        self.nonce = codecs.encode(os.urandom(32), 'hex').decode()
         chain_id = self._calculate_chain_id([EntryType.Create.value, DID_METHOD_SPEC_VERSION, self.nonce])
         did_id = 'did:fctr:{}'.format(chain_id)
         return did_id
