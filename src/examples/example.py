@@ -21,7 +21,7 @@ def create_new_did():
 def record_did_on_chain():
     new_did = create_new_did()
     entry_data = new_did.export_entry_data()
-    # walletd.new_chain(factomd, entry_data['ext_ids'], entry_data['content'], ec_address=ec_address)
+    walletd.new_chain(factomd, entry_data['ext_ids'], entry_data['content'], ec_address=ec_address)
     print(entry_data)
 
 
@@ -48,4 +48,5 @@ def decrypt_keys_from_ui():
     print(decrypted_keys[0]['privateKey'])
 
 
-record_did_on_chain()
+if __name__ == '__main__':
+    record_did_on_chain()
