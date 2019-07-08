@@ -9,7 +9,8 @@ from encryptor import encrypt_keys
 
 __all__ = ['DID', 'SignatureType']
 
-version = '1.0'
+DID_METHOD_SPEC_VERSION = '1.0'
+ENTRY_SIZE_LIMIT = 10275
 DEFAULT_ALIAS = 'defaultpubkey'
 
 
@@ -82,14 +83,14 @@ class DID:
 
         entry_size = self._calculate_entry_size(
             [self.nonce],
-            [entry_type, version],
+            [entry_type, DID_METHOD_SPEC_VERSION],
             json.dumps(entry_content))
 
-        if entry_size > 10275:
+        if entry_size > ENTRY_SIZE_LIMIT:
             raise RuntimeError('You have exceeded the entry size limit! Please remove some of your keys or services.')
 
         return {
-            'ext_ids': [entry_type, version, self.nonce],
+            'ext_ids': [entry_type, DID_METHOD_SPEC_VERSION, self.nonce],
             'content': entry_content
         }
 
@@ -125,7 +126,7 @@ class DID:
         """
 
         self.nonce = secrets.token_hex(32)
-        chain_id = self._calculate_chain_id([EntryType.Create.value, version, self.nonce])
+        chain_id = self._calculate_chain_id([EntryType.Create.value, DID_METHOD_SPEC_VERSION, self.nonce])
         did_id = 'did:fctr:' + chain_id
         return did_id
 
