@@ -81,17 +81,28 @@ class DID:
         self.did_keys.append(DidKeyModel(alias, set(purpose), type, controller,
                                          key_pair.public_key, key_pair.private_key, priority_requirement))
 
-    def add_service(self, service_type, endpoint, alias):
+    def add_service(self, alias, service_type, endpoint, priority_requirement=None):
         """
-        Adds new service to services array
+        Adds a new service to the DID Document.
 
-        :type service_type: str
-        :type endpoint: str
-        :type alias: str
+        Parameters
+        ----------
+        alias: str
+            A human-readable nickname for the service endpoint. It should be unique across the services
+            defined in the DID document.
+        service_type: str
+            Type of the service endpoint.
+        endpoint: str
+            A service endpoint may represent any type of service the subject wishes to advertise,
+            including decentralized identity management services for further discovery,
+            authentication, authorization, or interaction.
+            The service endpoint must be a valid URL.
+        priority_requirement: number, optional (default is None)
+            A positive integer showing the minimum hierarchical level a key must have in order to remove this service.
         """
 
         self._validate_service_input_params(service_type, endpoint, alias)
-        self.services.append(ServiceModel(service_type, endpoint, alias))
+        self.services.append(ServiceModel(alias, service_type, endpoint, priority_requirement))
 
     def export_entry_data(self):
         """
