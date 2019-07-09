@@ -19,9 +19,37 @@ ENTRY_SIZE_LIMIT = 10275
 class DID:
     def __init__(self):
         self.id = self._generate_id()
+        self.management_keys = []
         self.services = []
         self.used_key_aliases = set()
         self.used_service_aliases = set()
+
+    def add_management_key(self, alias, priority, signature_type=SignatureType.EdDSA.value, controller=None):
+        """
+        Creates a new management key for the DID.
+
+        Parameters
+        ----------
+        alias: str
+            A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
+        priority: number
+            A positive integer showing the hierarchical level of the key. The key(s) with priority 1
+            overrides any key with priority greater than 1.
+        signature_type: SignatureType, optional (default is EdDSA)
+            Identifies the type of signature to be used when creating the key.
+        controller: str, optional (default is None)
+            An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
+            the default value is used which is the current DID itself.
+        """
+
+        if not controller:
+            controller = self.id
+
+        self._validate_key_input_params(alias, signature_type, controller)
+
+        key_pair = generate_key_pair(signature_type)
+        self.management_keys.append(ManagementKeyModel(alias, priority, signature_type, controller,
+                                                       key_pair.public_key, key_pair.private_key))
 
     def add_service(self, service_type, endpoint, alias):
         """
