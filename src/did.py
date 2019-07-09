@@ -20,6 +20,7 @@ class DID:
     def __init__(self):
         self.id = self._generate_id()
         self.management_keys = []
+        self.did_keys = []
         self.services = []
         self.used_key_aliases = set()
         self.used_service_aliases = set()
@@ -50,6 +51,35 @@ class DID:
         key_pair = generate_key_pair(signature_type)
         self.management_keys.append(ManagementKeyModel(alias, priority, signature_type, controller,
                                                        key_pair.public_key, key_pair.private_key))
+
+    def add_did_key(self, alias, purpose, signature_type=SignatureType.EdDSA.value,
+                    controller=None, priority_requirement=None):
+        """
+        Creates a new DID key for the DID.
+
+        Parameters
+        ----------
+        alias: str
+            A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
+        purpose: PurposeType[]
+            A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
+        signature_type: SignatureType, optional (default is EdDSA)
+            Identifies the type of signature to be used when creating the key.
+        controller: str, optional (default is None)
+            An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
+            the default value is used which is the current DID itself.
+        priority_requirement: number, optional (default is None)
+            A positive integer showing the minimum hierarchical level a key must have in order to remove this key.
+        """
+
+        if not controller:
+            controller = self.id
+
+        self._validate_key_input_params(alias, signature_type, controller)
+
+        key_pair = generate_key_pair(type)
+        self.did_keys.append(DidKeyModel(alias, set(purpose), type, controller,
+                                         key_pair.public_key, key_pair.private_key, priority_requirement))
 
     def add_service(self, service_type, endpoint, alias):
         """
