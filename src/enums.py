@@ -1,6 +1,6 @@
 from enum import Enum
 
-__all__ = ['SignatureType', 'EntryType']
+__all__ = ['SignatureType', 'EntryType', 'PurposeType']
 
 
 class SignatureType(Enum):
@@ -12,3 +12,8 @@ class SignatureType(Enum):
 class EntryType(Enum):
     Create = 'DIDManagement'
     Update = 'DIDUpdate'
+
+
+class PurposeType(Enum):
+    PublicKey = 'publicKey',
+    AuthenticationKey = 'authentication'
