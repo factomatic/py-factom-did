@@ -5,59 +5,23 @@ import os
 import re
 
 from encryptor import encrypt_keys
-from enums import SignatureType, EntryType
+from enums import SignatureType, EntryType, PurposeType
 from keys import generate_key_pair
-from models import KeyModel, ServiceModel
+from models import ManagementKeyModel, DidKeyModel, ServiceModel
 
-__all__ = ['DID', 'SignatureType']
+__all__ = ['DID', 'SignatureType', 'PurposeType']
 
-DID_METHOD_SPEC_VERSION = '1.0'
+ENTRY_SCHEMA_VERSION = '1.0.0'
+DID_METHOD_SPEC_VERSION = '0.1.0'
 ENTRY_SIZE_LIMIT = 10275
-DEFAULT_ALIAS = 'defaultpubkey'
 
 
 class DID:
     def __init__(self):
         self.id = self._generate_id()
-        self.public_keys = []
-        self.authentication_keys = []
         self.services = []
         self.used_key_aliases = set()
         self.used_service_aliases = set()
-
-    def add_public_key(self, alias=DEFAULT_ALIAS, signature_type=SignatureType.EdDSA.value, controller=None):
-        """
-        Adds new public key to public_keys array
-
-        :type alias: str
-        :type signature_type: SignatureType
-        :type controller: str
-        """
-
-        if not controller:
-            controller = self.id
-
-        self._validate_key_input_params(alias, signature_type, controller)
-
-        key_pair = generate_key_pair(signature_type)
-        self.public_keys.append(KeyModel(alias, signature_type, controller, key_pair.public_key, key_pair.private_key))
-
-    def add_authentication_key(self, alias, signature_type=SignatureType.EdDSA.value, controller=None):
-        """
-        Adds new authentication key to authentication_keys array
-
-        :type alias: str
-        :type signature_type: SignatureType
-        :type controller: str
-        """
-
-        if not controller:
-            controller = self.id
-
-        self._validate_key_input_params(alias, signature_type, controller)
-
-        key_pair = generate_key_pair(signature_type)
-        self.authentication_keys.append(KeyModel(alias, signature_type, controller, key_pair.public_key, key_pair.private_key))
 
     def add_service(self, service_type, endpoint, alias):
         """
@@ -81,14 +45,14 @@ class DID:
 
         entry_size = self._calculate_entry_size(
             [self.nonce],
-            [entry_type, DID_METHOD_SPEC_VERSION],
+            [entry_type, ENTRY_SCHEMA_VERSION],
             json.dumps(entry_content))
 
         if entry_size > ENTRY_SIZE_LIMIT:
             raise RuntimeError('You have exceeded the entry size limit! Please remove some of your keys or services.')
 
         return {
-            'ext_ids': [entry_type, DID_METHOD_SPEC_VERSION, self.nonce],
+            'ext_ids': [entry_type, ENTRY_SCHEMA_VERSION, self.nonce],
             'content': entry_content
         }
 
@@ -124,7 +88,7 @@ class DID:
         """
 
         self.nonce = codecs.encode(os.urandom(32), 'hex').decode()
-        chain_id = self._calculate_chain_id([EntryType.Create.value, DID_METHOD_SPEC_VERSION, self.nonce])
+        chain_id = self._calculate_chain_id([EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce])
         did_id = 'did:fctr:{}'.format(chain_id)
         return did_id
 
