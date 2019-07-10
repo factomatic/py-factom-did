@@ -10,11 +10,19 @@ __all__ = ['encrypt_keys', 'decrypt_keys', 'decrypt_keys_from_ui_store']
 
 def encrypt_keys(keys, password):
     """
-     Encrypts keys with a password and returns cipher text
+    Encrypts keys with a password and returns cipher text.
 
-     :type keys: KeyModel[]
-     :type password: str
-     :return ctx_b64: str
+    Parameters
+    ----------
+    keys: KeyModel[]
+        A list of keys (management or did) to be encrypted.
+    password: str
+        A password to use for the encryption of the keys.
+
+    Returns
+    -------
+    str
+        Encrypted keys cipher text encoded in base64 format.
     """
 
     keys_data = list(map(lambda k: {
@@ -46,11 +54,24 @@ def encrypt_keys(keys, password):
 
 def decrypt_keys(ctx_b64, password):
     """
-    Decrypts keys from cipher text and password
+    Decrypts keys from cipher text and password.
 
-    :type ctx_b64: str
-    :type password: str
-    :return decrypted_keys: []
+    Parameters
+    ----------
+    ctx_b64: str
+        Base 64 encoded cipher text.
+    password: str
+        A password used for the encryption of the keys.
+
+    Returns
+    -------
+    list
+        A list of decrypted keys objects.
+
+    Raises
+    ------
+    ValueError
+        If the cipher text or the password used for the encryption is invalid.
     """
 
     ctx_bin = urlsafe_b64decode(ctx_b64)
@@ -75,13 +96,27 @@ def decrypt_keys(ctx_b64, password):
 
 def decrypt_keys_from_ui_store(ctx_b64, password, salt, vector):
     """
-    Decrypts keys from cipher text, password, salt and initial vector
+    Decrypts keys from cipher text, password, salt and initial vector.
 
-     :type ctx_b64: str
-     :type password: str
-     :type salt: str
-     :type vector: str
-     :return decrypted_keys: []
+    Parameters
+    ----------
+    ctx_b64: str
+        Base 64 encoded cipher text.
+    password: str
+        A password used for the encryption of the keys.
+    salt: str
+        32 bytes of random data encoded in base64 format.
+    vector: str
+        Initialization vector with 16 bytes size encoded in base64 format.
+    Returns
+    -------
+    list
+        A list of decrypted keys objects.
+
+    Raises
+    ------
+    ValueError
+        If one of the parameters is invalid.
     """
 
     sa = urlsafe_b64decode(salt)
