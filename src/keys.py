@@ -11,10 +11,22 @@ __all__ = ['generate_key_pair']
 
 def generate_key_pair(signature_type):
     """
-    Generates new key pair
+    Generates new key pair.
 
-    :type signature_type: str
-    :return: KeyPairModel
+    Parameters
+    ----------
+    signature_type: str
+        Type of signature to be used when creating the key.
+
+    Returns
+    -------
+    KeyPairModel
+        A KeyPairModel containing public and private key.
+
+    Raises
+    ------
+    RuntimeError
+        If invalid signature type is passed.
     """
 
     if signature_type == SignatureType.EdDSA.value:
