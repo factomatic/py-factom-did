@@ -111,7 +111,7 @@ class DID:
         Returns
         -------
         dict
-            a dictionary with the ExtIDs and entry content of strings used that are the header columns
+            A dictionary with the ExtIDs and entry content of strings used that are the header columns.
 
         Raises
         ------
@@ -137,10 +137,20 @@ class DID:
 
     def export_encrypted_keys(self, password):
         """
-        Returns encrypted keys cipher text
+        Exports encrypted keys cipher text.
+
+        Parameters
+        ----------
+        password: str
+            A password to use for the encryption of the keys.
+
+        Returns
+        -------
+        str
+            Encrypted keys cipher text.
         """
 
-        return encrypt_keys(self.public_keys, password)
+        return encrypt_keys(self.management_keys + self.did_keys, password)
 
     def _get_did_document(self):
         """
