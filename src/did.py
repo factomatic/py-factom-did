@@ -106,7 +106,17 @@ class DID:
 
     def export_entry_data(self):
         """
-        Returns a dictionary with the ExtIDs and entry content that can be recorded on-chain to create the DID
+        Exports content that can be recorded on-chain to create the DID.
+
+        Returns
+        -------
+        dict
+            a dictionary with the ExtIDs and entry content of strings used that are the header columns
+
+        Raises
+        ------
+        RuntimeError
+            If the entry size exceeds the entry size limit.
         """
 
         entry_content = json.dumps(self._get_did_document())
@@ -115,7 +125,7 @@ class DID:
         entry_size = self._calculate_entry_size(
             [self.nonce],
             [entry_type, ENTRY_SCHEMA_VERSION],
-            json.dumps(entry_content))
+            entry_content)
 
         if entry_size > ENTRY_SIZE_LIMIT:
             raise RuntimeError('You have exceeded the entry size limit! Please remove some of your keys or services.')
