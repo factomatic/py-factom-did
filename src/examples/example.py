@@ -1,6 +1,6 @@
 from factom import Factomd, FactomWalletd
 
-from did import DID, SignatureType
+from did import DID, SignatureType, PurposeType
 from encryptor import decrypt_keys, decrypt_keys_from_ui_store
 
 factomd = Factomd()
@@ -11,10 +11,10 @@ ec_address = 'EC3VjuH17eACyP22WwxPcqcbnVkE8QSd1HJP7MXDJkgR3hvaPBhP'
 
 def create_new_did():
     new_did = DID()
-    new_did.add_public_key()
-    new_did.add_public_key('mysecpkey', SignatureType.ECDSA.value)
-    new_did.add_authentication_key('myauthkey', SignatureType.EdDSA.value)
-    new_did.add_service('PhotoStreamService', 'https://myphoto.com', 'myphotoservice')
+    new_did.add_management_key('my-first-management-key', 1)
+    new_did.add_management_key('my-secp-key', 2, SignatureType.ECDSA.value)
+    new_did.add_did_key('my-auth-key', [PurposeType.AuthenticationKey.value])
+    new_did.add_service('my-photo-service', 'PhotoStreamService', 'https://myphoto.com')
     return new_did
 
 

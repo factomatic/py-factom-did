@@ -77,8 +77,8 @@ class DID:
 
         self._validate_did_key_input_params(alias, set(purpose), signature_type, controller, priority_requirement)
 
-        key_pair = generate_key_pair(type)
-        self.did_keys.append(DidKeyModel(alias, set(purpose), type, controller,
+        key_pair = generate_key_pair(signature_type)
+        self.did_keys.append(DidKeyModel(alias, set(purpose), signature_type, controller,
                                          key_pair.public_key, key_pair.private_key, priority_requirement))
 
     def add_service(self, alias, service_type, endpoint, priority_requirement=None):
