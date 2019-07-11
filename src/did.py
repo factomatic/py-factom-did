@@ -46,7 +46,7 @@ class DID:
         if not controller:
             controller = self.id
 
-        self._validate_key_input_params(alias, signature_type, controller)
+        self._validate_management_key_input_params(alias, priority, signature_type, controller)
 
         key_pair = generate_key_pair(signature_type)
         self.management_keys.append(ManagementKeyModel(alias, priority, signature_type, controller,
@@ -75,7 +75,7 @@ class DID:
         if not controller:
             controller = self.id
 
-        self._validate_key_input_params(alias, signature_type, controller)
+        self._validate_did_key_input_params(alias, set(purpose), signature_type, controller, priority_requirement)
 
         key_pair = generate_key_pair(type)
         self.did_keys.append(DidKeyModel(alias, set(purpose), type, controller,
@@ -276,13 +276,54 @@ class DID:
 
         return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
 
+    def _validate_management_key_input_params(self, alias, priority, signature_type, controller):
+        """
+        Validates management key input parameters.
+
+        Parameters
+        ----------
+        alias: str
+        priority: number
+        signature_type: SignatureType
+        controller: str
+        """
+
+        if priority < 1:
+            raise ValueError('Priority must be a positive integer.')
+
+        self._validate_key_input_params(alias, signature_type, controller)
+
+    def _validate_did_key_input_params(self, alias, purpose, signature_type, controller, priority_requirement):
+        """
+        Validates did key input parameters.
+
+        Parameters
+        ----------
+        alias: str
+        purpose: set
+        signature_type: SignatureType
+        controller: str
+        priority_requirement: number
+        """
+
+        for purpose_type in purpose:
+            if purpose_type not in (PurposeType.PublicKey.value, PurposeType.AuthenticationKey.value):
+                raise ValueError('Purpose must contain only valid PurposeTypes.')
+
+        if priority_requirement is not None and priority_requirement < 1:
+            raise ValueError('Priority requirement must be a positive integer.')
+
+        self._validate_key_input_params(alias, signature_type, controller)
+
     def _validate_key_input_params(self, alias, signature_type, controller):
         """
-         Validates public and authentication key input parameters
+        Validates key input parameters.
 
-         :type alias: str
-         :type signature_type: SignatureType
-         :type controller: str
+        Parameters
+        ----------
+        alias: str
+        signature_type: SignatureType
+        controller: str
         """
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
@@ -297,7 +338,7 @@ class DID:
         if signature_type not in (SignatureType.ECDSA.value, SignatureType.EdDSA.value, SignatureType.RSA.value):
             raise ValueError('Type must be a valid signature type.')
 
-        if not re.match("^did:fctr:[a-f0-9]{64}$", controller):
+        if not re.match("^did:factom:[a-f0-9]{64}$", controller):
             raise ValueError('Controller must be a valid DID.')
 
     def _validate_service_input_params(self, service_type, endpoint, alias):
