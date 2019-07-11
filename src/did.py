@@ -374,12 +374,18 @@ class DID:
     @staticmethod
     def _calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
         """
-        Calculates entry size in bytes
+        Calculates entry size in bytes.
 
-        :type hex_ext_ids: Array
-        :type utf8_ext_ids: Array
-        :type content: str
-        :return total_entry_size: number
+        Parameters
+        ----------
+        hex_ext_ids: list
+        utf8_ext_ids: list
+        content: str
+
+        Returns
+        -------
+        number
+            A total size of the entry in bytes.
         """
 
         total_entry_size = 0
