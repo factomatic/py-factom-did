@@ -101,7 +101,7 @@ class DID:
             A positive integer showing the minimum hierarchical level a key must have in order to remove this service.
         """
 
-        self._validate_service_input_params(service_type, endpoint, alias)
+        self._validate_service_input_params(alias, service_type, endpoint, priority_requirement)
         self.services.append(ServiceModel(alias, service_type, endpoint, priority_requirement))
 
     def export_entry_data(self):
@@ -341,20 +341,17 @@ class DID:
         if not re.match("^did:factom:[a-f0-9]{64}$", controller):
             raise ValueError('Controller must be a valid DID.')
 
-    def _validate_service_input_params(self, service_type, endpoint, alias):
+    def _validate_service_input_params(self, alias, service_type, endpoint, priority_requirement):
         """
-        Validates public and authentication key input parameters
+        Validates service input parameters.
 
-        :type service_type: str
-        :type endpoint: str
-        :type alias: str
+        Parameters
+        ----------
+        alias: str
+        service_type: str
+        endpoint: str
+        priority_requirement: number
         """
-
-        if len(service_type) == 0:
-            raise ValueError('Type is required.')
-
-        if not re.match("^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):
-            raise ValueError('Endpoint must be a valid URL address starting with http:// or https://.')
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
             raise ValueError('Alias must not be more than 32 characters long and must contain only lower-case '
@@ -364,6 +361,15 @@ class DID:
             raise ValueError('The given service alias "{}" has already been used.'.format(alias))
 
         self.used_service_aliases.add(alias)
+
+        if len(service_type) == 0:
+            raise ValueError('Type is required.')
+
+        if not re.match("^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):
+            raise ValueError('Endpoint must be a valid URL address starting with http:// or https://.')
+
+        if priority_requirement is not None and priority_requirement < 1:
+            raise ValueError('Priority requirement must be a positive integer.')
 
     @staticmethod
     def _calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
