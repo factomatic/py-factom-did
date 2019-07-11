@@ -183,14 +183,17 @@ class DID:
 
     def _generate_id(self):
         """
-        Generates new DID Id
+        Generates a new DID Id.
 
-        :return: did_id: str
+        Returns
+        -------
+        str
+            A DID Id.
         """
 
         self.nonce = codecs.encode(os.urandom(32), 'hex').decode()
         chain_id = self._calculate_chain_id([EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce])
-        did_id = 'did:fctr:{}'.format(chain_id)
+        did_id = 'did:factom:{}'.format(chain_id)
         return did_id
 
     def _build_key_entry_object(self, key):
@@ -254,10 +257,17 @@ class DID:
     @staticmethod
     def _calculate_chain_id(ext_ids):
         """
-        Calculates chain id by hashing each ExtID, joining the hashes into a byte array and hashing the array
+        Calculates chain id by hashing each ExtID, joining the hashes into a byte array and hashing the array.
 
-        :type ext_ids: Array
-        :return full_hash_hex: str
+        Parameters
+        ----------
+        ext_ids: list
+            A list of ExtIds.
+
+        Returns
+        -------
+        str
+            A chain id.
         """
 
         ext_ids_hash_bytes = bytearray(b'')
