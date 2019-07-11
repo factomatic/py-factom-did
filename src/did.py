@@ -154,20 +154,32 @@ class DID:
 
     def _get_did_document(self):
         """
-        Returns DID Document
+        Builds a DID Document.
+
+        Returns
+        -------
+        dict
+            A dictionary with the DID Document properties.
         """
 
-        public_keys = list(map(self._build_key_entry_object, self.public_keys))
-        authentication_keys = list(map(self._build_key_entry_object, self.authentication_keys))
-        services = list(map(self._build_service_entry_object, self.services))
+        management_keys = list(map(self._build_key_entry_object, self.management_keys))
+        if len(management_keys) < 1:
+            raise RuntimeError('The DID must have at least one management key.')
 
-        return {
-            '@context': 'https://w3id.org/did/v1',
-            'id': self.id,
-            'publicKey': public_keys,
-            'authentication': authentication_keys,
-            'service': services
+        did_document = {
+            'didMethodVersion': DID_METHOD_SPEC_VERSION,
+            'managementKey': management_keys
         }
+
+        did_keys = list(map(self._build_key_entry_object, self.did_keys))
+        if len(did_keys) > 0:
+            did_document['didKey'] = did_keys
+
+        services = list(map(self._build_service_entry_object, self.services))
+        if len(services) > 0:
+            did_document['service'] = services
+
+        return did_document
 
     def _generate_id(self):
         """
@@ -183,30 +195,61 @@ class DID:
 
     def _build_key_entry_object(self, key):
         """
-        Builds a key object to include in an entry
+        Builds a key object to include in the DID Document.
 
-        :type key: KeyModel
+        Parameters
+        ----------
+        key: KeyModel
+            A key to use when building the object.
+
+        Returns
+        -------
+        obj
+            A key object to include in the DID Document.
         """
 
-        return {
+        key_entry_object = {
             'id': '{}#{}'.format(self.id, key.alias),
             'type': '{}VerificationKey'.format(key.signature_type),
             'controller': key.controller,
             'publicKeyBase58': str(key.public_key, 'utf8')
         }
 
+        if type(key) == ManagementKeyModel:
+            key_entry_object['priority'] = key.priority
+        else:
+            key_entry_object['purpose'] = list(key.purpose)
+
+            if key.priority_requirement is not None:
+                key_entry_object['priorityRequirement'] = key.priority_requirement
+
+        return key_entry_object
+
     def _build_service_entry_object(self, service):
         """
-        Builds a key object to include in an entry
+        Builds a service object to include in the DID Document.
 
-        :type service: ServiceModel
+        Parameters
+        ----------
+        service: ServiceModel
+            A service to use when building the object.
+
+        Returns
+        -------
+        obj
+            A service object to include in the DID Document.
         """
 
-        return {
+        service_entry_object = {
             'id': '{}#{}'.format(self.id, service.alias),
             'type': service.service_type,
             'serviceEndpoint': service.endpoint
         }
+
+        if service.priority_requirement is not None:
+            service_entry_object['priorityRequirement'] = service.priority_requirement
+
+        return service_entry_object
 
     @staticmethod
     def _calculate_chain_id(ext_ids):
