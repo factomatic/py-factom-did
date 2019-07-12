@@ -211,11 +211,13 @@ class DID:
             A key object to include in the DID Document.
         """
 
+        public_key_property = 'publicKeyPem' if key.signature_type == SignatureType.RSA.value else 'publicKeyBase58'
+
         key_entry_object = {
             'id': '{}#{}'.format(self.id, key.alias),
             'type': '{}VerificationKey'.format(key.signature_type),
             'controller': key.controller,
-            'publicKeyBase58': str(key.public_key, 'utf8')
+            public_key_property: str(key.public_key, 'utf8')
         }
 
         if type(key) == ManagementKeyModel:
