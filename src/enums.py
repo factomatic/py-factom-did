@@ -15,5 +15,5 @@ class EntryType(Enum):
 
 
 class PurposeType(Enum):
-    PublicKey = 'publicKey',
+    PublicKey = 'publicKey'
     AuthenticationKey = 'authentication'
