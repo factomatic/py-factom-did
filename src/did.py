@@ -9,7 +9,7 @@ from enums import SignatureType, EntryType, PurposeType
 from keys import generate_key_pair
 from models import ManagementKeyModel, DidKeyModel, ServiceModel
 
-__all__ = ['DID', 'SignatureType', 'PurposeType']
+__all__ = ['DID', 'SignatureType', 'PurposeType', 'ENTRY_SCHEMA_VERSION', 'DID_METHOD_SPEC_VERSION']
 
 ENTRY_SCHEMA_VERSION = '1.0.0'
 DID_METHOD_SPEC_VERSION = '0.1.0'
