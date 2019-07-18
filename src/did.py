@@ -1,3 +1,4 @@
+from base64 import urlsafe_b64encode
 import codecs
 import hashlib
 import json
@@ -135,7 +136,7 @@ class DID:
             'content': entry_content
         }
 
-    def export_encrypted_keys(self, password):
+    def export_encrypted_keys_as_str(self, password):
         """
         Exports encrypted keys cipher text.
 
@@ -150,7 +151,36 @@ class DID:
             Encrypted keys cipher text.
         """
 
-        return encrypt_keys(self.management_keys + self.did_keys, password)
+        encryption_result = encrypt_keys(self.management_keys + self.did_keys, password)
+        cipher_text_b64 = urlsafe_b64encode(encryption_result['salt'] + encryption_result['iv'] + encryption_result['tag'] + encryption_result['data'])
+        return str(cipher_text_b64, 'utf8')
+
+    def export_encrypted_keys_as_json(self, password):
+        """
+        Exports encrypted keys as JSON.
+
+        Parameters
+        ----------
+        password: str
+            A password to use for the encryption of the keys.
+
+        Returns
+        -------
+        str
+            Encrypted keys JSON.
+        """
+
+        encryption_result = encrypt_keys(self.management_keys + self.did_keys, password)
+        return json.dumps({
+            'data': str(urlsafe_b64encode(encryption_result['data']), 'utf8'),
+            'encryptionAlgo': {
+                'name': 'AES-GCM',
+                'iv': str(urlsafe_b64encode(encryption_result['iv']), 'utf8'),
+                'salt': str(urlsafe_b64encode(encryption_result['salt']), 'utf8'),
+                'tagLength': 128
+            },
+            'did': self.id
+        })
 
     def _get_did_document(self):
         """
