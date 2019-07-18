@@ -5,12 +5,12 @@ from Crypto.Protocol.KDF import PBKDF2
 import json
 import os
 
-__all__ = ['encrypt_keys', 'decrypt_keys', 'decrypt_keys_from_ui_store']
+__all__ = ['encrypt_keys', 'decrypt_keys_from_str', 'decrypt_keys_from_json', 'decrypt_keys_from_ui_store_file']
 
 
 def encrypt_keys(keys, password):
     """
-    Encrypts keys with a password and returns cipher text.
+    Encrypts keys with a password.
 
     Parameters
     ----------
@@ -21,8 +21,8 @@ def encrypt_keys(keys, password):
 
     Returns
     -------
-    str
-        Encrypted keys cipher text encoded in base64 format.
+    obj
+        An object containing salt, initial vector, tag and encrypted data.
     """
 
     keys_data = list(map(lambda k: {
@@ -46,19 +46,23 @@ def encrypt_keys(keys, password):
     )
 
     cipher = AES.new(key=key, mode=AES.MODE_GCM, nonce=iv)
-    ctx, tag = cipher.encrypt_and_digest(data)
+    encrypted_data, tag = cipher.encrypt_and_digest(data)
 
-    ctx_b64 = urlsafe_b64encode(sa + iv + tag + ctx)
-    return str(ctx_b64, 'utf8')
+    return {
+        'salt': sa,
+        'iv': iv,
+        'tag': tag,
+        'data': encrypted_data
+    }
 
 
-def decrypt_keys(ctx_b64, password):
+def decrypt_keys_from_str(cipher_text_b64, password):
     """
     Decrypts keys from cipher text and password.
 
     Parameters
     ----------
-    ctx_b64: str
+    cipher_text_b64: str
         Base 64 encoded cipher text.
     password: str
         A password used for the encryption of the keys.
@@ -74,40 +78,26 @@ def decrypt_keys(ctx_b64, password):
         If the cipher text or the password used for the encryption is invalid.
     """
 
-    ctx_bin = urlsafe_b64decode(ctx_b64)
-    sa, ctx_bin = ctx_bin[:32], ctx_bin[32:]
-    iv, ctx_bin = ctx_bin[:16], ctx_bin[16:]
-    tag, ctx = ctx_bin[:16], ctx_bin[16:]
+    cipher_text_bin = urlsafe_b64decode(cipher_text_b64)
+    salt, cipher_text_bin = cipher_text_bin[:32], cipher_text_bin[32:]
+    iv, cipher_text_bin = cipher_text_bin[:16], cipher_text_bin[16:]
+    tag, encrypted_data = cipher_text_bin[:16], cipher_text_bin[16:]
 
-    key = PBKDF2(
-        password, sa,
-        dkLen=16,
-        count=1000,
-        prf=_hmac256
-    )
-
-    try:
-        m = _decrypt(key, iv, ctx)
-        decrypted_keys = json.loads(m.decode('utf8'))
-        return decrypted_keys
-    except Exception as e:
-        raise ValueError(e)
+    decrypted_keys = _decrypt_keys(salt, iv, encrypted_data, password)
+    return decrypted_keys
 
 
-def decrypt_keys_from_ui_store(ctx_b64, password, salt, vector):
+def decrypt_keys_from_json(encrypted_keys_json, password):
     """
-    Decrypts keys from cipher text, password, salt and initial vector.
+    Decrypts keys from JSON and password.
 
     Parameters
     ----------
-    ctx_b64: str
-        Base 64 encoded cipher text.
+    encrypted_keys_json: str
+        JSON containing encrypted keys data.
     password: str
         A password used for the encryption of the keys.
-    salt: str
-        32 bytes of random data encoded in base64 format.
-    vector: str
-        Initialization vector with 16 bytes size encoded in base64 format.
+
     Returns
     -------
     list
@@ -116,27 +106,88 @@ def decrypt_keys_from_ui_store(ctx_b64, password, salt, vector):
     Raises
     ------
     ValueError
-        If one of the parameters is invalid.
+        If the JSON or the password used for the encryption is invalid.
+    """
+    try:
+        encrypted_keys_obj = json.loads(encrypted_keys_json)
+    except json.decoder.JSONDecodeError:
+        raise ValueError('Invalid JSON file.')
+
+    salt = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['salt'])
+    iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
+    encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
+
+    decrypted_keys = _decrypt_keys(salt, iv, encrypted_data, password)
+    return decrypted_keys
+
+
+def decrypt_keys_from_ui_store_file(file_path, password):
+    """
+    Decrypts keys from cipher text, password, salt and initial vector.
+
+    Parameters
+    ----------
+    file_path: str
+        Path to a file to read from.
+    password: str
+        A password used for the encryption of the keys.
+
+    Returns
+    -------
+    list
+        A list of decrypted keys objects.
+
+    Raises
+    ------
+    ValueError
+        If the file or the password is invalid.
     """
 
-    sa = urlsafe_b64decode(salt)
-    iv = urlsafe_b64decode(vector)
-    ctx = urlsafe_b64decode(ctx_b64)
+    with open(file_path, 'r') as encrypted_file:
+        encrypted_file_content = encrypted_file.read()
+        print(encrypted_file_content)
+
+        try:
+            encrypted_keys_obj = json.loads(encrypted_file_content)
+        except json.decoder.JSONDecodeError:
+            raise ValueError('Invalid JSON file.')
+
+        salt = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['salt'])
+        iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
+        encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
+
+        key = PBKDF2(
+            password, salt,
+            dkLen=32,
+            count=10000,
+            prf=_hmac256
+        )
+
+        try:
+            m = _decrypt(key, iv, encrypted_data)
+            decoded_store = m.decode('utf-8', 'backslashreplace')
+
+            # ToDo: check trailing characters
+            liq = decoded_store.rfind('"')
+            decrypted_keys = json.loads(json.loads(decoded_store[0:liq + 1]))
+            return decrypted_keys
+        except json.decoder.JSONDecodeError:
+            raise ValueError('Invalid encrypted data or password.')
+
+
+def _decrypt_keys(salt, iv, encrypted_data, password):
     key = PBKDF2(
-        password, sa,
-        dkLen=32,
-        count=10000,
+        password, salt,
+        dkLen=16,
+        count=1000,
         prf=_hmac256
     )
 
     try:
-        m = _decrypt(key, iv, ctx)
-        decoded_store = m.decode('utf-8', 'backslashreplace')
-        liq = decoded_store.rfind('"')
-        decrypted_keys = json.loads(json.loads(decoded_store[0:liq + 1]))
-        return decrypted_keys
-    except Exception as e:
-        raise ValueError(e)
+        m = _decrypt(key, iv, encrypted_data)
+        return json.loads(m.decode('utf8'))
+    except json.decoder.JSONDecodeError:
+        raise ValueError('Invalid encrypted data or password.')
 
 
 def _hmac256(secret, m):
