@@ -1,7 +1,7 @@
 from factom import Factomd, FactomWalletd
 
 from did import DID, SignatureType, PurposeType
-from encryptor import decrypt_keys, decrypt_keys_from_ui_store
+from encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
 
 factomd = Factomd()
 walletd = FactomWalletd()
@@ -61,13 +61,25 @@ def record_did_on_chain():
     print(entry_data)
 
 
-def encrypt_and_decrypt_did_keys():
+def encrypt_keys_as_str_and_decrypt():
     new_did = create_new_did()
-    encrypted_keys = new_did.export_encrypted_keys('1234')
+    keys_cipher_text = new_did.export_encrypted_keys_as_str('1234')
     print('-----------------------------------Encrypted---------------------------------------')
-    print(encrypted_keys)
+    print(keys_cipher_text)
 
-    decrypted_keys = decrypt_keys(encrypted_keys, '1234')
+    decrypted_keys = decrypt_keys_from_str(keys_cipher_text, '1234')
+    print('-----------------------------------Decrypted---------------------------------------')
+    print(decrypted_keys)
+    print(decrypted_keys[0]['alias'])
+
+
+def encrypt_keys_as_json_and_decrypt():
+    new_did = create_new_did()
+    keys_json = new_did.export_encrypted_keys_as_json('1234')
+    print('-----------------------------------Encrypted---------------------------------------')
+    print(keys_json)
+
+    decrypted_keys = decrypt_keys_from_json(keys_json, '1234')
     print('-----------------------------------Decrypted---------------------------------------')
     print(decrypted_keys)
     print(decrypted_keys[0]['alias'])
@@ -78,12 +90,9 @@ def decrypt_keys_from_ui():
     Decrypt keys file downloaded from factom-did-ui app
     '''
 
-    pw = '123qweASD!@#'
-    salt = 'cChkzEf0dWzlnp1UqYOtJLbljr+yp7hsyEngrQXqF3g='
-    vector = 'iktNUmPe/P2JaZbJJR0Mww=='
-    ctx = '5od26bPl/Z+BxwCX9i5WSlGYymy2ltUmW5F6sV5K4DsGo05anopJCwj7m7RHCMCJcoUlFy8PBgkow5lZNnpJRPPC6bjn0euW3kVLtLecgWy/ryOQx3tOV8CuY6iITV8Akk9KBBqQHIja4ePaUWKRlZM1YL9tFbFivNAbEt1ueWHhNb6zln7zwnAWJbXTK4Tn4piFrADXksoQYdt6lfPJbCWFhyRSCtY/WJLKORaeQ8qywN4CTKBb92Ae2xT4upZBWXlEURutk45I8AXMIEKpIpZXSczhVb06qGruIV/z5dQQX8ngExjDo7HsDcgtew+wDbBc4JQAtT/duQfWvVGe8QQPiu06U6F5V8u209WXSNHj02Hm8Jqck6upqPlBNJAhWw+K9A=='
-
-    decrypted_keys = decrypt_keys_from_ui_store(ctx, pw, salt, vector)
+    file_path = '.\\examples\\paper-did-UTC--2019-06-17T18_09_31.938Z.txt'
+    password = '123qweASD!@#'
+    decrypted_keys = decrypt_keys_from_ui_store_file(file_path, password)
     print(decrypted_keys)
     print(decrypted_keys[0]['privateKey'])
 
