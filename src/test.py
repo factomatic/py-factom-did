@@ -2,7 +2,7 @@ import json
 import unittest
 
 from did import DID, SignatureType, PurposeType, ENTRY_SCHEMA_VERSION, DID_METHOD_SPEC_VERSION
-from encryptor import decrypt_keys, decrypt_keys_from_ui_store
+from encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
 from enums import EntryType
 
 
@@ -334,25 +334,77 @@ class ExportEntryDataTestCase(unittest.TestCase):
 
 
 class EncryptorTestCase(unittest.TestCase):
-    def test_encrypt_decrypt(self):
+    def test_encrypt_as_str_and_decrypt(self):
         did = DID()
         did.add_management_key('management-key', 1)
         generated_management_key = did.management_keys[0]
 
         password = '123456'
-        encrypted_keys = did.export_encrypted_keys(password)
-        decrypted_keys = decrypt_keys(encrypted_keys, password)
-        decrypted_public_key = decrypted_keys[0]
+        encrypted_keys_cipher_b64 = did.export_encrypted_keys_as_str(password)
+        decrypted_keys = decrypt_keys_from_str(encrypted_keys_cipher_b64, password)
+        decrypted_management_key = decrypted_keys[0]
 
-        self.assertEqual(generated_management_key.alias, decrypted_public_key['alias'])
-        self.assertEqual(generated_management_key.signature_type, decrypted_public_key['type'])
-        self.assertEqual(str(generated_management_key.private_key, 'utf8'), decrypted_public_key['privateKey'])
+        self.assertEqual(generated_management_key.alias, decrypted_management_key['alias'])
+        self.assertEqual(generated_management_key.signature_type, decrypted_management_key['type'])
+        self.assertEqual(str(generated_management_key.private_key, 'utf8'), decrypted_management_key['privateKey'])
 
-    def test_decrypt_keys_from_ui_store(self):
-        pw = '123qweASD!@#'
-        salt = 'cChkzEf0dWzlnp1UqYOtJLbljr+yp7hsyEngrQXqF3g='
-        vector = 'iktNUmPe/P2JaZbJJR0Mww=='
-        ctx = '5od26bPl/Z+BxwCX9i5WSlGYymy2ltUmW5F6sV5K4DsGo05anopJCwj7m7RHCMCJcoUlFy8PBgkow5lZNnpJRPPC6bjn0euW3kVLtLecgWy/ryOQx3tOV8CuY6iITV8Akk9KBBqQHIja4ePaUWKRlZM1YL9tFbFivNAbEt1ueWHhNb6zln7zwnAWJbXTK4Tn4piFrADXksoQYdt6lfPJbCWFhyRSCtY/WJLKORaeQ8qywN4CTKBb92Ae2xT4upZBWXlEURutk45I8AXMIEKpIpZXSczhVb06qGruIV/z5dQQX8ngExjDo7HsDcgtew+wDbBc4JQAtT/duQfWvVGe8QQPiu06U6F5V8u209WXSNHj02Hm8Jqck6upqPlBNJAhWw+K9A=='
+    def test_encrypt_as_str_and_decrypt_with_invalid_password_throws_error(self):
+        did = DID()
+        did.add_management_key('management-key', 1)
+
+        password = '123456'
+        encrypted_keys_cipher_b64 = did.export_encrypted_keys_as_str(password)
+
+        invalid_password = '12345'
+        self.assertRaises(ValueError, lambda: decrypt_keys_from_str(encrypted_keys_cipher_b64, invalid_password))
+
+    def test_encrypt_as_str_and_decrypt_with_invalid_cipher_text_throws_error(self):
+        did = DID()
+        did.add_management_key('management-key', 1)
+
+        password = '123456'
+        encrypted_keys_cipher_b64 = did.export_encrypted_keys_as_str(password)
+
+        self.assertRaises(ValueError, lambda: decrypt_keys_from_str(encrypted_keys_cipher_b64[:24], password))
+
+    def test_encrypt_as_json_and_decrypt(self):
+        did = DID()
+        did.add_management_key('management-key', 1)
+        generated_management_key = did.management_keys[0]
+
+        password = '123456'
+        encrypted_keys_json = did.export_encrypted_keys_as_json(password)
+        decrypted_keys = decrypt_keys_from_json(encrypted_keys_json, password)
+        decrypted_management_key = decrypted_keys[0]
+
+        self.assertEqual(generated_management_key.alias, decrypted_management_key['alias'])
+        self.assertEqual(generated_management_key.signature_type, decrypted_management_key['type'])
+        self.assertEqual(str(generated_management_key.private_key, 'utf8'), decrypted_management_key['privateKey'])
+
+    def test_encrypt_as_json_and_decrypt_with_invalid_password_throws_error(self):
+        did = DID()
+        did.add_management_key('management-key', 1)
+
+        password = '123456'
+        encrypted_keys_json = did.export_encrypted_keys_as_json(password)
+
+        invalid_password = '!23456'
+        self.assertRaises(ValueError, lambda: decrypt_keys_from_json(encrypted_keys_json, invalid_password))
+
+    def test_encrypt_as_json_and_decrypt_with_invalid_json_throws_error(self):
+        invalid_json = '{"data": "KuZTmv2xmw4N+GFYNCBuqMgt8OEO24hHABPJBKjxehmqI2I0UZwzIjqf2acI8DnfYQTs0uVZxetLri'
+        password = '123qweASD!@#'
+        self.assertRaises(ValueError, lambda: decrypt_keys_from_json(invalid_json, password))
+
+    def test_encrypt_as_json_and_decrypt_with_missing_json_property_throws_error(self):
+        # data property is missing from the json
+        invalid_json = '{"encryptionAlgo": {"name": "AES-GCM","iv": "vLsvUFfZJ3nUe/G3GHFK1A==","salt": "GynGAsqMaVbmMviTSkx6htQpDcgL4pQ8UQRdann/Jzo=","tagLength": 128},"did": "did:fctr:3626da39a85becd84c203676bd99707723290a06ea0663d3eade8a2301910573"}'
+        password = '123qweASD!@#'
+        self.assertRaises(KeyError, lambda: decrypt_keys_from_json(invalid_json, password))
+
+    def test_decrypt_keys_from_ui_store_file(self):
+        file_path = '.\\examples\\paper-did-UTC--2019-06-17T18_09_31.938Z.txt'
+        password = '123qweASD!@#'
         expected_keys = [
             {
                 'alias': 'myfirstkey',
@@ -365,8 +417,13 @@ class EncryptorTestCase(unittest.TestCase):
                 'privateKey': 'CJiZnpMLpAsdB5nu4FJUaiWKGs5PyCwuNNnHFAfuZFeJ'
             }]
 
-        decrypted_keys = decrypt_keys_from_ui_store(ctx, pw, salt, vector)
+        decrypted_keys = decrypt_keys_from_ui_store_file(file_path, password)
         self.assertEqual(expected_keys, decrypted_keys)
+
+    def test_decrypt_keys_from_ui_store_file_with_invalid_password_throws_error(self):
+        file_path = '.\\examples\\paper-did-UTC--2019-06-17T18_09_31.938Z.txt'
+        invalid_password = 'qweASD!@#'
+        self.assertRaises(ValueError, lambda: decrypt_keys_from_ui_store_file(file_path, invalid_password))
 
 
 if __name__ == '__main__':

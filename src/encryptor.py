@@ -145,7 +145,6 @@ def decrypt_keys_from_ui_store_file(file_path, password):
 
     with open(file_path, 'r') as encrypted_file:
         encrypted_file_content = encrypted_file.read()
-        print(encrypted_file_content)
 
         try:
             encrypted_keys_obj = json.loads(encrypted_file_content)
