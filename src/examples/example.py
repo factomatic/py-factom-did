@@ -1,7 +1,7 @@
 from factom import Factomd, FactomWalletd
 
-from did import DID, SignatureType
-from encryptor import decrypt_keys, decrypt_keys_from_ui_store
+from did import DID, SignatureType, PurposeType
+from encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
 
 factomd = Factomd()
 walletd = FactomWalletd()
@@ -11,10 +11,46 @@ ec_address = 'EC3VjuH17eACyP22WwxPcqcbnVkE8QSd1HJP7MXDJkgR3hvaPBhP'
 
 def create_new_did():
     new_did = DID()
-    new_did.add_public_key()
-    new_did.add_public_key('mysecpkey', SignatureType.ECDSA.value)
-    new_did.add_authentication_key('myauthkey', SignatureType.EdDSA.value)
-    new_did.add_service('PhotoStreamService', 'https://myphoto.com', 'myphotoservice')
+
+    '''Add new management key with default signature type and controller'''
+    management_key_1_alias = 'my-first-management-key'
+    management_key_1_priority = 1
+    new_did.add_management_key(management_key_1_alias, management_key_1_priority)
+
+    '''Add new management key with specified signature type and controller'''
+    management_key_2_alias = 'my-second-management-key'
+    management_key_2_priority = 2
+    management_key_2_signature_type = SignatureType.ECDSA.value
+    management_key_2_controller = 'did:factom:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'
+    new_did.add_management_key(management_key_2_alias, management_key_2_priority, management_key_2_signature_type,
+                               management_key_2_controller)
+
+    '''Add new public key with default signature type and controller'''
+    did_key_1_alias = 'my-did-key-1'
+    did_key_1_purpose = [PurposeType.PublicKey.value]
+    new_did.add_did_key(did_key_1_alias, did_key_1_purpose)
+
+    '''Add new authentication key with specified signature type'''
+    did_key_2_alias = 'my-did-key-2'
+    did_key_2_purpose = [PurposeType.AuthenticationKey.value]
+    did_key_2_signature_type = SignatureType.RSA.value
+    new_did.add_did_key(did_key_2_alias, did_key_2_purpose, did_key_2_signature_type)
+
+    '''Add new both public and authentication key with specified signature type, controller and priority requirement'''
+    did_key_3_alias = 'my-did-key-3'
+    did_key_3_purpose = [PurposeType.PublicKey.value, PurposeType.AuthenticationKey.value]
+    did_key_3_signature_type = SignatureType.EdDSA.value
+    did_key_3_controller = 'did:factom:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'
+    did_key_3_priority_requirement = 2
+    new_did.add_did_key(did_key_3_alias, did_key_3_purpose, did_key_3_signature_type, did_key_3_controller,
+                        did_key_3_priority_requirement)
+
+    '''Add new service'''
+    service_alias = 'my-photo-service'
+    service_type = 'PhotoStreamService'
+    service_endpoint = 'https://myphoto.com'
+    new_did.add_service(service_alias, service_type, service_endpoint)
+
     return new_did
 
 
@@ -25,25 +61,38 @@ def record_did_on_chain():
     print(entry_data)
 
 
-def encrypt_and_decrypt_did_keys():
+def encrypt_keys_as_str_and_decrypt():
     new_did = create_new_did()
-    encrypted_keys = new_did.export_encrypted_keys('1234')
+    keys_cipher_text = new_did.export_encrypted_keys_as_str('1234')
     print('-----------------------------------Encrypted---------------------------------------')
-    print(encrypted_keys)
+    print(keys_cipher_text)
 
-    decrypted_keys = decrypt_keys(encrypted_keys, '1234')
+    decrypted_keys = decrypt_keys_from_str(keys_cipher_text, '1234')
+    print('-----------------------------------Decrypted---------------------------------------')
+    print(decrypted_keys)
+    print(decrypted_keys[0]['alias'])
+
+
+def encrypt_keys_as_json_and_decrypt():
+    new_did = create_new_did()
+    keys_json = new_did.export_encrypted_keys_as_json('1234')
+    print('-----------------------------------Encrypted---------------------------------------')
+    print(keys_json)
+
+    decrypted_keys = decrypt_keys_from_json(keys_json, '1234')
     print('-----------------------------------Decrypted---------------------------------------')
     print(decrypted_keys)
     print(decrypted_keys[0]['alias'])
 
 
 def decrypt_keys_from_ui():
-    pw = '123qweASD!@#'
-    salt = 'cChkzEf0dWzlnp1UqYOtJLbljr+yp7hsyEngrQXqF3g='
-    vector = 'iktNUmPe/P2JaZbJJR0Mww=='
-    ctx = '5od26bPl/Z+BxwCX9i5WSlGYymy2ltUmW5F6sV5K4DsGo05anopJCwj7m7RHCMCJcoUlFy8PBgkow5lZNnpJRPPC6bjn0euW3kVLtLecgWy/ryOQx3tOV8CuY6iITV8Akk9KBBqQHIja4ePaUWKRlZM1YL9tFbFivNAbEt1ueWHhNb6zln7zwnAWJbXTK4Tn4piFrADXksoQYdt6lfPJbCWFhyRSCtY/WJLKORaeQ8qywN4CTKBb92Ae2xT4upZBWXlEURutk45I8AXMIEKpIpZXSczhVb06qGruIV/z5dQQX8ngExjDo7HsDcgtew+wDbBc4JQAtT/duQfWvVGe8QQPiu06U6F5V8u209WXSNHj02Hm8Jqck6upqPlBNJAhWw+K9A=='
+    '''
+    Decrypt keys file downloaded from factom-did-ui app
+    '''
 
-    decrypted_keys = decrypt_keys_from_ui_store(ctx, pw, salt, vector)
+    file_path = '.\\examples\\paper-did-UTC--2019-06-17T18_09_31.938Z.txt'
+    password = '123qweASD!@#'
+    decrypted_keys = decrypt_keys_from_ui_store_file(file_path, password)
     print(decrypted_keys)
     print(decrypted_keys[0]['privateKey'])
 
