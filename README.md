@@ -29,7 +29,7 @@ You can find an example of the library workflow in the src/examples directory.
 
 * Execute the tests with
 ```
-	python test.py
+	pytest
 ```
 
 * Execute the example
