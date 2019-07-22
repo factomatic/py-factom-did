@@ -1,11 +1,12 @@
 import json
+import os
+import pytest
+import re
 import unittest
 
 from did.did import DID, SignatureType, PurposeType, ENTRY_SCHEMA_VERSION, DID_METHOD_SPEC_VERSION
 from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
 from did.enums import EntryType
-import re
-import pytest
 
 
 class EmptyDidTestCase(unittest.TestCase):
@@ -430,7 +431,7 @@ class EncryptorTestCase(unittest.TestCase):
             decrypt_keys_from_json(invalid_json, password)
 
     def test_decrypt_keys_from_ui_store_file(self):
-        file_path = '.\\examples\\paper-did-UTC--2019-06-17T18_09_31.938Z.txt'
+        file_path = os.path.join('fixtures', 'paper-did-UTC--2019-06-17T18_09_31.938Z.txt')
         password = '123qweASD!@#'
         expected_keys = [
             {
@@ -448,7 +449,7 @@ class EncryptorTestCase(unittest.TestCase):
         assert expected_keys == decrypted_keys
 
     def test_decrypt_keys_from_ui_store_file_with_invalid_password_throws_error(self):
-        file_path = '.\\examples\\paper-did-UTC--2019-06-17T18_09_31.938Z.txt'
+        file_path = os.path.join('fixtures', 'paper-did-UTC--2019-06-17T18_09_31.938Z.txt')
         invalid_password = 'qweASD!@#'
         with pytest.raises(ValueError):
             decrypt_keys_from_ui_store_file(file_path, invalid_password)
