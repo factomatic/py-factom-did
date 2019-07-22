@@ -3,8 +3,8 @@ from Crypto.PublicKey import RSA
 from ecdsa import SigningKey, SECP256k1
 import ed25519
 
-from enums import SignatureType
-from models import KeyPairModel
+from did.enums import SignatureType
+from did.models import KeyPairModel
 
 __all__ = ['generate_key_pair']
 

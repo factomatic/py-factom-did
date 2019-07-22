@@ -5,10 +5,10 @@ import json
 import os
 import re
 
-from encryptor import encrypt_keys
-from enums import SignatureType, EntryType, PurposeType
-from keys import generate_key_pair
-from models import ManagementKeyModel, DidKeyModel, ServiceModel
+from did.encryptor import encrypt_keys
+from did.enums import SignatureType, EntryType, PurposeType
+from did.keys import generate_key_pair
+from did.models import ManagementKeyModel, DidKeyModel, ServiceModel
 
 __all__ = ['DID', 'SignatureType', 'PurposeType', 'ENTRY_SCHEMA_VERSION', 'DID_METHOD_SPEC_VERSION']
 
