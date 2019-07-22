@@ -397,7 +397,7 @@ class DID:
         if len(service_type) == 0:
             raise ValueError('Type is required.')
 
-        if not re.match("^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):
+        if not re.match(r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):
             raise ValueError('Endpoint must be a valid URL address starting with http:// or https://.')
 
         if priority_requirement is not None and priority_requirement < 1:
