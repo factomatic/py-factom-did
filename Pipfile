@@ -11,6 +11,7 @@ base58 = "*"
 ecdsa = "*"
 ed25519 = "*"
 factom-api = "*"
+pytest = "*"
 
 [requires]
 python_version = "3.7"
