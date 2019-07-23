@@ -28,7 +28,7 @@ class DID:
 
     def add_management_key(self, alias, priority, signature_type=SignatureType.EdDSA.value, controller=None):
         """
-        Creates a new management key for the DID. test
+        Creates a new management key for the DID.
 
         Parameters
         ----------
