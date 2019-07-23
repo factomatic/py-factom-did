@@ -5,10 +5,10 @@ import json
 import os
 import re
 
-from encryptor import encrypt_keys
-from enums import SignatureType, EntryType, PurposeType
-from keys import generate_key_pair
-from models import ManagementKeyModel, DidKeyModel, ServiceModel
+from did.encryptor import encrypt_keys
+from did.enums import SignatureType, EntryType, PurposeType
+from did.keys import generate_key_pair
+from did.models import ManagementKeyModel, DidKeyModel, ServiceModel
 
 __all__ = ['DID', 'SignatureType', 'PurposeType', 'ENTRY_SCHEMA_VERSION', 'DID_METHOD_SPEC_VERSION']
 
@@ -397,7 +397,7 @@ class DID:
         if len(service_type) == 0:
             raise ValueError('Type is required.')
 
-        if not re.match("^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):
+        if not re.match(r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):
             raise ValueError('Endpoint must be a valid URL address starting with http:// or https://.')
 
         if priority_requirement is not None and priority_requirement < 1:
