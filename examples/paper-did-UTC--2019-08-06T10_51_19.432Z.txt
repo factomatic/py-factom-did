@@ -1,0 +1,10 @@
+{
+  "data": "nLjdAVoeBpsxSCv6AMyeSEOpnRP15S+JoXE40/piYCSu+B2KiMqgG6fhrrqIfpz+hC04+p4Q3ljS/i+7aKDfYb+feoRWcI8Q5DkSYha5Zj/IryT1D1vW+V2p2lgYdtixrX5KYUGzAAIQIC00NDoDYZurGJ/NvlJBjl8pBfpIlH1Gnq7XMu1JQbRMs6ofeAp6OBCSqOMya9s6tw1HGfTt8srZww==",
+  "encryptionAlgo": {
+    "name": "AES-GCM",
+    "iv": "2arSkAax0bzjgrF7FZdoSQ==",
+    "salt": "JsvnDTPIXihO+yJagaCjVA0pRE+v5FH3YgH87GkTHK8=",
+    "tagLength": 128
+  },
+  "did": "did:fctr:bd8d134001dbfc09804d9e28f39c60ac2521340aa9de5aae19a554621412cb56"
+}
