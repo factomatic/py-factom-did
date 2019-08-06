@@ -48,7 +48,7 @@ def encrypt_keys(keys, password):
     }
 
 
-def decrypt_keys_from_str(cipher_text_b64, password):
+def decrypt_keys_from_str(cipher_text_b64, password, encryption_algo='AES-GCM'):
     """
     Decrypts keys from cipher text and password.
 
@@ -58,6 +58,8 @@ def decrypt_keys_from_str(cipher_text_b64, password):
         Base 64 encoded cipher text.
     password: str
         A password used for the encryption of the keys.
+    encryption_algo: str
+        The encryption algorithm used. Currently only 'AES-GCM' is supported
 
     Returns
     -------
@@ -75,7 +77,7 @@ def decrypt_keys_from_str(cipher_text_b64, password):
     iv, cipher_text_bin = cipher_text_bin[:16], cipher_text_bin[16:]
     ciphertext = cipher_text_bin[:-16]
 
-    return _decrypt_keys(salt, iv, ciphertext, password)
+    return _decrypt_keys(salt, iv, ciphertext, password, encryption_algo)
 
 
 def decrypt_keys_from_json_str(encrypted_keys_json_str, password):
@@ -162,12 +164,14 @@ def _decrypt_keys_from_json(encrypted_keys_json, password):
     tag_length = int(encrypted_keys_json['encryptionAlgo']['tagLength'])
     ciphertext = encrypted_data[:-int(tag_length / 8)]
 
-    return _decrypt_keys(salt, iv, ciphertext, password)
+    encryption_algo = encrypted_keys_json['encryptionAlgo']['name']
+
+    return _decrypt_keys(salt, iv, ciphertext, password, encryption_algo)
 
 
-def _decrypt_keys(salt, iv, ciphertext, password):
+def _decrypt_keys(salt, iv, ciphertext, password, encryption_algo):
     try:
-        m = _decrypt(iv, ciphertext, password, salt)
+        m = _decrypt(iv, ciphertext, password, salt, encryption_algo)
         return json.loads(m.decode('utf8'))
     except json.decoder.JSONDecodeError:
         raise ValueError('Invalid encrypted data or password.')
@@ -177,7 +181,10 @@ def _hmac256(secret, m):
     return HMAC.new(key=secret, msg=m, digestmod=SHA256).digest()
 
 
-def _decrypt(iv, ciphertext, password, salt):
+def _decrypt(iv, ciphertext, password, salt, encryption_algo):
+    if encryption_algo != 'AES-GCM':
+        raise NotImplementedError('Currently only AES-GCM is supported!')
+
     key = _gen_key(password, salt)
     decryptor = AES.new(key=key, mode=AES.MODE_GCM, nonce=iv)
     return decryptor.decrypt(ciphertext)
