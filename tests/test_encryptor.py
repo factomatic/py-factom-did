@@ -2,7 +2,7 @@ import os
 import pytest
 
 from did.did import DID
-from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
+from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json_str, decrypt_keys_from_json_file
 
 
 @pytest.fixture
@@ -49,7 +49,7 @@ class TestEncryptor():
 
         password = '123456'
         encrypted_keys_json = did.export_encrypted_keys_as_json(password)
-        decrypted_keys = decrypt_keys_from_json(encrypted_keys_json, password)
+        decrypted_keys = decrypt_keys_from_json_str(encrypted_keys_json, password)
         decrypted_management_key = decrypted_keys[0]
 
         assert generated_management_key.alias == decrypted_management_key['alias']
@@ -64,22 +64,22 @@ class TestEncryptor():
 
         invalid_password = '!23456'
         with pytest.raises(ValueError):
-            decrypt_keys_from_json(encrypted_keys_json, invalid_password)
+            decrypt_keys_from_json_str(encrypted_keys_json, invalid_password)
 
     def test_encrypt_as_json_and_decrypt_with_invalid_json_throws_error(self):
         invalid_json = '{"data": "KuZTmv2xmw4N+GFYNCBuqMgt8OEO24hHABPJBKjxehmqI2I0UZwzIjqf2acI8DnfYQTs0uVZxetLri'
         password = '123qweASD!@#'
         with pytest.raises(ValueError):
-            decrypt_keys_from_json(invalid_json, password)
+            decrypt_keys_from_json_str(invalid_json, password)
 
     def test_encrypt_as_json_and_decrypt_with_missing_json_property_throws_error(self):
         # data property is missing from the json
         invalid_json = '{"encryptionAlgo": {"name": "AES-GCM","iv": "vLsvUFfZJ3nUe/G3GHFK1A==","salt": "GynGAsqMaVbmMviTSkx6htQpDcgL4pQ8UQRdann/Jzo=","tagLength": 128},"did": "did:fctr:3626da39a85becd84c203676bd99707723290a06ea0663d3eade8a2301910573"}'
         password = '123qweASD!@#'
         with pytest.raises(KeyError):
-            decrypt_keys_from_json(invalid_json, password)
+            decrypt_keys_from_json_str(invalid_json, password)
 
-    def test_decrypt_keys_from_ui_store_file(self):
+    def test_decrypt_keys_from_file(self):
         file_path = os.path.join('tests', 'fixtures',
             'paper-did-UTC--2019-08-06T10_51_19.432Z.txt')
         password = '123qweASD!@#'
@@ -91,12 +91,12 @@ class TestEncryptor():
             }
         ]
 
-        decrypted_keys = decrypt_keys_from_ui_store_file(file_path, password)
+        decrypted_keys = decrypt_keys_from_json_file(file_path, password)
         assert expected_keys == decrypted_keys
 
-    def test_decrypt_keys_from_ui_store_file_with_invalid_password_throws_error(self):
+    def test_decrypt_keys_from_file_with_invalid_password_throws_error(self):
         file_path = os.path.join('tests', 'fixtures',
             'paper-did-UTC--2019-08-06T10_51_19.432Z.txt')
         invalid_password = 'qweASD!@#'
         with pytest.raises(ValueError):
-            decrypt_keys_from_ui_store_file(file_path, invalid_password)
+            decrypt_keys_from_json_file(file_path, invalid_password)

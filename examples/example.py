@@ -4,7 +4,9 @@ from pprint import pprint
 from factom import Factomd, FactomWalletd
 
 from did.did import DID, DID_METHOD_NAME, SignatureType, PurposeType
-from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
+from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json_str, \
+    decrypt_keys_from_json_file
+
 
 factomd = Factomd()
 walletd = FactomWalletd()
@@ -82,22 +84,23 @@ def encrypt_keys_as_json_and_decrypt():
     print('-----------------------------------Encrypted---------------------------------------')
     pprint(keys_json)
 
-    decrypted_keys = decrypt_keys_from_json(keys_json, '1234')
+    decrypted_keys = decrypt_keys_from_json_str(keys_json, '1234')
     print('-----------------------------------Decrypted---------------------------------------')
     pprint(decrypted_keys)
     pprint(decrypted_keys[0]['alias'])
 
 
-def decrypt_keys_from_ui():
+def decrypt_keys_from_file():
     '''
-    Decrypt keys file downloaded from factom-did-ui app
+    Decrypt keys from JSON file with a schema compatible to the one in
+    DID.export_encrypted_keys_as_json()
     '''
 
     file_path = os.path.join(
         'examples',
         'paper-did-UTC--2019-08-06T10_51_19.432Z.txt')
     password = '123qweASD!@#'
-    decrypted_keys = decrypt_keys_from_ui_store_file(file_path, password)
+    decrypted_keys = decrypt_keys_from_json_file(file_path, password)
     pprint(decrypted_keys)
     pprint(decrypted_keys[0]['privateKey'])
 

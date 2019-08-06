@@ -34,30 +34,21 @@ def encrypt_keys(keys, password):
 
     data = bytes(json.dumps(keys_data), 'utf8')
 
-    sa = os.urandom(32)
+    salt = os.urandom(32)
     iv = os.urandom(16)
-    iter_cnt = 1000
 
-    key = PBKDF2(
-        password=password,
-        salt=sa,
-        dkLen=16,
-        count=iter_cnt,
-        prf=_hmac256
-    )
-
+    key = _gen_key(password, salt)
     cipher = AES.new(key=key, mode=AES.MODE_GCM, nonce=iv)
-    encrypted_data, tag = cipher.encrypt_and_digest(data)
+    ciphertext, tag = cipher.encrypt_and_digest(data)
 
     return {
-        'salt': sa,
+        'salt': salt,
         'iv': iv,
-        'tag': tag,
-        'data': encrypted_data
+        'data': ciphertext + tag
     }
 
 
-def decrypt_keys_from_str(cipher_text_b64, password):
+def decrypt_keys_from_str(cipher_text_b64, password, encryption_algo='AES-GCM'):
     """
     Decrypts keys from cipher text and password.
 
@@ -67,6 +58,8 @@ def decrypt_keys_from_str(cipher_text_b64, password):
         Base 64 encoded cipher text.
     password: str
         A password used for the encryption of the keys.
+    encryption_algo: str
+        The encryption algorithm used. Currently only 'AES-GCM' is supported
 
     Returns
     -------
@@ -82,27 +75,39 @@ def decrypt_keys_from_str(cipher_text_b64, password):
     cipher_text_bin = urlsafe_b64decode(cipher_text_b64)
     salt, cipher_text_bin = cipher_text_bin[:32], cipher_text_bin[32:]
     iv, cipher_text_bin = cipher_text_bin[:16], cipher_text_bin[16:]
-    _, encrypted_data = cipher_text_bin[:16], cipher_text_bin[16:]
+    ciphertext = cipher_text_bin[:-16]
 
-    decrypted_keys = _decrypt_keys(salt, iv, encrypted_data, password)
-    return decrypted_keys
+    return _decrypt_keys(salt, iv, ciphertext, password, encryption_algo)
 
 
-def decrypt_keys_from_json(encrypted_keys_json, password):
+def decrypt_keys_from_json_str(encrypted_keys_json_str, password):
     """
-    Decrypts keys from JSON and password.
+    Decrypts keys from JSON string and password. The JSON string must have a
+    schema compatible with the one produced by
+    DID.export_encrypted_keys_as_json():
+
+    '{
+        "encryptionAlgo": {
+            "salt": ...,
+            "iv": ...,
+            "name": ...,
+            "tagLength": ...,
+        },
+        "data": ... (encrypted private keys),
+        "did": ...
+    }'
 
     Parameters
     ----------
-    encrypted_keys_json: str
-        JSON containing encrypted keys data.
+    encrypted_keys_json_str: str
+        JSON string containing encrypted keys data.
     password: str
         A password used for the encryption of the keys.
 
     Returns
     -------
     list
-        A list of decrypted keys objects.
+        A list of decrypted key objects.
 
     Raises
     ------
@@ -110,21 +115,19 @@ def decrypt_keys_from_json(encrypted_keys_json, password):
         If the JSON or the password used for the encryption is invalid.
     """
     try:
-        encrypted_keys_obj = json.loads(encrypted_keys_json)
+        encrypted_keys_json = json.loads(encrypted_keys_json_str)
     except json.decoder.JSONDecodeError:
         raise ValueError('Invalid JSON file.')
 
-    salt = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['salt'])
-    iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
-    encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
-
-    decrypted_keys = _decrypt_keys(salt, iv, encrypted_data, password)
-    return decrypted_keys
+    return _decrypt_keys_from_json(encrypted_keys_json, password)
 
 
-def decrypt_keys_from_ui_store_file(file_path, password):
+def decrypt_keys_from_json_file(file_path, password):
     """
-    Decrypts keys from cipher text, password, salt and initial vector.
+    Decrypts keys from JSON file and password. The file must contain valid JSON
+    with a schema compatible with the one produced by
+    DID.export_encrypted_keys_as_json(). See decrypt_keys_from_json_str for
+    details.
 
     Parameters
     ----------
@@ -146,43 +149,29 @@ def decrypt_keys_from_ui_store_file(file_path, password):
 
     with open(file_path, 'r') as encrypted_file:
         try:
-            encrypted_keys_obj = json.load(encrypted_file)
+            encrypted_keys_json = json.load(encrypted_file)
         except json.decoder.JSONDecodeError:
             raise ValueError('Invalid JSON file.')
 
-        salt = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['salt'])
-        iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
-        encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
-
-        # Remove tag_length bits from the encrypted data to obtain the actual
-        # ciphertext
-        tag_length = int(encrypted_keys_obj['encryptionAlgo']['tagLength'])
-        ciphertext = encrypted_data[:-int(tag_length / 8)]
-
-        key = PBKDF2(
-            password, salt,
-            dkLen=32,
-            count=10000,
-            prf=_hmac256
-        )
-
-        try:
-            m = _decrypt(key, iv, ciphertext)
-            return json.loads(m.decode('utf8'))
-        except json.decoder.JSONDecodeError:
-            raise ValueError('Invalid encrypted data or password.')
+    return _decrypt_keys_from_json(encrypted_keys_json, password)
 
 
-def _decrypt_keys(salt, iv, encrypted_data, password):
-    key = PBKDF2(
-        password, salt,
-        dkLen=16,
-        count=1000,
-        prf=_hmac256
-    )
+def _decrypt_keys_from_json(encrypted_keys_json, password):
+    salt = urlsafe_b64decode(encrypted_keys_json['encryptionAlgo']['salt'])
+    iv = urlsafe_b64decode(encrypted_keys_json['encryptionAlgo']['iv'])
+    encrypted_data = urlsafe_b64decode(encrypted_keys_json['data'])
 
+    tag_length = int(encrypted_keys_json['encryptionAlgo']['tagLength'])
+    ciphertext = encrypted_data[:-int(tag_length / 8)]
+
+    encryption_algo = encrypted_keys_json['encryptionAlgo']['name']
+
+    return _decrypt_keys(salt, iv, ciphertext, password, encryption_algo)
+
+
+def _decrypt_keys(salt, iv, ciphertext, password, encryption_algo):
     try:
-        m = _decrypt(key, iv, encrypted_data)
+        m = _decrypt(iv, ciphertext, password, salt, encryption_algo)
         return json.loads(m.decode('utf8'))
     except json.decoder.JSONDecodeError:
         raise ValueError('Invalid encrypted data or password.')
@@ -192,6 +181,19 @@ def _hmac256(secret, m):
     return HMAC.new(key=secret, msg=m, digestmod=SHA256).digest()
 
 
-def _decrypt(key, iv, ciphertext):
+def _decrypt(iv, ciphertext, password, salt, encryption_algo):
+    if encryption_algo != 'AES-GCM':
+        raise NotImplementedError('Currently only AES-GCM is supported!')
+
+    key = _gen_key(password, salt)
     decryptor = AES.new(key=key, mode=AES.MODE_GCM, nonce=iv)
     return decryptor.decrypt(ciphertext)
+
+
+def _gen_key(password, salt):
+    return PBKDF2(
+        password, salt,
+        dkLen=32,
+        count=10000,
+        prf=_hmac256
+    )

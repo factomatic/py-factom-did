@@ -164,7 +164,7 @@ class DID:
         """
 
         encryption_result = encrypt_keys(self.management_keys + self.did_keys, password)
-        cipher_text_b64 = urlsafe_b64encode(encryption_result['salt'] + encryption_result['iv'] + encryption_result['tag'] + encryption_result['data'])
+        cipher_text_b64 = urlsafe_b64encode(encryption_result['salt'] + encryption_result['iv'] + encryption_result['data'])
         return str(cipher_text_b64, 'utf8')
 
     def export_encrypted_keys_as_json(self, password):

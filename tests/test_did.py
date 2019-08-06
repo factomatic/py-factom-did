@@ -5,7 +5,6 @@ import re
 
 from did.did import DID, SignatureType, PurposeType, ENTRY_SCHEMA_VERSION, \
     DID_METHOD_SPEC_VERSION, DID_METHOD_NAME
-from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
 from did.enums import EntryType
 
 
