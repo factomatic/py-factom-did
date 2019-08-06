@@ -1,11 +1,12 @@
-from base64 import urlsafe_b64encode, urlsafe_b64decode
+from base64 import urlsafe_b64decode
 from Crypto.Cipher import AES
 from Crypto.Hash import (SHA256, HMAC)
 from Crypto.Protocol.KDF import PBKDF2
 import json
 import os
 
-__all__ = ['encrypt_keys', 'decrypt_keys_from_str', 'decrypt_keys_from_json', 'decrypt_keys_from_ui_store_file']
+__all__ = ['encrypt_keys', 'decrypt_keys_from_str', 'decrypt_keys_from_json',
+           'decrypt_keys_from_ui_store_file']
 
 
 def encrypt_keys(keys, password):
@@ -81,7 +82,7 @@ def decrypt_keys_from_str(cipher_text_b64, password):
     cipher_text_bin = urlsafe_b64decode(cipher_text_b64)
     salt, cipher_text_bin = cipher_text_bin[:32], cipher_text_bin[32:]
     iv, cipher_text_bin = cipher_text_bin[:16], cipher_text_bin[16:]
-    tag, encrypted_data = cipher_text_bin[:16], cipher_text_bin[16:]
+    _, encrypted_data = cipher_text_bin[:16], cipher_text_bin[16:]
 
     decrypted_keys = _decrypt_keys(salt, iv, encrypted_data, password)
     return decrypted_keys
@@ -144,16 +145,19 @@ def decrypt_keys_from_ui_store_file(file_path, password):
     """
 
     with open(file_path, 'r') as encrypted_file:
-        encrypted_file_content = encrypted_file.read()
-
         try:
-            encrypted_keys_obj = json.loads(encrypted_file_content)
+            encrypted_keys_obj = json.load(encrypted_file)
         except json.decoder.JSONDecodeError:
             raise ValueError('Invalid JSON file.')
 
         salt = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['salt'])
         iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
         encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
+
+        # Remove tag_length bits from the encrypted data to obtain the actual
+        # ciphertext
+        tag_length = int(encrypted_keys_obj['encryptionAlgo']['tagLength'])
+        ciphertext = encrypted_data[:-int(tag_length / 8)]
 
         key = PBKDF2(
             password, salt,
@@ -163,13 +167,8 @@ def decrypt_keys_from_ui_store_file(file_path, password):
         )
 
         try:
-            m = _decrypt(key, iv, encrypted_data)
-            decoded_store = m.decode('utf-8', 'backslashreplace')
-
-            # ToDo: check trailing characters
-            liq = decoded_store.rfind('"')
-            decrypted_keys = json.loads(json.loads(decoded_store[0:liq + 1]))
-            return decrypted_keys
+            m = _decrypt(key, iv, ciphertext)
+            return json.loads(m.decode('utf8'))
         except json.decoder.JSONDecodeError:
             raise ValueError('Invalid encrypted data or password.')
 
@@ -195,5 +194,4 @@ def _hmac256(secret, m):
 
 def _decrypt(key, iv, ciphertext):
     decryptor = AES.new(key=key, mode=AES.MODE_GCM, nonce=iv)
-    plaintext = decryptor.decrypt(ciphertext)
-    return plaintext
+    return decryptor.decrypt(ciphertext)

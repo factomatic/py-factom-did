@@ -70,11 +70,11 @@
         },
         "factom-api": {
             "hashes": [
-                "sha256:740baa52fffc30063cc9fd61cb79939ee564b8dc7f0ccfae7b4aee2b7af1c6e8",
-                "sha256:ae26e343a786b4edae6fab9ac09f6535f474e7c647602a216f67ff9b48cabdba"
+                "sha256:50f6292d83394b7bfe090e8abae4b911778d1357a30256d12b4419f7eeb0368e",
+                "sha256:f6c151db2f1a0e4bc78e2f57c1b672a05b8de75e6756b86d2a38f4db4f4e06c9"
             ],
             "index": "pypi",
-            "version": "==0.1.1"
+            "version": "==1.0.0"
         },
         "idna": {
             "hashes": [
@@ -85,10 +85,10 @@
         },
         "importlib-metadata": {
             "hashes": [
-                "sha256:6dfd58dfe281e8d240937776065dd3624ad5469c835248219bd16cf2e12dbeb7",
-                "sha256:cb6ee23b46173539939964df59d3d72c3e0c1b5d54b84f1d8a7e912fe43612db"
+                "sha256:23d3d873e008a513952355379d93cbcab874c58f4f034ff657c7a87422fa64e8",
+                "sha256:80d2de76188eabfbfcf27e6a37342c2827801e59c4cc14b0371c56fed43820e3"
             ],
-            "version": "==0.18"
+            "version": "==0.19"
         },
         "more-itertools": {
             "hashes": [
@@ -99,10 +99,10 @@
         },
         "packaging": {
             "hashes": [
-                "sha256:0c98a5d0be38ed775798ece1b9727178c4469d9c3b4ada66e8e6b7849f8732af",
-                "sha256:9e1cbf8c12b1f1ce0bb5344b8d7ecf66a6f8a6e91bcb0c84593ed6d3ab5c4ab3"
+                "sha256:a7ac867b97fdc07ee80a8058fe4435ccd274ecc3b0ed61d852d7d53055528cf9",
+                "sha256:c491ca87294da7cc01902edbe30a5bc6c4c28172b5138ab4e4aa1b9d7bfaeafe"
             ],
-            "version": "==19.0"
+            "version": "==19.1"
         },
         "pluggy": {
             "hashes": [
@@ -154,10 +154,10 @@
         },
         "pyparsing": {
             "hashes": [
-                "sha256:530d8bf8cc93a34019d08142593cf4d78a05c890da8cf87ffa3120af53772238",
-                "sha256:f78e99616b6f1a4745c0580e170251ef1bbafc0d0513e270c4bd281bf29d2800"
+                "sha256:6f98a7b9397e206d78cc01df10131398f1c8b8510a2f4d97d9abd82e1aacdd80",
+                "sha256:d9338df12903bbf5d65a0e4e87c2161968b10d2e489652bb47001d82a9b028b4"
             ],
-            "version": "==2.4.1"
+            "version": "==2.4.2"
         },
         "pytest": {
             "hashes": [

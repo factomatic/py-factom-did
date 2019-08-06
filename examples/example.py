@@ -1,3 +1,6 @@
+import os
+from pprint import pprint
+
 from factom import Factomd, FactomWalletd
 
 from did.did import DID, SignatureType, PurposeType
@@ -58,7 +61,7 @@ def record_did_on_chain():
     new_did = create_new_did()
     entry_data = new_did.export_entry_data()
     walletd.new_chain(factomd, entry_data['ext_ids'], entry_data['content'], ec_address=ec_address)
-    print(entry_data)
+    pprint(entry_data)
 
 
 def encrypt_keys_as_str_and_decrypt():
@@ -69,20 +72,20 @@ def encrypt_keys_as_str_and_decrypt():
 
     decrypted_keys = decrypt_keys_from_str(keys_cipher_text, '1234')
     print('-----------------------------------Decrypted---------------------------------------')
-    print(decrypted_keys)
-    print(decrypted_keys[0]['alias'])
+    pprint(decrypted_keys)
+    pprint(decrypted_keys[0]['alias'])
 
 
 def encrypt_keys_as_json_and_decrypt():
     new_did = create_new_did()
     keys_json = new_did.export_encrypted_keys_as_json('1234')
     print('-----------------------------------Encrypted---------------------------------------')
-    print(keys_json)
+    pprint(keys_json)
 
     decrypted_keys = decrypt_keys_from_json(keys_json, '1234')
     print('-----------------------------------Decrypted---------------------------------------')
-    print(decrypted_keys)
-    print(decrypted_keys[0]['alias'])
+    pprint(decrypted_keys)
+    pprint(decrypted_keys[0]['alias'])
 
 
 def decrypt_keys_from_ui():
@@ -90,12 +93,15 @@ def decrypt_keys_from_ui():
     Decrypt keys file downloaded from factom-did-ui app
     '''
 
-    file_path = '.\\examples\\paper-did-UTC--2019-06-17T18_09_31.938Z.txt'
+    file_path = os.path.join(
+        'examples',
+        'paper-did-UTC--2019-08-06T10_51_19.432Z.txt')
     password = '123qweASD!@#'
     decrypted_keys = decrypt_keys_from_ui_store_file(file_path, password)
-    print(decrypted_keys)
-    print(decrypted_keys[0]['privateKey'])
+    pprint(decrypted_keys)
+    pprint(decrypted_keys[0]['privateKey'])
 
 
 if __name__ == '__main__':
-    record_did_on_chain()
+    did_object = create_new_did()
+    pprint(did_object.export_entry_data())
