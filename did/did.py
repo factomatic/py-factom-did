@@ -10,9 +10,11 @@ from did.enums import SignatureType, EntryType, PurposeType
 from did.keys import generate_key_pair
 from did.models import ManagementKeyModel, DidKeyModel, ServiceModel
 
-__all__ = ['DID', 'SignatureType', 'PurposeType', 'ENTRY_SCHEMA_VERSION', 'DID_METHOD_SPEC_VERSION']
+__all__ = ['DID', 'SignatureType', 'PurposeType', 'ENTRY_SCHEMA_VERSION',
+    'DID_METHOD_SPEC_VERSION', 'DID_METHOD_NAME']
 
 ENTRY_SCHEMA_VERSION = '1.0.0'
+DID_METHOD_NAME = 'did:factom'
 DID_METHOD_SPEC_VERSION = '0.1.0'
 ENTRY_SIZE_LIMIT = 10275
 
@@ -35,8 +37,8 @@ class DID:
         alias: str
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
         priority: number
-            A positive integer showing the hierarchical level of the key. The key(s) with priority 1
-            overrides any key with priority greater than 1.
+            A positive integer showing the hierarchical level of the key. The key(s) with priority 0
+            overrides any key with priority greater than 0.
         signature_type: SignatureType, optional (default is EdDSA)
             Identifies the type of signature to be used when creating the key.
         controller: str, optional (default is None)
@@ -116,9 +118,18 @@ class DID:
 
         Raises
         ------
-        RuntimeError
-            If the entry size exceeds the entry size limit.
+        ValueError
+            - If there are no management keys.
+            - If there is no management key with priority 0.
+            - If the entry size exceeds the entry size limit.
         """
+
+        management_keys = list(map(self._build_key_entry_object, self.management_keys))
+
+        if len(management_keys) < 1:
+            raise ValueError('The DID must have at least one management key.')
+        if not any(map(lambda key: key['priority'] == 0, management_keys)):
+            raise ValueError('At least one management key must have priority 0.')
 
         entry_content = json.dumps(self._get_did_document())
         entry_type = EntryType.Create.value
@@ -129,7 +140,8 @@ class DID:
             entry_content)
 
         if entry_size > ENTRY_SIZE_LIMIT:
-            raise RuntimeError('You have exceeded the entry size limit! Please remove some of your keys or services.')
+            raise ValueError('You have exceeded the entry size limit! Please '
+                             'remove some of your keys or services.')
 
         return {
             'ext_ids': [entry_type, ENTRY_SCHEMA_VERSION, self.nonce],
@@ -193,8 +205,6 @@ class DID:
         """
 
         management_keys = list(map(self._build_key_entry_object, self.management_keys))
-        if len(management_keys) < 1:
-            raise RuntimeError('The DID must have at least one management key.')
 
         did_document = {
             'didMethodVersion': DID_METHOD_SPEC_VERSION,
@@ -223,7 +233,7 @@ class DID:
 
         self.nonce = codecs.encode(os.urandom(32), 'hex').decode()
         chain_id = self._calculate_chain_id([EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce])
-        did_id = 'did:factom:{}'.format(chain_id)
+        did_id = '{}:{}'.format(DID_METHOD_NAME, chain_id)
         return did_id
 
     def _build_key_entry_object(self, key):
@@ -320,7 +330,7 @@ class DID:
         controller: str
         """
 
-        if priority < 1:
+        if priority < 0:
             raise ValueError('Priority must be a positive integer.')
 
         self._validate_key_input_params(alias, signature_type, controller)
@@ -342,7 +352,7 @@ class DID:
             if purpose_type not in (PurposeType.PublicKey.value, PurposeType.AuthenticationKey.value):
                 raise ValueError('Purpose must contain only valid PurposeTypes.')
 
-        if priority_requirement is not None and priority_requirement < 1:
+        if priority_requirement is not None and priority_requirement < 0:
             raise ValueError('Priority requirement must be a positive integer.')
 
         self._validate_key_input_params(alias, signature_type, controller)
@@ -370,7 +380,7 @@ class DID:
         if signature_type not in (SignatureType.ECDSA.value, SignatureType.EdDSA.value, SignatureType.RSA.value):
             raise ValueError('Type must be a valid signature type.')
 
-        if not re.match("^did:factom:[a-f0-9]{64}$", controller):
+        if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
             raise ValueError('Controller must be a valid DID.')
 
     def _validate_service_input_params(self, alias, service_type, endpoint, priority_requirement):
@@ -400,7 +410,7 @@ class DID:
         if not re.match(r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):
             raise ValueError('Endpoint must be a valid URL address starting with http:// or https://.')
 
-        if priority_requirement is not None and priority_requirement < 1:
+        if priority_requirement is not None and priority_requirement < 0:
             raise ValueError('Priority requirement must be a positive integer.')
 
     @staticmethod

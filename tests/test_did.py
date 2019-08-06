@@ -3,7 +3,8 @@ import os
 import pytest
 import re
 
-from did.did import DID, SignatureType, PurposeType, ENTRY_SCHEMA_VERSION, DID_METHOD_SPEC_VERSION
+from did.did import DID, SignatureType, PurposeType, ENTRY_SCHEMA_VERSION, \
+    DID_METHOD_SPEC_VERSION, DID_METHOD_NAME
 from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
 from did.enums import EntryType
 
@@ -15,7 +16,7 @@ def did():
 
 class TestEmptyDid():
     def test_generating_new_empty_did(self, did):
-        assert re.search("^did:factom:[a-f0-9]{64}$", did.id)
+        assert re.search("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), did.id)
         assert 64 == len(did.nonce)
         assert [] == did.management_keys
         assert [] == did.did_keys
@@ -41,7 +42,8 @@ class TestManagementKeys():
         management_key_2_alias = 'management-key-2'
         management_key_2_priority = 2
         management_key_2_signature_type = SignatureType.ECDSA.value
-        management_key_2_controller = 'did:factom:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'
+        management_key_2_controller = \
+            '{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'.format(DID_METHOD_NAME)
 
         did.add_management_key(management_key_2_alias, management_key_2_priority,
                                management_key_2_signature_type, management_key_2_controller)
@@ -76,7 +78,7 @@ class TestManagementKeys():
                 did.add_management_key(alias, 1)
 
     def test_invalid_priority_throws_exception(self, did):
-        test_cases = [0, -1, -2]
+        test_cases = [-1, -2]
         for priority in test_cases:
             management_key_alias = 'management-key-{}'.format(str(priority))
             with pytest.raises(ValueError):
@@ -97,9 +99,9 @@ class TestManagementKeys():
 
     def test_invalid_controller_throws_exception(self, did):
         test_cases = [
-            ('management-key-1', 'did:factom:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654h05f838b8005'),
+            ('management-key-1', '{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654h05f838b8005'.format(DID_METHOD_NAME)),
             ('management-key-2', 'did:fctr:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'),
-            ('management-key-3', 'did:factom:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b800')
+            ('management-key-3', '{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b800'.format(DID_METHOD_NAME))
         ]
 
         for alias, controller in test_cases:
@@ -123,7 +125,7 @@ class DidKeysTestCase():
         did_key_2_alias = 'did-key-2'
         did_key_2_purpose = [PurposeType.PublicKey.value, PurposeType.AuthenticationKey.value]
         did_key_2_signature_type = SignatureType.ECDSA.value
-        did_key_2_controller = 'did:factom:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'
+        did_key_2_controller = '{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'.format(DID_METHOD_NAME)
         did_key_2_priority_requirement = 1
         did.add_did_key(did_key_2_alias, did_key_2_purpose, did_key_2_signature_type, did_key_2_controller,
                              did_key_2_priority_requirement)
@@ -172,7 +174,7 @@ class DidKeysTestCase():
                 did.add_did_key(alias, [PurposeType.PublicKey.value], SignatureType.EdDSA.value, controller)
 
     def test_invalid_priority_requirement_throws_exception(self):
-        test_cases = [0, -1, -2]
+        test_cases = [-1, -2]
         for priority_requirement in test_cases:
             did_key_alias = 'did-key-{}'.format(str(priority_requirement))
             with pytest.raises(ValueError):
@@ -243,7 +245,7 @@ class TestService():
     def test_invalid_priority_requirement_throws_exception(self, did):
         service_type = 'PhotoStreamService'
         service_endpoint = 'https://myphoto.com'
-        test_cases = [0, -1, -2]
+        test_cases = [-1, -2]
         for priority_requirement in test_cases:
             service_alias = 'service-{}'.format(str(priority_requirement))
             with pytest.raises(ValueError):
@@ -252,7 +254,7 @@ class TestService():
 
 class TestExportEntryData():
     def test_export_entry_data_returns_correct_ext_ids(self, did):
-        did.add_management_key('my-management-key', 1)
+        did.add_management_key('my-management-key', 0)
         entry_data = did.export_entry_data()
 
         ext_ids = entry_data['ext_ids']
@@ -262,7 +264,7 @@ class TestExportEntryData():
 
     def test_export_entry_data_with_management_key(self, did):
         key_alias = 'my-management-key'
-        key_priority = 1
+        key_priority = 0
         did.add_management_key(key_alias, key_priority)
         entry_data = did.export_entry_data()
 
@@ -287,13 +289,13 @@ class TestExportEntryData():
         did_key_alias = 'my-public-key'
         did_key_purpose = [PurposeType.PublicKey.value]
         did_key_signature_type = SignatureType.RSA.value
-        did_key_controller = 'did:factom:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'
+        did_key_controller = '{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005'.format(DID_METHOD_NAME)
         did_key_priority_requirement = 1
         service_alias = 'my-photo-service'
         service_type = 'PhotoStreamService'
         service_endpoint = 'https://myphoto.com'
         service_priority_requirement = 2
-        did.add_management_key('my-management-key-1', 1)
+        did.add_management_key('my-management-key-1', 0)
         did.add_management_key('my-management-key-2', 2)
         did.add_did_key(did_key_alias, did_key_purpose, did_key_signature_type, did_key_controller,
                              did_key_priority_requirement)
@@ -324,11 +326,11 @@ class TestExportEntryData():
 
     def test_exceed_entry_size_throws_error(self, did):
         for x in range(0, 35):
-            did.add_management_key('management-key-{}'.format(x), 1)
+            did.add_management_key('management-key-{}'.format(x), 0)
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             did.export_entry_data()
 
     def test_export_without_management_key_throws_error(self, did):
-        with pytest.raises(RuntimeError):
+        with pytest.raises(ValueError):
             did.export_entry_data()
