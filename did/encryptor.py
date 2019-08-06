@@ -34,26 +34,17 @@ def encrypt_keys(keys, password):
 
     data = bytes(json.dumps(keys_data), 'utf8')
 
-    sa = os.urandom(32)
+    salt = os.urandom(32)
     iv = os.urandom(16)
-    iter_cnt = 1000
 
-    key = PBKDF2(
-        password=password,
-        salt=sa,
-        dkLen=16,
-        count=iter_cnt,
-        prf=_hmac256
-    )
-
+    key = _gen_key(password, salt)
     cipher = AES.new(key=key, mode=AES.MODE_GCM, nonce=iv)
-    encrypted_data, tag = cipher.encrypt_and_digest(data)
+    ciphertext, tag = cipher.encrypt_and_digest(data)
 
     return {
-        'salt': sa,
+        'salt': salt,
         'iv': iv,
-        'tag': tag,
-        'data': encrypted_data
+        'data': ciphertext + tag
     }
 
 
@@ -82,15 +73,26 @@ def decrypt_keys_from_str(cipher_text_b64, password):
     cipher_text_bin = urlsafe_b64decode(cipher_text_b64)
     salt, cipher_text_bin = cipher_text_bin[:32], cipher_text_bin[32:]
     iv, cipher_text_bin = cipher_text_bin[:16], cipher_text_bin[16:]
-    _, encrypted_data = cipher_text_bin[:16], cipher_text_bin[16:]
+    ciphertext = cipher_text_bin[:-16]
 
-    decrypted_keys = _decrypt_keys(salt, iv, encrypted_data, password)
-    return decrypted_keys
+    return _decrypt_keys(salt, iv, ciphertext, password)
 
 
 def decrypt_keys_from_json(encrypted_keys_json, password):
     """
-    Decrypts keys from JSON and password.
+    Decrypts keys from JSON and password. The JSON must have a schema compatible
+    with the one produced by DID.export_encrypted_keys_as_json():
+
+    {
+        "encryptionAlgo": {
+            "salt": ...,
+            "iv": ...,
+            "name": ...,
+            "tagLength": ...,
+        },
+        "data": ... (encrypted private keys),
+        "did": ...
+    }
 
     Parameters
     ----------
@@ -118,11 +120,13 @@ def decrypt_keys_from_json(encrypted_keys_json, password):
     iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
     encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
 
-    decrypted_keys = _decrypt_keys(salt, iv, encrypted_data, password)
-    return decrypted_keys
+    tag_length = int(encrypted_keys_obj['encryptionAlgo']['tagLength'])
+    ciphertext = encrypted_data[:-int(tag_length / 8)]
+
+    return _decrypt_keys(salt, iv, ciphertext, password)
 
 
-def decrypt_keys_from_ui_store_file(file_path, password):
+def decrypt_keys_from_file(file_path, password):
     """
     Decrypts keys from cipher text, password, salt and initial vector.
 
@@ -159,30 +163,12 @@ def decrypt_keys_from_ui_store_file(file_path, password):
         tag_length = int(encrypted_keys_obj['encryptionAlgo']['tagLength'])
         ciphertext = encrypted_data[:-int(tag_length / 8)]
 
-        key = PBKDF2(
-            password, salt,
-            dkLen=32,
-            count=10000,
-            prf=_hmac256
-        )
-
-        try:
-            m = _decrypt(key, iv, ciphertext)
-            return json.loads(m.decode('utf8'))
-        except json.decoder.JSONDecodeError:
-            raise ValueError('Invalid encrypted data or password.')
+        return _decrypt_keys(salt, iv, ciphertext, password)
 
 
-def _decrypt_keys(salt, iv, encrypted_data, password):
-    key = PBKDF2(
-        password, salt,
-        dkLen=16,
-        count=1000,
-        prf=_hmac256
-    )
-
+def _decrypt_keys(salt, iv, ciphertext, password):
     try:
-        m = _decrypt(key, iv, encrypted_data)
+        m = _decrypt(iv, ciphertext, password, salt)
         return json.loads(m.decode('utf8'))
     except json.decoder.JSONDecodeError:
         raise ValueError('Invalid encrypted data or password.')
@@ -192,6 +178,16 @@ def _hmac256(secret, m):
     return HMAC.new(key=secret, msg=m, digestmod=SHA256).digest()
 
 
-def _decrypt(key, iv, ciphertext):
+def _decrypt(iv, ciphertext, password, salt):
+    key = _gen_key(password, salt)
     decryptor = AES.new(key=key, mode=AES.MODE_GCM, nonce=iv)
     return decryptor.decrypt(ciphertext)
+
+
+def _gen_key(password, salt):
+    return PBKDF2(
+        password, salt,
+        dkLen=32,
+        count=10000,
+        prf=_hmac256
+    )
