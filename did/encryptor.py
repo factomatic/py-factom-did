@@ -1,11 +1,12 @@
-from base64 import urlsafe_b64encode, urlsafe_b64decode
+from base64 import urlsafe_b64decode
 from Crypto.Cipher import AES
 from Crypto.Hash import (SHA256, HMAC)
 from Crypto.Protocol.KDF import PBKDF2
 import json
 import os
 
-__all__ = ['encrypt_keys', 'decrypt_keys_from_str', 'decrypt_keys_from_json', 'decrypt_keys_from_ui_store_file']
+__all__ = ['encrypt_keys', 'decrypt_keys_from_str', 'decrypt_keys_from_json',
+           'decrypt_keys_from_ui_store_file']
 
 
 def encrypt_keys(keys, password):
@@ -81,7 +82,7 @@ def decrypt_keys_from_str(cipher_text_b64, password):
     cipher_text_bin = urlsafe_b64decode(cipher_text_b64)
     salt, cipher_text_bin = cipher_text_bin[:32], cipher_text_bin[32:]
     iv, cipher_text_bin = cipher_text_bin[:16], cipher_text_bin[16:]
-    tag, encrypted_data = cipher_text_bin[:16], cipher_text_bin[16:]
+    _, encrypted_data = cipher_text_bin[:16], cipher_text_bin[16:]
 
     decrypted_keys = _decrypt_keys(salt, iv, encrypted_data, password)
     return decrypted_keys
@@ -195,5 +196,4 @@ def _hmac256(secret, m):
 
 def _decrypt(key, iv, ciphertext):
     decryptor = AES.new(key=key, mode=AES.MODE_GCM, nonce=iv)
-    plaintext = decryptor.decrypt(ciphertext)
-    return plaintext
+    return decryptor.decrypt(ciphertext)
