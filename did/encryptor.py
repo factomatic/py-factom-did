@@ -145,16 +145,19 @@ def decrypt_keys_from_ui_store_file(file_path, password):
     """
 
     with open(file_path, 'r') as encrypted_file:
-        encrypted_file_content = encrypted_file.read()
-
         try:
-            encrypted_keys_obj = json.loads(encrypted_file_content)
+            encrypted_keys_obj = json.load(encrypted_file)
         except json.decoder.JSONDecodeError:
             raise ValueError('Invalid JSON file.')
 
         salt = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['salt'])
         iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
         encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
+
+        # Remove tag_length bits from the encrypted data to obtain the actual
+        # ciphertext
+        tag_length = int(encrypted_keys_obj['encryptionAlgo']['tagLength'])
+        ciphertext = encrypted_data[:-int(tag_length / 8)]
 
         key = PBKDF2(
             password, salt,
@@ -164,13 +167,8 @@ def decrypt_keys_from_ui_store_file(file_path, password):
         )
 
         try:
-            m = _decrypt(key, iv, encrypted_data)
-            decoded_store = m.decode('utf-8', 'backslashreplace')
-
-            # ToDo: check trailing characters
-            liq = decoded_store.rfind('"')
-            decrypted_keys = json.loads(json.loads(decoded_store[0:liq + 1]))
-            return decrypted_keys
+            m = _decrypt(key, iv, ciphertext)
+            return json.loads(m.decode('utf8'))
         except json.decoder.JSONDecodeError:
             raise ValueError('Invalid encrypted data or password.')
 
