@@ -78,12 +78,13 @@ def decrypt_keys_from_str(cipher_text_b64, password):
     return _decrypt_keys(salt, iv, ciphertext, password)
 
 
-def decrypt_keys_from_json(encrypted_keys_json, password):
+def decrypt_keys_from_json_str(encrypted_keys_json_str, password):
     """
-    Decrypts keys from JSON and password. The JSON must have a schema compatible
-    with the one produced by DID.export_encrypted_keys_as_json():
+    Decrypts keys from JSON string and password. The JSON string must have a
+    schema compatible with the one produced by
+    DID.export_encrypted_keys_as_json():
 
-    {
+    '{
         "encryptionAlgo": {
             "salt": ...,
             "iv": ...,
@@ -92,19 +93,19 @@ def decrypt_keys_from_json(encrypted_keys_json, password):
         },
         "data": ... (encrypted private keys),
         "did": ...
-    }
+    }'
 
     Parameters
     ----------
-    encrypted_keys_json: str
-        JSON containing encrypted keys data.
+    encrypted_keys_json_str: str
+        JSON string containing encrypted keys data.
     password: str
         A password used for the encryption of the keys.
 
     Returns
     -------
     list
-        A list of decrypted keys objects.
+        A list of decrypted key objects.
 
     Raises
     ------
@@ -112,23 +113,19 @@ def decrypt_keys_from_json(encrypted_keys_json, password):
         If the JSON or the password used for the encryption is invalid.
     """
     try:
-        encrypted_keys_obj = json.loads(encrypted_keys_json)
+        encrypted_keys_json = json.loads(encrypted_keys_json_str)
     except json.decoder.JSONDecodeError:
         raise ValueError('Invalid JSON file.')
 
-    salt = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['salt'])
-    iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
-    encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
-
-    tag_length = int(encrypted_keys_obj['encryptionAlgo']['tagLength'])
-    ciphertext = encrypted_data[:-int(tag_length / 8)]
-
-    return _decrypt_keys(salt, iv, ciphertext, password)
+    return _decrypt_keys_from_json(encrypted_keys_json, password)
 
 
-def decrypt_keys_from_file(file_path, password):
+def decrypt_keys_from_json_file(file_path, password):
     """
-    Decrypts keys from cipher text, password, salt and initial vector.
+    Decrypts keys from JSON file and password. The file must contain valid JSON
+    with a schema compatible with the one produced by
+    DID.export_encrypted_keys_as_json(). See decrypt_keys_from_json_str for
+    details.
 
     Parameters
     ----------
@@ -150,20 +147,22 @@ def decrypt_keys_from_file(file_path, password):
 
     with open(file_path, 'r') as encrypted_file:
         try:
-            encrypted_keys_obj = json.load(encrypted_file)
+            encrypted_keys_json = json.load(encrypted_file)
         except json.decoder.JSONDecodeError:
             raise ValueError('Invalid JSON file.')
 
-        salt = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['salt'])
-        iv = urlsafe_b64decode(encrypted_keys_obj['encryptionAlgo']['iv'])
-        encrypted_data = urlsafe_b64decode(encrypted_keys_obj['data'])
+    return _decrypt_keys_from_json(encrypted_keys_json, password)
 
-        # Remove tag_length bits from the encrypted data to obtain the actual
-        # ciphertext
-        tag_length = int(encrypted_keys_obj['encryptionAlgo']['tagLength'])
-        ciphertext = encrypted_data[:-int(tag_length / 8)]
 
-        return _decrypt_keys(salt, iv, ciphertext, password)
+def _decrypt_keys_from_json(encrypted_keys_json, password):
+    salt = urlsafe_b64decode(encrypted_keys_json['encryptionAlgo']['salt'])
+    iv = urlsafe_b64decode(encrypted_keys_json['encryptionAlgo']['iv'])
+    encrypted_data = urlsafe_b64decode(encrypted_keys_json['data'])
+
+    tag_length = int(encrypted_keys_json['encryptionAlgo']['tagLength'])
+    ciphertext = encrypted_data[:-int(tag_length / 8)]
+
+    return _decrypt_keys(salt, iv, ciphertext, password)
 
 
 def _decrypt_keys(salt, iv, ciphertext, password):
