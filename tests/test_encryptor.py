@@ -2,7 +2,7 @@ import os
 import pytest
 
 from did.did import DID
-from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_ui_store_file
+from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json, decrypt_keys_from_file
 
 
 @pytest.fixture
@@ -79,7 +79,7 @@ class TestEncryptor():
         with pytest.raises(KeyError):
             decrypt_keys_from_json(invalid_json, password)
 
-    def test_decrypt_keys_from_ui_store_file(self):
+    def test_decrypt_keys_from_file(self):
         file_path = os.path.join('tests', 'fixtures',
             'paper-did-UTC--2019-08-06T10_51_19.432Z.txt')
         password = '123qweASD!@#'
@@ -91,12 +91,12 @@ class TestEncryptor():
             }
         ]
 
-        decrypted_keys = decrypt_keys_from_ui_store_file(file_path, password)
+        decrypted_keys = decrypt_keys_from_file(file_path, password)
         assert expected_keys == decrypted_keys
 
-    def test_decrypt_keys_from_ui_store_file_with_invalid_password_throws_error(self):
+    def test_decrypt_keys_from_file_with_invalid_password_throws_error(self):
         file_path = os.path.join('tests', 'fixtures',
             'paper-did-UTC--2019-08-06T10_51_19.432Z.txt')
         invalid_password = 'qweASD!@#'
         with pytest.raises(ValueError):
-            decrypt_keys_from_ui_store_file(file_path, invalid_password)
+            decrypt_keys_from_file(file_path, invalid_password)
