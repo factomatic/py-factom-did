@@ -80,25 +80,23 @@ class TestEncryptor():
             decrypt_keys_from_json(invalid_json, password)
 
     def test_decrypt_keys_from_ui_store_file(self):
-        file_path = os.path.join('tests', 'fixtures', 'paper-did-UTC--2019-06-17T18_09_31.938Z.txt')
+        file_path = os.path.join('tests', 'fixtures',
+            'paper-did-UTC--2019-08-06T10_51_19.432Z.txt')
         password = '123qweASD!@#'
         expected_keys = [
             {
-                'alias': 'myfirstkey',
-                'type': 'Ed25519',
-                'privateKey': '3q1GGcMzEBXco2GiJKaH1bRzBuGcRWA5a2zgRPSgNzRcFWBfBzCh3Hi4kivHBTJ7NPmDtdskzQ1AL5f9vQKoMZ12'
-            },
-            {
-                'alias': 'myseckey',
-                'type': 'ECDSASecp256k1',
-                'privateKey': 'CJiZnpMLpAsdB5nu4FJUaiWKGs5PyCwuNNnHFAfuZFeJ'
-            }]
+                "alias": "defaultpubkey",
+                "type": "Ed25519",
+                "privateKey": "AjSQe96djVuNrh2izoFrwtPFcjL5XencKRYuArbRmJpqAZtEsbJhhYYmS5KdEmCd46hjJ3fGWuRb5jeEUKgPada"
+            }
+        ]
 
         decrypted_keys = decrypt_keys_from_ui_store_file(file_path, password)
         assert expected_keys == decrypted_keys
 
     def test_decrypt_keys_from_ui_store_file_with_invalid_password_throws_error(self):
-        file_path = os.path.join('tests', 'fixtures', 'paper-did-UTC--2019-06-17T18_09_31.938Z.txt')
+        file_path = os.path.join('tests', 'fixtures',
+            'paper-did-UTC--2019-08-06T10_51_19.432Z.txt')
         invalid_password = 'qweASD!@#'
         with pytest.raises(ValueError):
             decrypt_keys_from_ui_store_file(file_path, invalid_password)
