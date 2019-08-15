@@ -214,7 +214,7 @@ class DID:
 
         Raises
         ------
-            RuntimeException
+            RuntimeError
                 - If the chain cannot be created
         """
 
@@ -228,7 +228,7 @@ class DID:
             walletd.new_chain(factomd, entry_data['ext_ids'], entry_data['content'],
                               ec_address=ec_address)
         except FactomAPIError as e:
-            raise RuntimeException(
+            raise RuntimeError(
                 'Failed while trying to record DID data on-chain: {}'.format(e.data))
 
     def _get_did_document(self):
