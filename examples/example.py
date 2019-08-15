@@ -8,11 +8,11 @@ from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json_str, \
     decrypt_keys_from_json_file
 
 
+# NOTE: You must set an EC_ADDR environment variable, which points to a funded
+# EC address, in order to be able to record DIDs on-chain
 factomd = Factomd()
 walletd = FactomWalletd()
-fct_address = 'FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q'
-# ec_address = 'EC3VjuH17eACyP22WwxPcqcbnVkE8QSd1HJP7MXDJkgR3hvaPBhP'
-ec_address = 'EC3AZkzRPvw4wsHwjSgqkegK3Q9tUDndP1n4koQvvD6PATu7VXmv'
+ec_address = os.environ.get('EC_ADDR')
 
 
 def create_new_did():
