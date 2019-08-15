@@ -311,8 +311,8 @@ class DID:
         else:
             key_entry_object['purpose'] = list(key.purpose)
 
-            if key.priority_requirement is not None:
-                key_entry_object['priorityRequirement'] = key.priority_requirement
+        if key.priority_requirement is not None:
+            key_entry_object['priorityRequirement'] = key.priority_requirement
 
         return key_entry_object
 
