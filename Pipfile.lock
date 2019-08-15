@@ -70,11 +70,11 @@
         },
         "factom-api": {
             "hashes": [
-                "sha256:50f6292d83394b7bfe090e8abae4b911778d1357a30256d12b4419f7eeb0368e",
-                "sha256:f6c151db2f1a0e4bc78e2f57c1b672a05b8de75e6756b86d2a38f4db4f4e06c9"
+                "sha256:12729281b9b0549e0ea365dc94340f7ca10cd70853d960109bd8006d5d08c5a0",
+                "sha256:680c702fe109f7bfeb7c59f4d4a69c02c591fc81b82976a75dcaef6295dc89ff"
             ],
             "index": "pypi",
-            "version": "==1.0.0"
+            "version": "==1.0.1"
         },
         "idna": {
             "hashes": [

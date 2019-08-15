@@ -11,7 +11,9 @@ The library enables:
 * exporting public metadata to be recorded on Factom
 * encrypting the newly created keys
 
-You can find an example of the library workflow in the `examples/` directory.
+You can find an example of the library workflow in the `examples/` directory. In order to run the
+example, please note that it is necessary to create an environment variable called `EC_ADDR`, which
+contains a funded EC address to pay the fees for recording the DID on-chain.
 
 ## Build
 

@@ -5,6 +5,8 @@ import json
 import os
 import re
 
+from factom.exceptions import FactomAPIError
+
 from did.encryptor import encrypt_keys
 from did.enums import SignatureType, EntryType, PurposeType
 from did.keys import generate_key_pair
@@ -193,6 +195,44 @@ class DID:
             },
             'did': self.id
         })
+
+    def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
+        """
+        Attempts to record the DID document on-chain.
+
+        Parameters
+        ----------
+        factomd: obj
+            Factomd instance, instantiated from the Python factom-api package.
+        walletd: obj
+            Factom walletd instance, instantiated from the Python factom-api package.
+        ec_address: str
+            EC address used to pay for the chain & entry creation.
+        verbose: bool (optional)
+            If true, display the contents of the entry that will be recorded
+            on-chain. Default is False.
+
+        Raises
+        ------
+            RuntimeError
+                - If the chain cannot be created
+        """
+
+        from pprint import pprint
+
+        entry_data = self.export_entry_data()
+        if verbose:
+            pprint(entry_data)
+
+        # Encode the entry data
+        ext_ids = map(lambda x: x.encode('utf-8'), entry_data['ext_ids'])
+        content = entry_data['content'].encode('utf-8')
+
+        try:
+            walletd.new_chain(factomd, ext_ids, content, ec_address=ec_address)
+        except FactomAPIError as e:
+            raise RuntimeError(
+                'Failed while trying to record DID data on-chain: {}'.format(e.data))
 
     def _get_did_document(self):
         """
