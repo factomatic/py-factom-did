@@ -30,7 +30,8 @@ class DID:
         self.used_key_aliases = set()
         self.used_service_aliases = set()
 
-    def add_management_key(self, alias, priority, signature_type=SignatureType.EdDSA.value, controller=None):
+    def add_management_key(self, alias, priority, signature_type=SignatureType.EdDSA.value,
+                           controller=None, priority_requirement=None):
         """
         Creates a new management key for the DID.
 
@@ -39,23 +40,28 @@ class DID:
         alias: str
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
         priority: number
-            A positive integer showing the hierarchical level of the key. The key(s) with priority 0
+            A non-negative integer showing the hierarchical level of the key. The key(s) with priority 0
             overrides any key with priority greater than 0.
         signature_type: SignatureType, optional (default is EdDSA)
             Identifies the type of signature to be used when creating the key.
         controller: str, optional (default is None)
             An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
             the default value is used which is the current DID itself.
+        priority_requirement: number, optional (default is None)
+            A non-negative integer showing the minimum hierarchical level a key must have in order to remove this key.
         """
 
         if not controller:
             controller = self.id
 
-        self._validate_management_key_input_params(alias, priority, signature_type, controller)
+        self._validate_management_key_input_params(alias, priority,
+            signature_type, controller, priority_requirement)
 
         key_pair = generate_key_pair(signature_type)
         self.management_keys.append(ManagementKeyModel(alias, priority, signature_type, controller,
-                                                       key_pair.public_key, key_pair.private_key))
+                                                       key_pair.public_key,
+                                                       key_pair.private_key,
+                                                       priority_requirement))
 
     def add_did_key(self, alias, purpose, signature_type=SignatureType.EdDSA.value,
                     controller=None, priority_requirement=None):
@@ -74,7 +80,7 @@ class DID:
             An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
             the default value is used which is the current DID itself.
         priority_requirement: number, optional (default is None)
-            A positive integer showing the minimum hierarchical level a key must have in order to remove this key.
+            A non-negative integer showing the minimum hierarchical level a key must have in order to remove this key.
         """
 
         if not controller:
@@ -103,7 +109,7 @@ class DID:
             authentication, authorization, or interaction.
             The service endpoint must be a valid URL.
         priority_requirement: number, optional (default is None)
-            A positive integer showing the minimum hierarchical level a key must have in order to remove this service.
+            A non-negative integer showing the minimum hierarchical level a key must have in order to remove this service.
         """
 
         self._validate_service_input_params(alias, service_type, endpoint, priority_requirement)
@@ -305,8 +311,8 @@ class DID:
         else:
             key_entry_object['purpose'] = list(key.purpose)
 
-            if key.priority_requirement is not None:
-                key_entry_object['priorityRequirement'] = key.priority_requirement
+        if key.priority_requirement is not None:
+            key_entry_object['priorityRequirement'] = key.priority_requirement
 
         return key_entry_object
 
@@ -358,7 +364,8 @@ class DID:
 
         return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
 
-    def _validate_management_key_input_params(self, alias, priority, signature_type, controller):
+    def _validate_management_key_input_params(self, alias, priority,
+            signature_type, controller, priority_requirement=None):
         """
         Validates management key input parameters.
 
@@ -368,12 +375,14 @@ class DID:
         priority: number
         signature_type: SignatureType
         controller: str
+        priority_requirement: number
         """
 
         if priority < 0:
-            raise ValueError('Priority must be a positive integer.')
+            raise ValueError('Priority must be a non-negative integer.')
 
-        self._validate_key_input_params(alias, signature_type, controller)
+        self._validate_key_input_params(alias, signature_type, controller,
+            priority_requirement)
 
     def _validate_did_key_input_params(self, alias, purpose, signature_type, controller, priority_requirement):
         """
@@ -392,12 +401,11 @@ class DID:
             if purpose_type not in (PurposeType.PublicKey.value, PurposeType.AuthenticationKey.value):
                 raise ValueError('Purpose must contain only valid PurposeTypes.')
 
-        if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError('Priority requirement must be a positive integer.')
+        self._validate_key_input_params(alias, signature_type, controller,
+            priority_requirement)
 
-        self._validate_key_input_params(alias, signature_type, controller)
-
-    def _validate_key_input_params(self, alias, signature_type, controller):
+    def _validate_key_input_params(self, alias, signature_type, controller,
+                                   priority_requirement):
         """
         Validates key input parameters.
 
@@ -406,6 +414,7 @@ class DID:
         alias: str
         signature_type: SignatureType
         controller: str
+        priority_requirement: number
         """
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
@@ -422,6 +431,10 @@ class DID:
 
         if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
             raise ValueError('Controller must be a valid DID.')
+
+        if priority_requirement is not None and priority_requirement < 0:
+            raise ValueError('Priority requirement must be a non-negative integer.')
+
 
     def _validate_service_input_params(self, alias, service_type, endpoint, priority_requirement):
         """
@@ -451,7 +464,7 @@ class DID:
             raise ValueError('Endpoint must be a valid URL address starting with http:// or https://.')
 
         if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError('Priority requirement must be a positive integer.')
+            raise ValueError('Priority requirement must be a non-negative integer.')
 
     @staticmethod
     def _calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
