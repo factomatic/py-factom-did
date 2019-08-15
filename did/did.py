@@ -381,10 +381,8 @@ class DID:
         if priority < 0:
             raise ValueError('Priority must be a non-negative integer.')
 
-        if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError('Priority requirement must be a non-negative integer.')
-
-        self._validate_key_input_params(alias, signature_type, controller)
+        self._validate_key_input_params(alias, signature_type, controller,
+            priority_requirement)
 
     def _validate_did_key_input_params(self, alias, purpose, signature_type, controller, priority_requirement):
         """
@@ -403,12 +401,11 @@ class DID:
             if purpose_type not in (PurposeType.PublicKey.value, PurposeType.AuthenticationKey.value):
                 raise ValueError('Purpose must contain only valid PurposeTypes.')
 
-        if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError('Priority requirement must be a non-negative integer.')
+        self._validate_key_input_params(alias, signature_type, controller,
+            priority_requirement)
 
-        self._validate_key_input_params(alias, signature_type, controller)
-
-    def _validate_key_input_params(self, alias, signature_type, controller):
+    def _validate_key_input_params(self, alias, signature_type, controller,
+                                   priority_requirement):
         """
         Validates key input parameters.
 
@@ -417,6 +414,7 @@ class DID:
         alias: str
         signature_type: SignatureType
         controller: str
+        priority_requirement: number
         """
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
@@ -433,6 +431,10 @@ class DID:
 
         if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
             raise ValueError('Controller must be a valid DID.')
+
+        if priority_requirement is not None and priority_requirement < 0:
+            raise ValueError('Priority requirement must be a non-negative integer.')
+
 
     def _validate_service_input_params(self, alias, service_type, endpoint, priority_requirement):
         """
