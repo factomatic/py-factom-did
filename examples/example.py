@@ -11,7 +11,8 @@ from did.encryptor import decrypt_keys_from_str, decrypt_keys_from_json_str, \
 factomd = Factomd()
 walletd = FactomWalletd()
 fct_address = 'FA2jK2HcLnRdS94dEcU27rF3meoJfpUcZPSinpb7AwQvPRY6RL1Q'
-ec_address = 'EC3VjuH17eACyP22WwxPcqcbnVkE8QSd1HJP7MXDJkgR3hvaPBhP'
+# ec_address = 'EC3VjuH17eACyP22WwxPcqcbnVkE8QSd1HJP7MXDJkgR3hvaPBhP'
+ec_address = 'EC3AZkzRPvw4wsHwjSgqkegK3Q9tUDndP1n4koQvvD6PATu7VXmv'
 
 
 def create_new_did():
@@ -105,6 +106,4 @@ def decrypt_keys_from_file():
 
 
 if __name__ == '__main__':
-    # did_object = create_new_did()
-    # pprint(did_object.export_entry_data())
     record_did_on_chain()
