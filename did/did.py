@@ -224,9 +224,12 @@ class DID:
         if verbose:
             pprint(entry_data)
 
+        # Encode the entry data
+        ext_ids = map(lambda x: x.encode('utf-8'), entry_data['ext_ids'])
+        content = entry_data['content'].encode('utf-8')
+
         try:
-            walletd.new_chain(factomd, entry_data['ext_ids'], entry_data['content'],
-                              ec_address=ec_address)
+            walletd.new_chain(factomd, ext_ids, content, ec_address=ec_address)
         except FactomAPIError as e:
             raise RuntimeError(
                 'Failed while trying to record DID data on-chain: {}'.format(e.data))
