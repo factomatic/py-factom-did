@@ -12,12 +12,18 @@ from did.enums import SignatureType, EntryType, PurposeType
 from did.keys import generate_key_pair
 from did.models import ManagementKeyModel, DidKeyModel, ServiceModel
 
-__all__ = ['DID', 'SignatureType', 'PurposeType', 'ENTRY_SCHEMA_VERSION',
-    'DID_METHOD_SPEC_VERSION', 'DID_METHOD_NAME']
+__all__ = [
+    "DID",
+    "SignatureType",
+    "PurposeType",
+    "ENTRY_SCHEMA_VERSION",
+    "DID_METHOD_SPEC_VERSION",
+    "DID_METHOD_NAME",
+]
 
-ENTRY_SCHEMA_VERSION = '1.0.0'
-DID_METHOD_NAME = 'did:factom'
-DID_METHOD_SPEC_VERSION = '0.1.0'
+ENTRY_SCHEMA_VERSION = "1.0.0"
+DID_METHOD_NAME = "did:factom"
+DID_METHOD_SPEC_VERSION = "0.1.0"
 ENTRY_SIZE_LIMIT = 10275
 
 
@@ -30,8 +36,14 @@ class DID:
         self.used_key_aliases = set()
         self.used_service_aliases = set()
 
-    def add_management_key(self, alias, priority, signature_type=SignatureType.EdDSA.value,
-                           controller=None, priority_requirement=None):
+    def add_management_key(
+        self,
+        alias,
+        priority,
+        signature_type=SignatureType.EdDSA.value,
+        controller=None,
+        priority_requirement=None,
+    ):
         """
         Creates a new management key for the DID.
 
@@ -54,17 +66,31 @@ class DID:
         if not controller:
             controller = self.id
 
-        self._validate_management_key_input_params(alias, priority,
-            signature_type, controller, priority_requirement)
+        self._validate_management_key_input_params(
+            alias, priority, signature_type, controller, priority_requirement
+        )
 
         key_pair = generate_key_pair(signature_type)
-        self.management_keys.append(ManagementKeyModel(alias, priority, signature_type, controller,
-                                                       key_pair.public_key,
-                                                       key_pair.private_key,
-                                                       priority_requirement))
+        self.management_keys.append(
+            ManagementKeyModel(
+                alias,
+                priority,
+                signature_type,
+                controller,
+                key_pair.public_key,
+                key_pair.private_key,
+                priority_requirement,
+            )
+        )
 
-    def add_did_key(self, alias, purpose, signature_type=SignatureType.EdDSA.value,
-                    controller=None, priority_requirement=None):
+    def add_did_key(
+        self,
+        alias,
+        purpose,
+        signature_type=SignatureType.EdDSA.value,
+        controller=None,
+        priority_requirement=None,
+    ):
         """
         Creates a new DID key for the DID.
 
@@ -86,11 +112,22 @@ class DID:
         if not controller:
             controller = self.id
 
-        self._validate_did_key_input_params(alias, set(purpose), signature_type, controller, priority_requirement)
+        self._validate_did_key_input_params(
+            alias, set(purpose), signature_type, controller, priority_requirement
+        )
 
         key_pair = generate_key_pair(signature_type)
-        self.did_keys.append(DidKeyModel(alias, set(purpose), signature_type, controller,
-                                         key_pair.public_key, key_pair.private_key, priority_requirement))
+        self.did_keys.append(
+            DidKeyModel(
+                alias,
+                set(purpose),
+                signature_type,
+                controller,
+                key_pair.public_key,
+                key_pair.private_key,
+                priority_requirement,
+            )
+        )
 
     def add_service(self, alias, service_type, endpoint, priority_requirement=None):
         """
@@ -112,8 +149,12 @@ class DID:
             A non-negative integer showing the minimum hierarchical level a key must have in order to remove this service.
         """
 
-        self._validate_service_input_params(alias, service_type, endpoint, priority_requirement)
-        self.services.append(ServiceModel(alias, service_type, endpoint, priority_requirement))
+        self._validate_service_input_params(
+            alias, service_type, endpoint, priority_requirement
+        )
+        self.services.append(
+            ServiceModel(alias, service_type, endpoint, priority_requirement)
+        )
 
     def export_entry_data(self):
         """
@@ -135,25 +176,26 @@ class DID:
         management_keys = list(map(self._build_key_entry_object, self.management_keys))
 
         if len(management_keys) < 1:
-            raise ValueError('The DID must have at least one management key.')
-        if not any(map(lambda key: key['priority'] == 0, management_keys)):
-            raise ValueError('At least one management key must have priority 0.')
+            raise ValueError("The DID must have at least one management key.")
+        if not any(map(lambda key: key["priority"] == 0, management_keys)):
+            raise ValueError("At least one management key must have priority 0.")
 
         entry_content = json.dumps(self._get_did_document())
         entry_type = EntryType.Create.value
 
         entry_size = self._calculate_entry_size(
-            [self.nonce],
-            [entry_type, ENTRY_SCHEMA_VERSION],
-            entry_content)
+            [self.nonce], [entry_type, ENTRY_SCHEMA_VERSION], entry_content
+        )
 
         if entry_size > ENTRY_SIZE_LIMIT:
-            raise ValueError('You have exceeded the entry size limit! Please '
-                             'remove some of your keys or services.')
+            raise ValueError(
+                "You have exceeded the entry size limit! Please "
+                "remove some of your keys or services."
+            )
 
         return {
-            'ext_ids': [entry_type, ENTRY_SCHEMA_VERSION, self.nonce],
-            'content': entry_content
+            "ext_ids": [entry_type, ENTRY_SCHEMA_VERSION, self.nonce],
+            "content": entry_content,
         }
 
     def export_encrypted_keys_as_str(self, password):
@@ -172,8 +214,12 @@ class DID:
         """
 
         encryption_result = encrypt_keys(self.management_keys + self.did_keys, password)
-        cipher_text_b64 = urlsafe_b64encode(encryption_result['salt'] + encryption_result['iv'] + encryption_result['data'])
-        return str(cipher_text_b64, 'utf8')
+        cipher_text_b64 = urlsafe_b64encode(
+            encryption_result["salt"]
+            + encryption_result["iv"]
+            + encryption_result["data"]
+        )
+        return str(cipher_text_b64, "utf8")
 
     def export_encrypted_keys_as_json(self, password):
         """
@@ -191,16 +237,18 @@ class DID:
         """
 
         encryption_result = encrypt_keys(self.management_keys + self.did_keys, password)
-        return json.dumps({
-            'data': str(urlsafe_b64encode(encryption_result['data']), 'utf8'),
-            'encryptionAlgo': {
-                'name': 'AES-GCM',
-                'iv': str(urlsafe_b64encode(encryption_result['iv']), 'utf8'),
-                'salt': str(urlsafe_b64encode(encryption_result['salt']), 'utf8'),
-                'tagLength': 128
-            },
-            'did': self.id
-        })
+        return json.dumps(
+            {
+                "data": str(urlsafe_b64encode(encryption_result["data"]), "utf8"),
+                "encryptionAlgo": {
+                    "name": "AES-GCM",
+                    "iv": str(urlsafe_b64encode(encryption_result["iv"]), "utf8"),
+                    "salt": str(urlsafe_b64encode(encryption_result["salt"]), "utf8"),
+                    "tagLength": 128,
+                },
+                "did": self.id,
+            }
+        )
 
     def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
         """
@@ -231,14 +279,15 @@ class DID:
             pprint(entry_data)
 
         # Encode the entry data
-        ext_ids = map(lambda x: x.encode('utf-8'), entry_data['ext_ids'])
-        content = entry_data['content'].encode('utf-8')
+        ext_ids = map(lambda x: x.encode("utf-8"), entry_data["ext_ids"])
+        content = entry_data["content"].encode("utf-8")
 
         try:
             walletd.new_chain(factomd, ext_ids, content, ec_address=ec_address)
         except FactomAPIError as e:
             raise RuntimeError(
-                'Failed while trying to record DID data on-chain: {}'.format(e.data))
+                "Failed while trying to record DID data on-chain: {}".format(e.data)
+            )
 
     def _get_did_document(self):
         """
@@ -253,17 +302,17 @@ class DID:
         management_keys = list(map(self._build_key_entry_object, self.management_keys))
 
         did_document = {
-            'didMethodVersion': DID_METHOD_SPEC_VERSION,
-            'managementKey': management_keys
+            "didMethodVersion": DID_METHOD_SPEC_VERSION,
+            "managementKey": management_keys,
         }
 
         did_keys = list(map(self._build_key_entry_object, self.did_keys))
         if len(did_keys) > 0:
-            did_document['didKey'] = did_keys
+            did_document["didKey"] = did_keys
 
         services = list(map(self._build_service_entry_object, self.services))
         if len(services) > 0:
-            did_document['service'] = services
+            did_document["service"] = services
 
         return did_document
 
@@ -277,9 +326,11 @@ class DID:
             A DID Id.
         """
 
-        self.nonce = codecs.encode(os.urandom(32), 'hex').decode()
-        chain_id = self._calculate_chain_id([EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce])
-        did_id = '{}:{}'.format(DID_METHOD_NAME, chain_id)
+        self.nonce = codecs.encode(os.urandom(32), "hex").decode()
+        chain_id = self._calculate_chain_id(
+            [EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce]
+        )
+        did_id = "{}:{}".format(DID_METHOD_NAME, chain_id)
         return did_id
 
     def _build_key_entry_object(self, key):
@@ -297,22 +348,26 @@ class DID:
             A key object to include in the DID Document.
         """
 
-        public_key_property = 'publicKeyPem' if key.signature_type == SignatureType.RSA.value else 'publicKeyBase58'
+        public_key_property = (
+            "publicKeyPem"
+            if key.signature_type == SignatureType.RSA.value
+            else "publicKeyBase58"
+        )
 
         key_entry_object = {
-            'id': '{}#{}'.format(self.id, key.alias),
-            'type': '{}VerificationKey'.format(key.signature_type),
-            'controller': key.controller,
-            public_key_property: str(key.public_key, 'utf8')
+            "id": "{}#{}".format(self.id, key.alias),
+            "type": "{}VerificationKey".format(key.signature_type),
+            "controller": key.controller,
+            public_key_property: str(key.public_key, "utf8"),
         }
 
         if type(key) == ManagementKeyModel:
-            key_entry_object['priority'] = key.priority
+            key_entry_object["priority"] = key.priority
         else:
-            key_entry_object['purpose'] = list(key.purpose)
+            key_entry_object["purpose"] = list(key.purpose)
 
         if key.priority_requirement is not None:
-            key_entry_object['priorityRequirement'] = key.priority_requirement
+            key_entry_object["priorityRequirement"] = key.priority_requirement
 
         return key_entry_object
 
@@ -332,13 +387,13 @@ class DID:
         """
 
         service_entry_object = {
-            'id': '{}#{}'.format(self.id, service.alias),
-            'type': service.service_type,
-            'serviceEndpoint': service.endpoint
+            "id": "{}#{}".format(self.id, service.alias),
+            "type": service.service_type,
+            "serviceEndpoint": service.endpoint,
         }
 
         if service.priority_requirement is not None:
-            service_entry_object['priorityRequirement'] = service.priority_requirement
+            service_entry_object["priorityRequirement"] = service.priority_requirement
 
         return service_entry_object
 
@@ -358,14 +413,15 @@ class DID:
             A chain id.
         """
 
-        ext_ids_hash_bytes = bytearray(b'')
+        ext_ids_hash_bytes = bytearray(b"")
         for ext_id in ext_ids:
-            ext_ids_hash_bytes.extend(hashlib.sha256(bytes(ext_id, 'utf-8')).digest())
+            ext_ids_hash_bytes.extend(hashlib.sha256(bytes(ext_id, "utf-8")).digest())
 
         return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
 
-    def _validate_management_key_input_params(self, alias, priority,
-            signature_type, controller, priority_requirement=None):
+    def _validate_management_key_input_params(
+        self, alias, priority, signature_type, controller, priority_requirement=None
+    ):
         """
         Validates management key input parameters.
 
@@ -379,12 +435,15 @@ class DID:
         """
 
         if priority < 0:
-            raise ValueError('Priority must be a non-negative integer.')
+            raise ValueError("Priority must be a non-negative integer.")
 
-        self._validate_key_input_params(alias, signature_type, controller,
-            priority_requirement)
+        self._validate_key_input_params(
+            alias, signature_type, controller, priority_requirement
+        )
 
-    def _validate_did_key_input_params(self, alias, purpose, signature_type, controller, priority_requirement):
+    def _validate_did_key_input_params(
+        self, alias, purpose, signature_type, controller, priority_requirement
+    ):
         """
         Validates did key input parameters.
 
@@ -398,14 +457,19 @@ class DID:
         """
 
         for purpose_type in purpose:
-            if purpose_type not in (PurposeType.PublicKey.value, PurposeType.AuthenticationKey.value):
-                raise ValueError('Purpose must contain only valid PurposeTypes.')
+            if purpose_type not in (
+                PurposeType.PublicKey.value,
+                PurposeType.AuthenticationKey.value,
+            ):
+                raise ValueError("Purpose must contain only valid PurposeTypes.")
 
-        self._validate_key_input_params(alias, signature_type, controller,
-            priority_requirement)
+        self._validate_key_input_params(
+            alias, signature_type, controller, priority_requirement
+        )
 
-    def _validate_key_input_params(self, alias, signature_type, controller,
-                                   priority_requirement):
+    def _validate_key_input_params(
+        self, alias, signature_type, controller, priority_requirement
+    ):
         """
         Validates key input parameters.
 
@@ -418,25 +482,34 @@ class DID:
         """
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
-            raise ValueError('Alias must not be more than 32 characters long and must contain only lower-case '
-                             'letters, digits and hyphens.')
+            raise ValueError(
+                "Alias must not be more than 32 characters long and must contain only lower-case "
+                "letters, digits and hyphens."
+            )
 
         if alias in self.used_key_aliases:
-            raise ValueError('The given key alias "{}" has already been used.'.format(alias))
+            raise ValueError(
+                'The given key alias "{}" has already been used.'.format(alias)
+            )
 
         self.used_key_aliases.add(alias)
 
-        if signature_type not in (SignatureType.ECDSA.value, SignatureType.EdDSA.value, SignatureType.RSA.value):
-            raise ValueError('Type must be a valid signature type.')
+        if signature_type not in (
+            SignatureType.ECDSA.value,
+            SignatureType.EdDSA.value,
+            SignatureType.RSA.value,
+        ):
+            raise ValueError("Type must be a valid signature type.")
 
         if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
-            raise ValueError('Controller must be a valid DID.')
+            raise ValueError("Controller must be a valid DID.")
 
         if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError('Priority requirement must be a non-negative integer.')
+            raise ValueError("Priority requirement must be a non-negative integer.")
 
-
-    def _validate_service_input_params(self, alias, service_type, endpoint, priority_requirement):
+    def _validate_service_input_params(
+        self, alias, service_type, endpoint, priority_requirement
+    ):
         """
         Validates service input parameters.
 
@@ -449,22 +522,31 @@ class DID:
         """
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
-            raise ValueError('Alias must not be more than 32 characters long and must contain only lower-case '
-                             'letters, digits and hyphens.')
+            raise ValueError(
+                "Alias must not be more than 32 characters long and must contain only lower-case "
+                "letters, digits and hyphens."
+            )
 
         if alias in self.used_service_aliases:
-            raise ValueError('The given service alias "{}" has already been used.'.format(alias))
+            raise ValueError(
+                'The given service alias "{}" has already been used.'.format(alias)
+            )
 
         self.used_service_aliases.add(alias)
 
         if len(service_type) == 0:
-            raise ValueError('Type is required.')
+            raise ValueError("Type is required.")
 
-        if not re.match(r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$", endpoint):
-            raise ValueError('Endpoint must be a valid URL address starting with http:// or https://.')
+        if not re.match(
+            r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$",
+            endpoint,
+        ):
+            raise ValueError(
+                "Endpoint must be a valid URL address starting with http:// or https://."
+            )
 
         if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError('Priority requirement must be a non-negative integer.')
+            raise ValueError("Priority requirement must be a non-negative integer.")
 
     @staticmethod
     def _calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
@@ -485,13 +567,15 @@ class DID:
 
         total_entry_size = 0
         fixed_header_size = 35
-        total_entry_size += fixed_header_size + 2*len(hex_ext_ids) + 2*len(utf8_ext_ids)
+        total_entry_size += (
+            fixed_header_size + 2 * len(hex_ext_ids) + 2 * len(utf8_ext_ids)
+        )
 
         for ext_id in hex_ext_ids:
             total_entry_size += len(ext_id) / 2
 
         for ext_id in utf8_ext_ids:
-            total_entry_size += len(bytes(ext_id, 'utf-8'))
+            total_entry_size += len(bytes(ext_id, "utf-8"))
 
-        total_entry_size += len(bytes(content, 'utf-8'))
+        total_entry_size += len(bytes(content, "utf-8"))
         return total_entry_size
