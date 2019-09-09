@@ -4,6 +4,8 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pytest = "*"
+black = "*"
 
 [packages]
 pycryptodome = "*"
@@ -11,7 +13,9 @@ base58 = "*"
 ecdsa = "*"
 ed25519 = "*"
 factom-api = "*"
-pytest = "*"
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
