@@ -19,39 +19,28 @@ ec_address = os.environ.get("EC_ADDR")
 
 
 def create_new_did():
-    new_did = DID()
-
-    """Add new management key with default signature type and controller"""
+    # New management key with default signature type and controller
     management_key_1_alias = "my-first-management-key"
     management_key_1_priority = 0
-    new_did.add_management_key(management_key_1_alias, management_key_1_priority)
 
-    """Add new management key with specified signature type and controller"""
+    # New management key with specified signature type and controller
     management_key_2_alias = "my-second-management-key"
     management_key_2_priority = 2
     management_key_2_signature_type = SignatureType.ECDSA.value
     management_key_2_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
         DID_METHOD_NAME
     )
-    new_did.add_management_key(
-        management_key_2_alias,
-        management_key_2_priority,
-        management_key_2_signature_type,
-        management_key_2_controller,
-    )
 
-    """Add new public key with default signature type and controller"""
+    # New public key with default signature type and controller
     did_key_1_alias = "my-did-key-1"
     did_key_1_purpose = [PurposeType.PublicKey.value]
-    new_did.add_did_key(did_key_1_alias, did_key_1_purpose)
 
-    """Add new authentication key with specified signature type"""
+    # New authentication key with specified signature type
     did_key_2_alias = "my-did-key-2"
     did_key_2_purpose = [PurposeType.AuthenticationKey.value]
     did_key_2_signature_type = SignatureType.RSA.value
-    new_did.add_did_key(did_key_2_alias, did_key_2_purpose, did_key_2_signature_type)
 
-    """Add new both public and authentication key with specified signature type, controller and priority requirement"""
+    # New public and authentication key with specified signature type, controller and priority requirement
     did_key_3_alias = "my-did-key-3"
     did_key_3_purpose = [
         PurposeType.PublicKey.value,
@@ -62,19 +51,32 @@ def create_new_did():
         DID_METHOD_NAME
     )
     did_key_3_priority_requirement = 2
-    new_did.add_did_key(
-        did_key_3_alias,
-        did_key_3_purpose,
-        did_key_3_signature_type,
-        did_key_3_controller,
-        did_key_3_priority_requirement,
-    )
 
-    """Add new service"""
+    # New service
     service_alias = "my-photo-service"
     service_type = "PhotoStreamService"
     service_endpoint = "https://myphoto.com"
-    new_did.add_service(service_alias, service_type, service_endpoint)
+
+    new_did = (
+        DID()
+        .management_key(management_key_1_alias, management_key_1_priority)
+        .management_key(
+            management_key_2_alias,
+            management_key_2_priority,
+            management_key_2_signature_type,
+            management_key_2_controller,
+        )
+        .did_key(did_key_1_alias, did_key_1_purpose)
+        .did_key(did_key_2_alias, did_key_2_purpose, did_key_2_signature_type)
+        .did_key(
+            did_key_3_alias,
+            did_key_3_purpose,
+            did_key_3_signature_type,
+            did_key_3_controller,
+            did_key_3_priority_requirement,
+        )
+        .service(service_alias, service_type, service_endpoint)
+    )
 
     return new_did
 

@@ -36,7 +36,7 @@ class DID:
         self.used_key_aliases = set()
         self.used_service_aliases = set()
 
-    def add_management_key(
+    def management_key(
         self,
         alias,
         priority,
@@ -83,7 +83,9 @@ class DID:
             )
         )
 
-    def add_did_key(
+        return self
+
+    def did_key(
         self,
         alias,
         purpose,
@@ -129,7 +131,9 @@ class DID:
             )
         )
 
-    def add_service(self, alias, service_type, endpoint, priority_requirement=None):
+        return self
+
+    def service(self, alias, service_type, endpoint, priority_requirement=None):
         """
         Adds a new service to the DID Document.
 
@@ -155,6 +159,8 @@ class DID:
         self.services.append(
             ServiceModel(alias, service_type, endpoint, priority_requirement)
         )
+
+        return self
 
     def export_entry_data(self):
         """

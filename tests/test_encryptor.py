@@ -16,7 +16,7 @@ def did():
 
 class TestEncryptor:
     def test_encrypt_as_str_and_decrypt(self, did):
-        did.add_management_key("management-key", 1)
+        did.management_key("management-key", 1)
         generated_management_key = did.management_keys[0]
 
         password = "123456"
@@ -34,7 +34,7 @@ class TestEncryptor:
         )
 
     def test_encrypt_as_str_and_decrypt_with_invalid_password_throws_error(self, did):
-        did.add_management_key("management-key", 1)
+        did.management_key("management-key", 1)
 
         password = "123456"
         encrypted_keys_cipher_b64 = did.export_encrypted_keys_as_str(password)
@@ -46,7 +46,7 @@ class TestEncryptor:
     def test_encrypt_as_str_and_decrypt_with_invalid_cipher_text_throws_error(
         self, did
     ):
-        did.add_management_key("management-key", 1)
+        did.management_key("management-key", 1)
 
         password = "123456"
         encrypted_keys_cipher_b64 = did.export_encrypted_keys_as_str(password)
@@ -55,7 +55,7 @@ class TestEncryptor:
             decrypt_keys_from_str(encrypted_keys_cipher_b64[:24], password)
 
     def test_encrypt_as_json_and_decrypt(self, did):
-        did.add_management_key("management-key", 1)
+        did.management_key("management-key", 1)
         generated_management_key = did.management_keys[0]
 
         password = "123456"
@@ -73,7 +73,7 @@ class TestEncryptor:
         )
 
     def test_encrypt_as_json_and_decrypt_with_invalid_password_throws_error(self, did):
-        did.add_management_key("management-key", 1)
+        did.management_key("management-key", 1)
 
         password = "123456"
         encrypted_keys_json = did.export_encrypted_keys_as_json(password)
