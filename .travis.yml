@@ -8,6 +8,8 @@ matrix:
   sudo: true
 install:
 - pip install pipenv
-- pipenv install
+- pipenv install -d --pre
 script:
-- pytest
+- pytest --cov=./did/
+after_success:
+- coveralls
