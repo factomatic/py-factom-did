@@ -11,7 +11,6 @@ CLASSIFIERS = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
-    "Programming Language :: Python :: 3.5",
     "Programming Language :: Python :: 3.6",
     "Programming Language :: Python :: 3.7",
     "Topic :: Internet :: WWW/HTTP",
@@ -42,5 +41,5 @@ setup(
         "pycryptodome>=3.9.0",
     ],
     url="https://github.com/factomatic/py-factom-did",
-    python_requires=">=3.5",
+    python_requires=">=3.6",
 )
