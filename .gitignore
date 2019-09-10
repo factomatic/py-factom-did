@@ -1,5 +1,6 @@
 venv 
 .idea
+.coverage
 __pycache__
 build/
 dist/
