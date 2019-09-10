@@ -1,3 +1,7 @@
 venv 
 .idea
+.coverage
 __pycache__
+build/
+dist/
+py_factom_did.egg-info/

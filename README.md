@@ -1,3 +1,8 @@
+[![Build Status](https://travis-ci.org/factomatic/py-factom-did.svg?branch=master)](https://travis-ci.org/factomatic/py-factom-did)
+[![Coverage Status](https://coveralls.io/repos/github/factomatic/py-factom-did/badge.svg?branch=prepare-for-release)](https://coveralls.io/github/factomatic/py-factom-did?branch=prepare-for-release)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
+
 # py-factom-did
 
 py-factom-did is a Python library, allowing the creation of a Decentralized Identifier (DID) and
@@ -12,8 +17,16 @@ The library enables:
 * encrypting the newly created keys
 
 You can find an example of the library workflow in the `examples/` directory. In order to run the
-example, please note that it is necessary to create an environment variable called `EC_ADDR`, which
-contains a funded EC address to pay the fees for recording the DID on-chain.
+example, please note that it is necessary to:
+
+* have local instances of `factomd` and `factom-walletd` running
+* create an environment variable called `EC_ADDR`, which contains a funded EC
+address to pay the fees for recording the DID on-chain
+
+## Installation
+```
+pip install py-factom-did
+```
 
 ## Build
 
@@ -21,26 +34,26 @@ contains a funded EC address to pay the fees for recording the DID on-chain.
 
 * Create the virtual environment and install the dependencies:
 ```
-	pipenv install
+pipenv install
 ```
 
 or
 ```
-    pipenv install --pre -d
+pipenv install --pre -d
 ```
 to install both the default and development dependencies
 
 * Activate the virtual environment:
 ```
-	pipenv shell
+pipenv shell
 ```
 
 * Execute the tests:
 ```
-	pytest
+pytest
 ```
 
 * Execute the example:
 ```
-	python -m examples.example
+python -m examples.example
 ```

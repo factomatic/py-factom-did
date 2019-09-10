@@ -8,8 +8,8 @@ import os
 __all__ = [
     "encrypt_keys",
     "decrypt_keys_from_str",
-    "decrypt_keys_from_json",
-    "decrypt_keys_from_ui_store_file",
+    "decrypt_keys_from_json_str",
+    "decrypt_keys_from_json_file",
 ]
 
 

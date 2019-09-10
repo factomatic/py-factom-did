@@ -34,7 +34,7 @@ class TestManagementKeys:
     def test_add_management_keys(self, did):
         management_key_1_alias = "management-key-1"
         management_key_1_priority = 1
-        did.add_management_key(management_key_1_alias, management_key_1_priority)
+        did.management_key(management_key_1_alias, management_key_1_priority)
         generated_management_key_1 = did.management_keys[0]
 
         assert management_key_1_alias == generated_management_key_1.alias
@@ -51,7 +51,7 @@ class TestManagementKeys:
             DID_METHOD_NAME
         )
 
-        did.add_management_key(
+        did.management_key(
             management_key_2_alias,
             management_key_2_priority,
             management_key_2_signature_type,
@@ -72,7 +72,7 @@ class TestManagementKeys:
         management_key_3_priority = 3
         management_key_3_signature_type = SignatureType.RSA.value
 
-        did.add_management_key(
+        did.management_key(
             management_key_3_alias,
             management_key_3_priority,
             management_key_3_signature_type,
@@ -93,28 +93,26 @@ class TestManagementKeys:
         test_cases = ["myManagementKey", "my-m@nagement-key", "my_management_key"]
         for alias in test_cases:
             with pytest.raises(ValueError):
-                did.add_management_key(alias, 1)
+                did.management_key(alias, 1)
 
     def test_invalid_priority_throws_exception(self, did):
         test_cases = [-1, -2]
         for priority in test_cases:
             management_key_alias = "management-key-{}".format(str(priority))
             with pytest.raises(ValueError):
-                did.add_management_key(management_key_alias, priority)
+                did.management_key(management_key_alias, priority)
 
     def test_used_alias_throws_exception(self, did):
         management_key_alias = "management-key-1"
-        did.add_management_key(management_key_alias, 1)
+        did.management_key(management_key_alias, 1)
         with pytest.raises(ValueError):
-            did.add_management_key(management_key_alias, 1)
+            did.management_key(management_key_alias, 1)
 
     def test_invalid_signature_type_throws_exception(self, did):
         management_key_alias = "management-key"
         management_key_signature_type = "invalid_signature_type"
         with pytest.raises(ValueError):
-            did.add_management_key(
-                management_key_alias, 1, management_key_signature_type
-            )
+            did.management_key(management_key_alias, 1, management_key_signature_type)
 
     def test_invalid_controller_throws_exception(self, did):
         test_cases = [
@@ -138,14 +136,14 @@ class TestManagementKeys:
 
         for alias, controller in test_cases:
             with pytest.raises(ValueError):
-                did.add_management_key(alias, 1, SignatureType.EdDSA.value, controller)
+                did.management_key(alias, 1, SignatureType.EdDSA.value, controller)
 
 
 class DidKeysTestCase:
     def test_add_did_keys(self, did):
         did_key_1_alias = "did-key-1"
         did_key_1_purpose = [PurposeType.PublicKey.value]
-        did.add_did_key(did_key_1_alias, did_key_1_purpose)
+        did.did_key(did_key_1_alias, did_key_1_purpose)
         generated_did_key_1 = did.did_keys[0]
 
         assert did_key_1_alias == generated_did_key_1.alias
@@ -164,7 +162,7 @@ class DidKeysTestCase:
             DID_METHOD_NAME
         )
         did_key_2_priority_requirement = 1
-        did.add_did_key(
+        did.did_key(
             did_key_2_alias,
             did_key_2_purpose,
             did_key_2_signature_type,
@@ -186,7 +184,7 @@ class DidKeysTestCase:
         test_cases = ["myDidKey", "my-d!d-key", "my_did_key"]
         for alias in test_cases:
             with pytest.raises(ValueError):
-                did.add_did_key(alias, [PurposeType.PublicKey.value])
+                did.did_key(alias, [PurposeType.PublicKey.value])
 
     def test_invalid_purpose_type_throws_exception(self):
         did_key_alias = "did-key"
@@ -248,7 +246,7 @@ class TestService:
         service_1_alias = "photo-service"
         service_1_type = "PhotoStreamService"
         service_1_endpoint = "https://myphoto.com"
-        did.add_service(service_1_alias, service_1_type, service_1_endpoint)
+        did.service(service_1_alias, service_1_type, service_1_endpoint)
         generated_service_1 = did.services[0]
 
         assert service_1_alias == generated_service_1.alias
@@ -260,7 +258,7 @@ class TestService:
         service_2_type = "AuthenticationService"
         service_2_endpoint = "https://authenticateme.com"
         service_2_priority_requirement = 2
-        did.add_service(
+        did.service(
             service_2_alias,
             service_2_type,
             service_2_endpoint,
@@ -282,22 +280,22 @@ class TestService:
         test_cases = ["myPhotoService", "my-ph@to-service", "my_photo_service"]
         for alias in test_cases:
             with pytest.raises(ValueError):
-                did.add_service(alias, service_type, service_endpoint)
+                did.service(alias, service_type, service_endpoint)
 
     def test_used_alias_throws_exception(self, did):
         service_alias = "my-photo-service"
         service_type = "PhotoStreamService"
         service_endpoint = "https://myphoto.com"
-        did.add_service(service_alias, service_type, service_endpoint)
+        did.service(service_alias, service_type, service_endpoint)
         with pytest.raises(ValueError):
-            did.add_service(service_alias, service_type, service_endpoint)
+            did.service(service_alias, service_type, service_endpoint)
 
     def test_empty_service_type_throws_exception(self, did):
         service_alias = "my-photo-service"
         service_type = ""
         service_endpoint = "https://myphoto.com"
         with pytest.raises(ValueError):
-            did.add_service(service_alias, service_type, service_endpoint)
+            did.service(service_alias, service_type, service_endpoint)
 
     def test_invalid_endpoint_throws_exception(self, did):
         service_type = "PhotoStreamService"
@@ -308,7 +306,7 @@ class TestService:
 
         for alias, endpoint in test_cases:
             with pytest.raises(ValueError):
-                did.add_service(alias, service_type, endpoint)
+                did.service(alias, service_type, endpoint)
 
     def test_invalid_priority_requirement_throws_exception(self, did):
         service_type = "PhotoStreamService"
@@ -317,14 +315,14 @@ class TestService:
         for priority_requirement in test_cases:
             service_alias = "service-{}".format(str(priority_requirement))
             with pytest.raises(ValueError):
-                did.add_service(
+                did.service(
                     service_alias, service_type, service_endpoint, priority_requirement
                 )
 
 
 class TestExportEntryData:
     def test_export_entry_data_returns_correct_ext_ids(self, did):
-        did.add_management_key("my-management-key", 0)
+        did.management_key("my-management-key", 0)
         entry_data = did.export_entry_data()
 
         ext_ids = entry_data["ext_ids"]
@@ -335,7 +333,7 @@ class TestExportEntryData:
     def test_export_entry_data_with_management_key(self, did):
         key_alias = "my-management-key"
         key_priority = 0
-        did.add_management_key(key_alias, key_priority)
+        did.management_key(key_alias, key_priority)
         entry_data = did.export_entry_data()
 
         content = json.loads(entry_data["content"])
@@ -373,16 +371,16 @@ class TestExportEntryData:
         service_type = "PhotoStreamService"
         service_endpoint = "https://myphoto.com"
         service_priority_requirement = 2
-        did.add_management_key("my-management-key-1", 0)
-        did.add_management_key("my-management-key-2", 2)
-        did.add_did_key(
+        did.management_key("my-management-key-1", 0)
+        did.management_key("my-management-key-2", 2)
+        did.did_key(
             did_key_alias,
             did_key_purpose,
             did_key_signature_type,
             did_key_controller,
             did_key_priority_requirement,
         )
-        did.add_service(
+        did.service(
             service_alias, service_type, service_endpoint, service_priority_requirement
         )
         entry_data = did.export_entry_data()
@@ -411,7 +409,7 @@ class TestExportEntryData:
 
     def test_exceed_entry_size_throws_error(self, did):
         for x in range(0, 35):
-            did.add_management_key("management-key-{}".format(x), 0)
+            did.management_key("management-key-{}".format(x), 0)
 
         with pytest.raises(ValueError):
             did.export_entry_data()
