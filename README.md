@@ -24,6 +24,12 @@ contains a funded EC address to pay the fees for recording the DID on-chain.
 	pipenv install
 ```
 
+or
+```
+    pipenv install --pre -d
+```
+to install both the default and development dependencies
+
 * Activate the virtual environment:
 ```
 	pipenv shell
