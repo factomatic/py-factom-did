@@ -1,5 +1,5 @@
 [![Build Status](https://travis-ci.org/factomatic/py-factom-did.svg?branch=master)](https://travis-ci.org/factomatic/py-factom-did)
-[![Coverage Status](https://coveralls.io/repos/github/factomatic/py-factom-did/badge.svg?branch=prepare-for-release)](https://coveralls.io/github/factomatic/py-factom-did?branch=prepare-for-release)
+[![Coverage Status](https://coveralls.io/repos/github/factomatic/py-factom-did/badge.svg?branch=master)](https://coveralls.io/github/factomatic/py-factom-did?branch=master)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/ambv/black)
 
