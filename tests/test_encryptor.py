@@ -97,23 +97,24 @@ class TestEncryptor:
 
     def test_decrypt_keys_from_file(self):
         file_path = os.path.join(
-            "tests", "fixtures", "paper-did-UTC--2019-08-06T10_51_19.432Z.txt"
+            "tests", "fixtures", "paper-did-UTC--2019-09-11T07_42_16.244Z.txt"
         )
         password = "123qweASD!@#"
-        expected_keys = [
-            {
-                "alias": "defaultpubkey",
-                "type": "Ed25519",
-                "privateKey": "AjSQe96djVuNrh2izoFrwtPFcjL5XencKRYuArbRmJpqAZtEsbJhhYYmS5KdEmCd46hjJ3fGWuRb5jeEUKgPada",
-            }
-        ]
+        expected_keys = {
+            "didKeys": {
+                "default-public-key": "5iJZMRxzYqBHUF1sBz4qP4uLvDrAGuBVG3FKWfT9oUF5nqy9vdQY3tbPt3KRR1WJy3FFgLw11kxVoZqV8fh8jTM7"
+            },
+            "managementKeys": {
+                "default-management-key": "CZ7sxv8WsXaXCJM673FGbxTV2PzXPWU5DjbdS7C78rf8LxkDcPzAj8CSp1pNDmcLiNgNiPP1BK7ex3pLZyccTCL"
+            },
+        }
 
         decrypted_keys = decrypt_keys_from_json_file(file_path, password)
         assert expected_keys == decrypted_keys
 
     def test_decrypt_keys_from_file_with_invalid_password_throws_error(self):
         file_path = os.path.join(
-            "tests", "fixtures", "paper-did-UTC--2019-08-06T10_51_19.432Z.txt"
+            "tests", "fixtures", "paper-did-UTC--2019-09-11T07_42_16.244Z.txt"
         )
         invalid_password = "qweASD!@#"
         with pytest.raises(ValueError):
