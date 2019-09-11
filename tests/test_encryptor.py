@@ -22,15 +22,13 @@ class TestEncryptor:
         password = "123456"
         encrypted_keys_cipher_b64 = did.export_encrypted_keys_as_str(password)
         decrypted_keys = decrypt_keys_from_str(encrypted_keys_cipher_b64, password)
-        decrypted_management_key = decrypted_keys[0]
+        decrypted_management_keys = decrypted_keys.get("managementKeys")
+        decrypted_management_key_alias = list(decrypted_management_keys.keys())[0]
 
-        assert generated_management_key.alias == decrypted_management_key["alias"]
-        assert (
-            generated_management_key.signature_type == decrypted_management_key["type"]
-        )
+        assert generated_management_key.alias == decrypted_management_key_alias
         assert (
             str(generated_management_key.private_key, "utf8")
-            == decrypted_management_key["privateKey"]
+            == decrypted_management_keys[decrypted_management_key_alias]
         )
 
     def test_encrypt_as_str_and_decrypt_with_invalid_password_throws_error(self, did):
@@ -61,15 +59,13 @@ class TestEncryptor:
         password = "123456"
         encrypted_keys_json = did.export_encrypted_keys_as_json(password)
         decrypted_keys = decrypt_keys_from_json_str(encrypted_keys_json, password)
-        decrypted_management_key = decrypted_keys[0]
+        decrypted_management_keys = decrypted_keys.get("managementKeys")
+        decrypted_management_key_alias = list(decrypted_management_keys.keys())[0]
 
-        assert generated_management_key.alias == decrypted_management_key["alias"]
-        assert (
-            generated_management_key.signature_type == decrypted_management_key["type"]
-        )
+        assert generated_management_key.alias == decrypted_management_key_alias
         assert (
             str(generated_management_key.private_key, "utf8")
-            == decrypted_management_key["privateKey"]
+            == decrypted_management_keys[decrypted_management_key_alias]
         )
 
     def test_encrypt_as_json_and_decrypt_with_invalid_password_throws_error(self, did):
