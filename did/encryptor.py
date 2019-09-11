@@ -13,14 +13,16 @@ __all__ = [
 ]
 
 
-def encrypt_keys(keys, password):
+def encrypt_keys(management_keys, did_keys, password):
     """
     Encrypts keys with a password.
 
     Parameters
     ----------
-    keys: KeyModel[]
-        A list of keys (management or did) to be encrypted.
+    management_keys: ManagementKeyModel[]
+        A list of management keys to be encrypted.
+    did_keys: DidKeyModel[]
+        A list of did keys to be encrypted.
     password: str
         A password to use for the encryption of the keys.
 
@@ -30,16 +32,13 @@ def encrypt_keys(keys, password):
         An object containing salt, initial vector, tag and encrypted data.
     """
 
-    keys_data = list(
-        map(
-            lambda k: {
-                "alias": k.alias,
-                "type": k.signature_type,
-                "privateKey": str(k.private_key, "utf8"),
-            },
-            keys,
-        )
-    )
+    management_keys_dict = {
+        k.alias: str(k.private_key, "utf8") for k in management_keys
+    }
+
+    did_keys_dict = {k.alias: str(k.private_key, "utf8") for k in did_keys}
+
+    keys_data = {"managementKeys": management_keys_dict, "didKeys": did_keys_dict}
 
     data = bytes(json.dumps(keys_data), "utf8")
 
@@ -68,8 +67,8 @@ def decrypt_keys_from_str(cipher_text_b64, password, encryption_algo="AES-GCM"):
 
     Returns
     -------
-    list
-        A list of decrypted keys objects.
+    obj
+        An object containing dictionaries of decrypted management and did keys.
 
     Raises
     ------
@@ -111,8 +110,8 @@ def decrypt_keys_from_json_str(encrypted_keys_json_str, password):
 
     Returns
     -------
-    list
-        A list of decrypted key objects.
+    obj
+        An object containing dictionaries of decrypted management and did keys.
 
     Raises
     ------
@@ -143,8 +142,8 @@ def decrypt_keys_from_json_file(file_path, password):
 
     Returns
     -------
-    list
-        A list of decrypted keys objects.
+    obj
+        An object containing dictionaries of decrypted management and did keys.
 
     Raises
     ------

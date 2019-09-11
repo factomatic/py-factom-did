@@ -219,7 +219,7 @@ class DID:
             Encrypted keys cipher text.
         """
 
-        encryption_result = encrypt_keys(self.management_keys + self.did_keys, password)
+        encryption_result = encrypt_keys(self.management_keys, self.did_keys, password)
         cipher_text_b64 = urlsafe_b64encode(
             encryption_result["salt"]
             + encryption_result["iv"]
@@ -242,7 +242,7 @@ class DID:
             Encrypted keys JSON.
         """
 
-        encryption_result = encrypt_keys(self.management_keys + self.did_keys, password)
+        encryption_result = encrypt_keys(self.management_keys, self.did_keys, password)
         return json.dumps(
             {
                 "data": str(urlsafe_b64encode(encryption_result["data"]), "utf8"),
