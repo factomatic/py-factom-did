@@ -100,7 +100,15 @@ def encrypt_keys_as_str_and_decrypt():
         "-----------------------------------Decrypted---------------------------------------"
     )
     pprint(decrypted_keys)
-    pprint(decrypted_keys[0]["alias"])
+
+    decrypted_management_keys = decrypted_keys.get("managementKeys")
+    first_management_key_alias = list(decrypted_management_keys.keys())[0]
+    first_management_key_private_key = decrypted_management_keys[
+        first_management_key_alias
+    ]
+    print(
+        "{} -> {}".format(first_management_key_alias, first_management_key_private_key)
+    )
 
 
 def encrypt_keys_as_json_and_decrypt():
@@ -116,7 +124,6 @@ def encrypt_keys_as_json_and_decrypt():
         "-----------------------------------Decrypted---------------------------------------"
     )
     pprint(decrypted_keys)
-    pprint(decrypted_keys[0]["alias"])
 
 
 def decrypt_keys_from_file():
