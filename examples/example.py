@@ -125,11 +125,10 @@ def decrypt_keys_from_file():
     DID.export_encrypted_keys_as_json()
     """
 
-    file_path = os.path.join("examples", "paper-did-UTC--2019-08-06T10_51_19.432Z.txt")
+    file_path = os.path.join("examples", "paper-did-UTC--2019-09-11T07_42_16.244Z.txt")
     password = "123qweASD!@#"
     decrypted_keys = decrypt_keys_from_json_file(file_path, password)
     pprint(decrypted_keys)
-    pprint(decrypted_keys[0]["privateKey"])
 
 
 if __name__ == "__main__":
