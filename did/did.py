@@ -6,24 +6,13 @@ import os
 
 from factom.exceptions import FactomAPIError
 
+from did.constants import *
 from did.encryptor import encrypt_keys
 from did.enums import SignatureType, EntryType, PurposeType
 from did.keys import ManagementKey, DIDKey
 from did.service import Service
 
-__all__ = [
-    "DID",
-    "SignatureType",
-    "PurposeType",
-    "ENTRY_SCHEMA_VERSION",
-    "DID_METHOD_SPEC_VERSION",
-    "DID_METHOD_NAME",
-]
-
-ENTRY_SCHEMA_VERSION = "1.0.0"
-DID_METHOD_NAME = "did:factom"
-DID_METHOD_SPEC_VERSION = "0.2.0"
-ENTRY_SIZE_LIMIT = 10275
+__all__ = ["DID", "SignatureType", "PurposeType"]
 
 
 class DID:

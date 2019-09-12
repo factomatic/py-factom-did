@@ -5,7 +5,7 @@ from Crypto.PublicKey import RSA
 from ecdsa import SigningKey, SECP256k1
 import ed25519
 
-from did.did import DID_METHOD_NAME
+from did.constants import DID_METHOD_NAME
 from did.enums import PurposeType, SignatureType
 
 __all__ = ["AbstractDIDKey", "ManagementKey", "DIDKey"]
