@@ -57,3 +57,6 @@ pytest
 ```
 python -m examples.example
 ```
+
+## Documentation
+API documentation of the library is available [here](https://py-factom-did.readthedocs.io/en/stable/)

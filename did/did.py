@@ -51,15 +51,15 @@ class DID:
         ----------
         alias: str
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
-        priority: number
+        priority: int
             A non-negative integer showing the hierarchical level of the key. The key(s) with priority 0
             overrides any key with priority greater than 0.
-        signature_type: SignatureType, optional (default is EdDSA)
+        signature_type: SignatureType, optional
             Identifies the type of signature to be used when creating the key.
-        controller: str, optional (default is None)
+        controller: str, optional
             An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
             the default value is used which is the current DID itself.
-        priority_requirement: number, optional (default is None)
+        priority_requirement: int, optional
             A non-negative integer showing the minimum hierarchical level a key must have in order to remove this key.
         """
 
@@ -102,12 +102,12 @@ class DID:
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
         purpose: PurposeType[]
             A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
-        signature_type: SignatureType, optional (default is EdDSA)
+        signature_type: SignatureType, optional
             Identifies the type of signature to be used when creating the key.
-        controller: str, optional (default is None)
+        controller: str, optional
             An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
             the default value is used which is the current DID itself.
-        priority_requirement: number, optional (default is None)
+        priority_requirement: int, optional
             A non-negative integer showing the minimum hierarchical level a key must have in order to remove this key.
         """
 
@@ -149,7 +149,7 @@ class DID:
             including decentralized identity management services for further discovery,
             authentication, authorization, or interaction.
             The service endpoint must be a valid URL.
-        priority_requirement: number, optional (default is None)
+        priority_requirement: int, optional
             A non-negative integer showing the minimum hierarchical level a key must have in order to remove this service.
         """
 
@@ -174,9 +174,9 @@ class DID:
         Raises
         ------
         ValueError
-            - If there are no management keys.
-            - If there is no management key with priority 0.
-            - If the entry size exceeds the entry size limit.
+            If there are no management keys.
+            If there is no management key with priority 0.
+            If the entry size exceeds the entry size limit.
         """
 
         management_keys = list(map(self._build_key_entry_object, self.management_keys))
@@ -268,14 +268,14 @@ class DID:
             Factom walletd instance, instantiated from the Python factom-api package.
         ec_address: str
             EC address used to pay for the chain & entry creation.
-        verbose: bool (optional)
+        verbose: bool, optional
             If true, display the contents of the entry that will be recorded
-            on-chain. Default is False.
+            on-chain.
 
         Raises
         ------
             RuntimeError
-                - If the chain cannot be created
+                If the chain cannot be created
         """
 
         from pprint import pprint
@@ -434,10 +434,10 @@ class DID:
         Parameters
         ----------
         alias: str
-        priority: number
+        priority: int
         signature_type: SignatureType
         controller: str
-        priority_requirement: number
+        priority_requirement: int
         """
 
         if priority < 0:
@@ -459,7 +459,7 @@ class DID:
         purpose: set
         signature_type: SignatureType
         controller: str
-        priority_requirement: number
+        priority_requirement: int
         """
 
         for purpose_type in purpose:
@@ -484,7 +484,7 @@ class DID:
         alias: str
         signature_type: SignatureType
         controller: str
-        priority_requirement: number
+        priority_requirement: int
         """
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
@@ -524,7 +524,7 @@ class DID:
         alias: str
         service_type: str
         endpoint: str
-        priority_requirement: number
+        priority_requirement: int
         """
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
@@ -567,7 +567,7 @@ class DID:
 
         Returns
         -------
-        number
+        int
             A total size of the entry in bytes.
         """
 
