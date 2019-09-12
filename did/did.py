@@ -28,8 +28,8 @@ ENTRY_SIZE_LIMIT = 10275
 
 
 class DID:
-    def __init__(self):
-        self.id = self._generate_id()
+    def __init__(self, did=None):
+        self.id = self._generate_did() if did is None else did
         self.management_keys = []
         self.did_keys = []
         self.services = []
@@ -322,7 +322,7 @@ class DID:
 
         return did_document
 
-    def _generate_id(self):
+    def _generate_did(self):
         """
         Generates a new DID Id.
 
