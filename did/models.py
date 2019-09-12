@@ -1,10 +1,10 @@
 from collections import namedtuple
 
-__all__ = ["KeyPairModel", "ManagementKeyModel", "DidKeyModel", "ServiceModel"]
+__all__ = ["KeyPair", "ManagementKey", "DidKey", "Service"]
 
-KeyPairModel = namedtuple("KeyPairModel", ("public_key", "private_key"))
+KeyPair = namedtuple("KeyPair", ("public_key", "private_key"))
 
-ManagementKeyModel = namedtuple(
+ManagementKey = namedtuple(
     "ManagementKeyModel",
     (
         "alias",
@@ -17,7 +17,7 @@ ManagementKeyModel = namedtuple(
     ),
 )
 
-DidKeyModel = namedtuple(
+DidKey = namedtuple(
     "DidKeyModel",
     (
         "alias",
@@ -30,6 +30,6 @@ DidKeyModel = namedtuple(
     ),
 )
 
-ServiceModel = namedtuple(
+Service = namedtuple(
     "ServiceModel", ("alias", "service_type", "endpoint", "priority_requirement")
 )

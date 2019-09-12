@@ -10,7 +10,7 @@ from factom.exceptions import FactomAPIError
 from did.encryptor import encrypt_keys
 from did.enums import SignatureType, EntryType, PurposeType
 from did.keys import generate_key_pair
-from did.models import ManagementKeyModel, DidKeyModel, ServiceModel
+from did.models import ManagementKey, DidKey, Service
 
 __all__ = [
     "DID",
@@ -35,6 +35,11 @@ class DID:
         self.services = []
         self.used_key_aliases = set()
         self.used_service_aliases = set()
+
+    def update(self):
+        if len(self.management_keys) == 0:
+            raise RuntimeError("Cannot update DID with no management keys")
+        return DIDUpdater(self)
 
     def management_key(
         self,
@@ -72,7 +77,7 @@ class DID:
 
         key_pair = generate_key_pair(signature_type)
         self.management_keys.append(
-            ManagementKeyModel(
+            ManagementKey(
                 alias,
                 priority,
                 signature_type,
@@ -120,7 +125,7 @@ class DID:
 
         key_pair = generate_key_pair(signature_type)
         self.did_keys.append(
-            DidKeyModel(
+            DidKey(
                 alias,
                 set(purpose),
                 signature_type,
@@ -157,7 +162,7 @@ class DID:
             alias, service_type, endpoint, priority_requirement
         )
         self.services.append(
-            ServiceModel(alias, service_type, endpoint, priority_requirement)
+            Service(alias, service_type, endpoint, priority_requirement)
         )
 
         return self
@@ -367,7 +372,7 @@ class DID:
             public_key_property: str(key.public_key, "utf8"),
         }
 
-        if type(key) == ManagementKeyModel:
+        if type(key) == ManagementKey:
             key_entry_object["priority"] = key.priority
         else:
             key_entry_object["purpose"] = list(key.purpose)

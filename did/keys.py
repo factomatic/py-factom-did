@@ -4,7 +4,7 @@ from ecdsa import SigningKey, SECP256k1
 import ed25519
 
 from did.enums import SignatureType
-from did.models import KeyPairModel
+from did.models import KeyPair
 
 __all__ = ["generate_key_pair"]
 
@@ -41,7 +41,7 @@ def generate_key_pair(signature_type):
 
 def _generate_ed_dsa_key_pair():
     signing_key, verifying_key = ed25519.create_keypair()
-    key_pair = KeyPairModel(
+    key_pair = KeyPair(
         base58.b58encode(verifying_key.to_bytes()),
         base58.b58encode(signing_key.to_bytes()),
     )
@@ -51,7 +51,7 @@ def _generate_ed_dsa_key_pair():
 def _generate_ec_dsa_key_pair():
     signing_key = SigningKey.generate(curve=SECP256k1)
     verifying_key = signing_key.get_verifying_key()
-    key_pair = KeyPairModel(
+    key_pair = KeyPair(
         base58.b58encode(verifying_key.to_string()),
         base58.b58encode(signing_key.to_string()),
     )
@@ -60,5 +60,5 @@ def _generate_ec_dsa_key_pair():
 
 def _generate_rsa_key_pair():
     key = RSA.generate(2048)
-    key_pair = KeyPairModel(key.publickey().export_key(), key.export_key())
+    key_pair = KeyPair(key.publickey().export_key(), key.export_key())
     return key_pair
