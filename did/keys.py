@@ -1,40 +1,22 @@
+import re
+
 import base58
 from Crypto.PublicKey import RSA
 from ecdsa import SigningKey, SECP256k1
 import ed25519
 
-from did.enums import SignatureType
+from did.did import DID_METHOD_NAME
+from did.enums import PurposeType, SignatureType
 
-__all__ = ["KeyPair", "AbstractDIDKey", "ManagementKey", "DIDKey"]
+__all__ = ["AbstractDIDKey", "ManagementKey", "DIDKey"]
 
 
-class KeyPair:
+class AbstractDIDKey:
     """
-    Represents a cryptographic key pair, consisting of a public key and its corresponding private key.
+    Represents the common fields and functionality in a ManagementKey and a DidKey.
 
     Attributes
     ----------
-    public_key: str
-        The public key, encoded in base58.
-    private_key: str
-        The private key, encoded in base58.
-    """
-
-    def __init__(self, public_key, private_key):
-        self.public_key = public_key
-        self.private_key = private_key
-
-
-class AbstractDIDKey(KeyPair):
-    """
-    Represents the common fields in a ManagementKey and a DidKey.
-
-    Attributes
-    ----------
-    public_key: str
-        The public key, encoded in base58.
-    private_key: str
-        The private key, encoded in base58.
     signature_type: SignatureType
         Identifies the type of signature that the key pair can be used to generate and verify.
     alias: str
@@ -43,22 +25,40 @@ class AbstractDIDKey(KeyPair):
         An entity that controls the key.
     priority_requirement: int
         A non-negative integer showing the minimum hierarchical level a key must have in order to remove this key.
+    public_key: str, optional
+        The public key, encoded in base58.
+    private_key: str, optional
+        The private key, encoded in base58.
     """
 
     def __init__(
         self,
-        public_key,
-        private_key,
         signature_type,
         alias,
         controller,
         priority_requirement,
+        public_key=None,
+        private_key=None,
     ):
-        super().__init__(public_key, private_key)
+
+        self._validate_key_input_params(
+            signature_type,
+            alias,
+            controller,
+            priority_requirement,
+            public_key,
+            private_key,
+        )
+
         self.signature_type = signature_type
         self.alias = alias
         self.controller = controller
         self.priority_requirement = priority_requirement
+
+        if public_key is None and private_key is None:
+            self.public_key, self.private_key = self.generate_key_pair()
+        else:
+            self.public_key, self.private_key = public_key, private_key
 
     def generate_key_pair(self):
         """
@@ -87,27 +87,54 @@ class AbstractDIDKey(KeyPair):
     @staticmethod
     def _generate_ed_dsa_key_pair():
         signing_key, verifying_key = ed25519.create_keypair()
-        key_pair = KeyPair(
+        return (
             base58.b58encode(verifying_key.to_bytes()),
             base58.b58encode(signing_key.to_bytes()),
         )
-        return key_pair
 
     @staticmethod
     def _generate_ec_dsa_key_pair():
         signing_key = SigningKey.generate(curve=SECP256k1)
         verifying_key = signing_key.get_verifying_key()
-        key_pair = KeyPair(
+        return (
             base58.b58encode(verifying_key.to_string()),
             base58.b58encode(signing_key.to_string()),
         )
-        return key_pair
 
     @staticmethod
     def _generate_rsa_key_pair():
         key = RSA.generate(2048)
-        key_pair = KeyPair(key.publickey().export_key(), key.export_key())
-        return key_pair
+        return key.publickey().export_key(), key.export_key()
+
+    @staticmethod
+    def _validate_key_input_params(
+        signature_type, alias, controller, priority_requirement, public_key, private_key
+    ):
+        if (public_key is None and private_key is not None) or (
+            public_key is not None and private_key is None
+        ):
+            raise ValueError(
+                "Both private key and public must be specified, or both must be unspecified"
+            )
+
+        if not re.match("^[a-z0-9-]{1,32}$", alias):
+            raise ValueError(
+                "Alias must not be more than 32 characters long and must contain only lower-case "
+                "letters, digits and hyphens."
+            )
+
+        if signature_type not in (
+            SignatureType.ECDSA.value,
+            SignatureType.EdDSA.value,
+            SignatureType.RSA.value,
+        ):
+            raise ValueError("Type must be a valid signature type.")
+
+        if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
+            raise ValueError("Controller must be a valid DID.")
+
+        if priority_requirement is not None and priority_requirement < 0:
+            raise ValueError("Priority requirement must be a non-negative integer.")
 
 
 class ManagementKey(AbstractDIDKey):
@@ -116,8 +143,6 @@ class ManagementKey(AbstractDIDKey):
 
     Attributes
     ----------
-    public_key: str
-    private_key: str
     signature_type: SignatureType
     alias: str
     controller: str
@@ -125,26 +150,32 @@ class ManagementKey(AbstractDIDKey):
     priority: int
         A non-negative integer showing the hierarchical level of the key. Keys with lower priority override keys with
         higher priority.
+    public_key: str, optional
+    private_key: str, optional
     """
 
     def __init__(
         self,
-        public_key,
-        private_key,
         signature_type,
         alias,
         controller,
         priority_requirement,
         priority,
+        public_key=None,
+        private_key=None,
     ):
         super().__init__(
-            public_key,
-            private_key,
             signature_type,
             alias,
             controller,
             priority_requirement,
+            public_key,
+            private_key,
         )
+
+        if priority < 0:
+            raise ValueError("Priority must be a non-negative integer.")
+
         self.priority = priority
 
 
@@ -154,32 +185,40 @@ class DIDKey(AbstractDIDKey):
 
     Attributes
     ----------
-    public_key: str
-    private_key: str
     signature_type: SignatureType
     alias: str
     controller: str
     priority_requirement: int
     purpose: PurposeType[]
         A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
+    public_key: str, optional
+    private_key: str, optional
     """
 
     def __init__(
         self,
-        public_key,
-        private_key,
         signature_type,
         alias,
         controller,
         priority_requirement,
         purpose,
+        public_key=None,
+        private_key=None,
     ):
         super().__init__(
-            public_key,
-            private_key,
             signature_type,
             alias,
             controller,
             priority_requirement,
+            public_key,
+            private_key,
         )
+
+        for purpose_type in purpose:
+            if purpose_type not in (
+                PurposeType.PublicKey.value,
+                PurposeType.AuthenticationKey.value,
+            ):
+                raise ValueError("Purpose must contain only valid PurposeTypes.")
+
         self.purpose = purpose
