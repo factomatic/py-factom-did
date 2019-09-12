@@ -9,6 +9,7 @@ black = "*"
 pre-commit = "*"
 pytest-cov = "*"
 coveralls = "*"
+sphinx = "*"
 
 [packages]
 pycryptodome = "*"
