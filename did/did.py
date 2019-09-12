@@ -28,6 +28,19 @@ ENTRY_SIZE_LIMIT = 10275
 
 
 class DID:
+    """
+    Enables the construction of a DID document, by facilitating the construction of management keys and DID keys and the
+    addition of services. Allows exporting of the resulting DID object into a format suitable for recording on the
+    Factom blockchain.
+
+    Provides encryption functionality of private keys for the DID and their export to a string or to a JSON file.
+
+    Attributes
+    ----------
+    did: str, optional
+        A 32 byte hexadecimal string
+    """
+
     def __init__(self, did=None):
         self.id = self._generate_did() if did is None else did
         self.management_keys = []
@@ -35,11 +48,6 @@ class DID:
         self.services = []
         self.used_key_aliases = set()
         self.used_service_aliases = set()
-
-    def update(self):
-        if len(self.management_keys) == 0:
-            raise RuntimeError("Cannot update DID with no management keys")
-        return DIDUpdater(self)
 
     def management_key(
         self,
@@ -57,12 +65,12 @@ class DID:
         alias: str
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
         priority: int
-            A non-negative integer showing the hierarchical level of the key. The key(s) with priority 0
-            overrides any key with priority greater than 0.
+            A non-negative integer showing the hierarchical level of the key. Keys with lower priority
+            override keys with higher priority.
         signature_type: SignatureType, optional
-            Identifies the type of signature to be used when creating the key.
+            Identifies the type of signature that the key pair can be used to generate and verify.
         controller: str, optional
-            An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
+            An entity that controls the key. It must be a valid DID. If the argument is not passed in,
             the default value is used which is the current DID itself.
         priority_requirement: int, optional
             A non-negative integer showing the minimum hierarchical level a key must have in order to remove this key.
