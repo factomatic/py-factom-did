@@ -45,11 +45,11 @@ class DID:
         self._used_key_aliases = set()
         self._used_service_aliases = set()
 
-        for key in management_keys:
+        for key in self.management_keys:
             self._used_key_aliases.add(key.alias)
-        for key in did_keys:
+        for key in self.did_keys:
             self._used_key_aliases.add(key.alias)
-        for service in services:
+        for service in self.services:
             self._used_service_aliases.add(service)
 
     def management_key(

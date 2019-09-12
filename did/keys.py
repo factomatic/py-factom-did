@@ -17,10 +17,10 @@ class AbstractDIDKey:
 
     Attributes
     ----------
-    signature_type: SignatureType
-        Identifies the type of signature that the key pair can be used to generate and verify.
     alias: str
         A human-readable nickname for the key.
+    signature_type: SignatureType
+        Identifies the type of signature that the key pair can be used to generate and verify.
     controller: str
         An entity that controls the key.
     priority_requirement: int
@@ -33,8 +33,8 @@ class AbstractDIDKey:
 
     def __init__(
         self,
-        signature_type,
         alias,
+        signature_type,
         controller,
         priority_requirement,
         public_key=None,
@@ -42,16 +42,16 @@ class AbstractDIDKey:
     ):
 
         self._validate_key_input_params(
-            signature_type,
             alias,
+            signature_type,
             controller,
             priority_requirement,
             public_key,
             private_key,
         )
 
-        self.signature_type = signature_type
         self.alias = alias
+        self.signature_type = signature_type
         self.controller = controller
         self.priority_requirement = priority_requirement
 
@@ -108,7 +108,7 @@ class AbstractDIDKey:
 
     @staticmethod
     def _validate_key_input_params(
-        signature_type, alias, controller, priority_requirement, public_key, private_key
+        alias, signature_type, controller, priority_requirement, public_key, private_key
     ):
         if (public_key is None and private_key is not None) or (
             public_key is not None and private_key is None
@@ -143,30 +143,30 @@ class ManagementKey(AbstractDIDKey):
 
     Attributes
     ----------
-    signature_type: SignatureType
     alias: str
-    controller: str
-    priority_requirement: int
     priority: int
         A non-negative integer showing the hierarchical level of the key. Keys with lower priority override keys with
         higher priority.
+    signature_type: SignatureType
+    controller: str
+    priority_requirement: int
     public_key: str, optional
     private_key: str, optional
     """
 
     def __init__(
         self,
-        signature_type,
         alias,
+        priority,
+        signature_type,
         controller,
         priority_requirement,
-        priority,
         public_key=None,
         private_key=None,
     ):
         super().__init__(
-            signature_type,
             alias,
+            signature_type,
             controller,
             priority_requirement,
             public_key,
@@ -185,29 +185,29 @@ class DIDKey(AbstractDIDKey):
 
     Attributes
     ----------
-    signature_type: SignatureType
     alias: str
-    controller: str
-    priority_requirement: int
     purpose: PurposeType[]
         A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
+    signature_type: SignatureType
+    controller: str
+    priority_requirement: int
     public_key: str, optional
     private_key: str, optional
     """
 
     def __init__(
         self,
-        signature_type,
         alias,
+        purpose,
+        signature_type,
         controller,
         priority_requirement,
-        purpose,
         public_key=None,
         private_key=None,
     ):
         super().__init__(
-            signature_type,
             alias,
+            signature_type,
             controller,
             priority_requirement,
             public_key,
