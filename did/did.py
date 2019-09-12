@@ -42,15 +42,15 @@ class DID:
         self.did_keys = [] if did_keys is None else did_keys
         self.services = [] if services is None else services
 
-        self._used_key_aliases = set()
-        self._used_service_aliases = set()
+        self.used_key_aliases = set()
+        self.used_service_aliases = set()
 
         for key in self.management_keys:
-            self._used_key_aliases.add(key.alias)
+            self.used_key_aliases.add(key.alias)
         for key in self.did_keys:
-            self._used_key_aliases.add(key.alias)
+            self.used_key_aliases.add(key.alias)
         for service in self.services:
-            self._used_service_aliases.add(service)
+            self.used_service_aliases.add(service)
 
     def management_key(
         self,
@@ -82,12 +82,12 @@ class DID:
         if not controller:
             controller = self.id
 
-        if alias in self._used_key_aliases:
+        if alias in self.used_key_aliases:
             raise ValueError(
                 'The given key alias "{}" has already been used.'.format(alias)
             )
 
-        self._used_key_aliases.add(alias)
+        self.used_key_aliases.add(alias)
 
         self.management_keys.append(
             ManagementKey(
@@ -126,12 +126,12 @@ class DID:
         if not controller:
             controller = self.id
 
-        if alias in self._used_key_aliases:
+        if alias in self.used_key_aliases:
             raise ValueError(
                 'The given key alias "{}" has already been used.'.format(alias)
             )
 
-        self._used_key_aliases.add(alias)
+        self.used_key_aliases.add(alias)
 
         self.did_keys.append(
             DIDKey(
@@ -162,12 +162,12 @@ class DID:
             service.
         """
 
-        if alias in self._used_service_aliases:
+        if alias in self.used_service_aliases:
             raise ValueError(
                 'The given service alias "{}" has already been used.'.format(alias)
             )
 
-        self._used_service_aliases.add(alias)
+        self.used_service_aliases.add(alias)
 
         self.services.append(
             Service(alias, service_type, endpoint, priority_requirement)
