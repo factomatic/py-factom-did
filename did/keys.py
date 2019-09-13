@@ -115,7 +115,7 @@ class AbstractDIDKey:
         del d["private_key"]
         if self.priority_requirement is None:
             del d["priority_requirement"]
-        d["id"] = "{}:{}".format(DID_METHOD_NAME, self.alias)
+        d["id"] = self.full_id()
         return d
 
     def sign(self, msg, hash_f=hashlib.sha256):

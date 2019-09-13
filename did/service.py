@@ -15,7 +15,7 @@ class Service:
     alias: str
         A human-readable nickname for the service endpoint.
     controller: str
-
+        The DID behind this service. The controller must be a valid DID.
     service_type: str
         Type of the service endpoint (e.g. email, credential store).
     endpoint: str
@@ -31,7 +31,7 @@ class Service:
         self, alias, controller, service_type, endpoint, priority_requirement=None
     ):
         self._validate_service_input_params(
-            alias, service_type, endpoint, priority_requirement
+            alias, controller, service_type, endpoint, priority_requirement
         )
 
         self.alias = alias
@@ -73,7 +73,7 @@ class Service:
         Converts the object to a dictionary suitable for recording on-chain.
         """
         d = vars(self)
-        d["id"] = "{}:{}".format(DID_METHOD_NAME, self.alias)
+        d["id"] = self.full_id()
         if self.priority_requirement is None:
             del d["priority_requirement"]
         return d
@@ -89,7 +89,7 @@ class Service:
 
     @staticmethod
     def _validate_service_input_params(
-        alias, service_type, endpoint, priority_requirement
+        alias, controller, service_type, endpoint, priority_requirement
     ):
         if not re.match("^[a-z0-9-]{1,32}$", alias):
             raise ValueError(
@@ -107,6 +107,9 @@ class Service:
             raise ValueError(
                 "Endpoint must be a valid URL address starting with http:// or https://."
             )
+
+        if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
+            raise ValueError("Controller must be a valid DID.")
 
         if priority_requirement is not None and priority_requirement < 0:
             raise ValueError("Priority requirement must be a non-negative integer.")
