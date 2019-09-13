@@ -158,21 +158,21 @@ class DIDUpdater:
             revoke_dict["managementKey"].append({"id": key.alias})
             if (
                 key.priority_requirement is not None
-                and key.priority_requirement > min_priority_requirement
+                and key.priority_requirement < min_priority_requirement
             ):
                 min_priority_requirement = key.priority_requirement
         for key in revoked_did_keys:
             revoke_dict["didKey"].append({"id": key.alias})
             if (
                 key.priority_requirement is not None
-                and key.priority_requirement > min_priority_requirement
+                and key.priority_requirement < min_priority_requirement
             ):
                 min_priority_requirement = key.priority_requirement
         for service in revoked_services:
             revoke_dict["service"].append({"id": service.alias})
             if (
                 service.priority_requirement is not None
-                and service.priority_requirement > min_priority_requirement
+                and service.priority_requirement < min_priority_requirement
             ):
                 min_priority_requirement = service.priority_requirement
 
