@@ -46,11 +46,17 @@ class DID:
         self.used_service_aliases = set()
 
         for key in self.management_keys:
-            self.used_key_aliases.add(key.alias)
+            self._check_alias_is_unique_and_add_to_used(
+                self.used_key_aliases, key.alias
+            )
         for key in self.did_keys:
-            self.used_key_aliases.add(key.alias)
+            self._check_alias_is_unique_and_add_to_used(
+                self.used_key_aliases, key.alias
+            )
         for service in self.services:
-            self.used_service_aliases.add(service)
+            self._check_alias_is_unique_and_add_to_used(
+                self.used_service_aliases, service.alias
+            )
 
     def management_key(
         self,
@@ -82,12 +88,7 @@ class DID:
         if not controller:
             controller = self.id
 
-        if alias in self.used_key_aliases:
-            raise ValueError(
-                'The given key alias "{}" has already been used.'.format(alias)
-            )
-
-        self.used_key_aliases.add(alias)
+        self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
         self.management_keys.append(
             ManagementKey(
@@ -126,12 +127,7 @@ class DID:
         if not controller:
             controller = self.id
 
-        if alias in self.used_key_aliases:
-            raise ValueError(
-                'The given key alias "{}" has already been used.'.format(alias)
-            )
-
-        self.used_key_aliases.add(alias)
+        self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
         self.did_keys.append(
             DIDKey(
@@ -162,12 +158,7 @@ class DID:
             service.
         """
 
-        if alias in self.used_service_aliases:
-            raise ValueError(
-                'The given service alias "{}" has already been used.'.format(alias)
-            )
-
-        self.used_service_aliases.add(alias)
+        self._check_alias_is_unique_and_add_to_used(self.used_service_aliases, alias)
 
         self.services.append(
             Service(alias, service_type, endpoint, priority_requirement)
@@ -415,6 +406,12 @@ class DID:
             service_entry_object["priorityRequirement"] = service.priority_requirement
 
         return service_entry_object
+
+    @staticmethod
+    def _check_alias_is_unique_and_add_to_used(used_aliases, alias):
+        if alias in used_aliases:
+            raise ValueError('Duplicate key alias "{}" detected.'.format(alias))
+        used_aliases.add(alias)
 
     @staticmethod
     def _calculate_chain_id(ext_ids):
