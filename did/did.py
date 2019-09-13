@@ -88,13 +88,12 @@ class DID:
         if not controller:
             controller = self.id
 
+        key = ManagementKey(
+            alias, priority, signature_type, controller, priority_requirement
+        )
         self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
-        self.management_keys.append(
-            ManagementKey(
-                alias, priority, signature_type, controller, priority_requirement
-            )
-        )
+        self.management_keys.append(key)
 
         return self
 
@@ -127,13 +126,12 @@ class DID:
         if not controller:
             controller = self.id
 
+        key = DIDKey(
+            alias, set(purpose), signature_type, controller, priority_requirement
+        )
         self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
-        self.did_keys.append(
-            DIDKey(
-                alias, set(purpose), signature_type, controller, priority_requirement
-            )
-        )
+        self.did_keys.append(key)
 
         return self
 
@@ -158,11 +156,10 @@ class DID:
             service.
         """
 
+        service = Service(alias, service_type, endpoint, priority_requirement)
         self._check_alias_is_unique_and_add_to_used(self.used_service_aliases, alias)
 
-        self.services.append(
-            Service(alias, service_type, endpoint, priority_requirement)
-        )
+        self.services.append(service)
 
         return self
 
