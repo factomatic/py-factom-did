@@ -1,12 +1,15 @@
 from base64 import urlsafe_b64encode
 import codecs
-import hashlib
 import json
 import os
 import re
 
-from factom.exceptions import FactomAPIError
 
+from did.blockchain import (
+    calculate_chain_id,
+    calculate_entry_size,
+    record_entry_on_chain,
+)
 from did.constants import *
 from did.encryptor import encrypt_keys
 from did.enums import SignatureType, EntryType, PurposeType
@@ -193,7 +196,7 @@ class DID:
         entry_content = json.dumps(self._get_did_document())
         entry_type = EntryType.Create.value
 
-        entry_size = self._calculate_entry_size(
+        entry_size = calculate_entry_size(
             [self.nonce], [entry_type, ENTRY_SCHEMA_VERSION], entry_content
         )
 
@@ -282,22 +285,9 @@ class DID:
                 If the chain cannot be created
         """
 
-        from pprint import pprint
-
-        entry_data = self.export_entry_data()
-        if verbose:
-            pprint(entry_data)
-
-        # Encode the entry data
-        ext_ids = map(lambda x: x.encode("utf-8"), entry_data["ext_ids"])
-        content = entry_data["content"].encode("utf-8")
-
-        try:
-            walletd.new_chain(factomd, ext_ids, content, ec_address=ec_address)
-        except FactomAPIError as e:
-            raise RuntimeError(
-                "Failed while trying to record DID data on-chain: {}".format(e.data)
-            )
+        record_entry_on_chain(
+            self.export_entry_data(), factomd, walletd, ec_address, verbose
+        )
 
     @staticmethod
     def is_valid_did(did):
@@ -341,7 +331,7 @@ class DID:
         """
 
         self.nonce = codecs.encode(os.urandom(32), "hex").decode()
-        chain_id = self._calculate_chain_id(
+        chain_id = calculate_chain_id(
             [EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce]
         )
         did_id = "{}:{}".format(DID_METHOD_NAME, chain_id)
@@ -416,57 +406,3 @@ class DID:
         if alias in used_aliases:
             raise ValueError('Duplicate key alias "{}" detected.'.format(alias))
         used_aliases.add(alias)
-
-    @staticmethod
-    def _calculate_chain_id(ext_ids):
-        """
-        Calculates chain id by hashing each ExtID, joining the hashes into a byte array and hashing the array.
-
-        Parameters
-        ----------
-        ext_ids: list
-            A list of ExtIds.
-
-        Returns
-        -------
-        str
-            A chain id.
-        """
-
-        ext_ids_hash_bytes = bytearray(b"")
-        for ext_id in ext_ids:
-            ext_ids_hash_bytes.extend(hashlib.sha256(bytes(ext_id, "utf-8")).digest())
-
-        return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
-
-    @staticmethod
-    def _calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
-        """
-        Calculates entry size in bytes.
-
-        Parameters
-        ----------
-        hex_ext_ids: list
-        utf8_ext_ids: list
-        content: str
-
-        Returns
-        -------
-        int
-            A total size of the entry in bytes.
-        """
-
-        total_entry_size = 0
-        fixed_header_size = 35
-        total_entry_size += (
-            fixed_header_size + 2 * len(hex_ext_ids) + 2 * len(utf8_ext_ids)
-        )
-
-        for ext_id in hex_ext_ids:
-            total_entry_size += len(ext_id) / 2
-
-        for ext_id in utf8_ext_ids:
-            total_entry_size += len(bytes(ext_id, "utf-8"))
-
-        total_entry_size += len(bytes(content, "utf-8"))
-        return total_entry_size
