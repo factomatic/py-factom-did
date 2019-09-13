@@ -161,7 +161,7 @@ class DID:
             service.
         """
 
-        service = Service(alias, service_type, endpoint, priority_requirement)
+        service = Service(alias, self.id, service_type, endpoint, priority_requirement)
         self._check_alias_is_unique_and_add_to_used(self.used_service_aliases, alias)
 
         self.services.append(service)

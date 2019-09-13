@@ -151,6 +151,15 @@ class AbstractDIDKey:
                 "Unsupported signature type: {}".format(self.signature_type)
             )
 
+    def full_id(self):
+        """
+        Returns
+        -------
+        str
+            The full id for the key, constituting of the DID_METHOD_NAME, the controller and the key alias.
+        """
+        return "{}:{}#{}".format(DID_METHOD_NAME, self.controller, self.alias)
+
     def _generate_ed_dsa_key_pair(self):
         self.signing_key, self.verifying_key = ed25519.create_keypair()
         return (

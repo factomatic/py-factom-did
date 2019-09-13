@@ -14,6 +14,8 @@ class Service:
     ----------
     alias: str
         A human-readable nickname for the service endpoint.
+    controller: str
+
     service_type: str
         Type of the service endpoint (e.g. email, credential store).
     endpoint: str
@@ -25,12 +27,15 @@ class Service:
         A non-negative integer showing the minimum hierarchical level a key must have in order to remove this service.
     """
 
-    def __init__(self, alias, service_type, endpoint, priority_requirement=None):
+    def __init__(
+        self, alias, controller, service_type, endpoint, priority_requirement=None
+    ):
         self._validate_service_input_params(
             alias, service_type, endpoint, priority_requirement
         )
 
         self.alias = alias
+        self.controller = controller
         self.service_type = service_type
         self.endpoint = endpoint
         self.priority_requirement = priority_requirement
@@ -39,11 +44,13 @@ class Service:
         if self.__class__ is other.__class__:
             return (
                 self.alias,
+                self.controller,
                 self.service_type,
                 self.endpoint,
                 self.priority_requirement,
             ) == (
                 other.alias,
+                other.controller,
                 other.service_type,
                 other.endpoint,
                 other.priority_requirement,
@@ -52,7 +59,13 @@ class Service:
 
     def __hash__(self):
         return hash(
-            (self.alias, self.service_type, self.endpoint, self.priority_requirement)
+            (
+                self.alias,
+                self.controller,
+                self.service_type,
+                self.endpoint,
+                self.priority_requirement,
+            )
         )
 
     def to_entry_dict(self):
@@ -64,6 +77,15 @@ class Service:
         if self.priority_requirement is None:
             del d["priority_requirement"]
         return d
+
+    def full_id(self):
+        """
+        Returns
+        -------
+        str
+            The full id for the service, constituting of the DID_METHOD_NAME, the controller and the service alias.
+        """
+        return "{}:{}#{}".format(DID_METHOD_NAME, self.controller, self.alias)
 
     @staticmethod
     def _validate_service_input_params(
