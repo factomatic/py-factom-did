@@ -1,5 +1,4 @@
 from base64 import urlsafe_b64encode
-import codecs
 import json
 import os
 import re
@@ -330,7 +329,7 @@ class DID:
             A DID Id.
         """
 
-        self.nonce = codecs.encode(os.urandom(32), "hex").decode()
+        self.nonce = os.urandom(32).hex()
         chain_id = calculate_chain_id(
             [EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce]
         )
