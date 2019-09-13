@@ -3,15 +3,14 @@ import hashlib
 from factom.exceptions import FactomAPIError
 
 
-def calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
+def calculate_entry_size(ext_ids, content):
     """
     Calculates entry size in bytes.
 
     Parameters
     ----------
-    hex_ext_ids: list
-    utf8_ext_ids: list
-    content: str
+    ext_ids: bytes[] or str[]
+    content: bytes or str
 
     Returns
     -------
@@ -21,15 +20,20 @@ def calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
 
     total_entry_size = 0
     fixed_header_size = 35
-    total_entry_size += fixed_header_size + 2 * len(hex_ext_ids) + 2 * len(utf8_ext_ids)
+    total_entry_size += fixed_header_size + 2 * len(ext_ids)
 
-    for ext_id in hex_ext_ids:
-        total_entry_size += len(ext_id) / 2
+    for ext_id in ext_ids:
+        if type(ext_id) is bytes:
+            total_entry_size += len(ext_id)
+        else:
+            # If the ExtID is not bytes, it's assumed to be a hex string
+            total_entry_size += len(ext_id) / 2
 
-    for ext_id in utf8_ext_ids:
-        total_entry_size += len(bytes(ext_id, "utf-8"))
+    if type(content) is bytes:
+        total_entry_size += len(content)
+    else:
+        total_entry_size += len(content) / 2
 
-    total_entry_size += len(bytes(content, "utf-8"))
     return total_entry_size
 
 
