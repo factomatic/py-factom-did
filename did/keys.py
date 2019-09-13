@@ -1,7 +1,10 @@
+import hashlib
 import re
 
 import base58
+from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
+from Crypto.Signature import pkcs1_15
 from ecdsa import SigningKey, SECP256k1
 import ed25519
 
@@ -115,27 +118,59 @@ class AbstractDIDKey:
         d["id"] = "{}:{}".format(DID_METHOD_NAME, self.alias)
         return d
 
-    @staticmethod
-    def _generate_ed_dsa_key_pair():
-        signing_key, verifying_key = ed25519.create_keypair()
+    def sign(self, msg, hash_f=hashlib.sha256):
+        """
+        Signs a message with the existing private key and signature type.
+
+        The message is hashed before being signed, with the provided hash function. The default hash function used is
+        SHA-256. Note that for RSA signature types, only SHA-256 hashing is currently supported.
+
+        Parameters
+        ----------
+        msg: bytes
+            The message to sign.
+        hash_f: function, optional
+            The hash function used to compute the digest of the message before signing it.
+
+        Returns
+        -------
+        bytes
+            The bytes of the signatures.
+        """
+
+        assert type(msg) is bytes, "Message must be supplied as bytes."
+
+        if self.signature_type == SignatureType.ECDSA.value:
+            self.signing_key.sign_digest_deterministic(hash_f(msg).digest())
+        elif self.signature_type == SignatureType.EdDSA.value:
+            self.signing_key.sign(hash_f(msg).digest())
+        elif self.signature_type == SignatureType.RSA.value:
+            pkcs1_15.new(self.signing_key).sign(SHA256.new(msg))
+        else:
+            raise NotImplementedError(
+                "Unsupported signature type: {}".format(self.signature_type)
+            )
+
+    def _generate_ed_dsa_key_pair(self):
+        self.signing_key, self.verifying_key = ed25519.create_keypair()
         return (
-            base58.b58encode(verifying_key.to_bytes()),
-            base58.b58encode(signing_key.to_bytes()),
+            base58.b58encode(self.verifying_key.to_bytes()),
+            base58.b58encode(self.signing_key.to_bytes()),
         )
 
-    @staticmethod
-    def _generate_ec_dsa_key_pair():
-        signing_key = SigningKey.generate(curve=SECP256k1)
-        verifying_key = signing_key.get_verifying_key()
+    def _generate_ec_dsa_key_pair(self):
+        self.signing_key = SigningKey.generate(curve=SECP256k1)
+        self.verifying_key = self.signing_key.get_verifying_key()
         return (
-            base58.b58encode(verifying_key.to_string()),
-            base58.b58encode(signing_key.to_string()),
+            base58.b58encode(self.verifying_key.to_string()),
+            base58.b58encode(self.signing_key.to_string()),
         )
 
-    @staticmethod
-    def _generate_rsa_key_pair():
-        key = RSA.generate(2048)
-        return key.publickey().export_key(), key.export_key()
+    def _generate_rsa_key_pair(self):
+        self.signing_key = RSA.generate(2048)
+        self.verifying_key = self.signing_key.publickey()
+
+        return self.verifying_key.export_key(), self.signing_key.export_key()
 
     @staticmethod
     def _validate_key_input_params(
