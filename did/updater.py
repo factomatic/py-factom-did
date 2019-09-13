@@ -52,7 +52,7 @@ class DIDUpdater:
         priority_requirement=None,
     ):
         """
-        Adds a management key to the DID object.
+        Adds a DID key to the DID object.
 
         Parameters
         ----------
