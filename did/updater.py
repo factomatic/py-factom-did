@@ -1,6 +1,9 @@
+from collections import defaultdict
+
 from did.did import SignatureType
 
 
+# TODO: Handle removal by id?
 class DIDUpdater:
     """
     Facilitates the creation of an update entry for an existing DID.
@@ -15,9 +18,9 @@ class DIDUpdater:
 
     def __init__(self, did):
         self.did = did
-        self.orig_management_keys = self.did.management_keys.copy()
-        self.orig_did_keys = self.did.did_keys.copy()
-        self.orig_services = self.did.services.copy()
+        self.orig_management_keys = set(self.did.management_keys.copy())
+        self.orig_did_keys = set(self.did.did_keys.copy())
+        self.orig_services = set(self.did.services.copy())
 
     def add_management_key(
         self,
@@ -124,7 +127,83 @@ class DIDUpdater:
         return self
 
     def export_entry_data(self):
-        pass
+        """
+        Constructs a signed DIDUpdate entry ready for recording on-chain.
+
+        Raises
+        ------
+        RuntimeError
+            If a management key of sufficient priority is not available to sign the update.
+        """
+        import math
+
+        revoked_management_keys = self.orig_management_keys.difference(
+            self.did.management_keys
+        )
+        revoked_did_keys = self.orig_did_keys.difference(self.did.did_keys)
+        revoked_services = self.orig_services.difference(self.did.services)
+        new_management_keys = self.did.management_keys.difference(
+            self.orig_management_keys
+        )
+        new_did_keys = self.did.did_keys.difference(self.orig_did_keys)
+        new_services = self.did.services.difference(self.orig_services)
+
+        # Entries in the "revoke" section of a DIDUpdate entry
+        revoke_dict = defaultdict(list)
+
+        # The minimum priority requirement from all revoked components
+        min_priority_requirement = math.inf
+
+        for key in revoked_management_keys:
+            revoke_dict["managementKey"].append({"id": key.alias})
+            if (
+                key.priority_requirement is not None
+                and key.priority_requirement > min_priority_requirement
+            ):
+                min_priority_requirement = key.priority_requirement
+        for key in revoked_did_keys:
+            revoke_dict["didKey"].append({"id": key.alias})
+            if (
+                key.priority_requirement is not None
+                and key.priority_requirement > min_priority_requirement
+            ):
+                min_priority_requirement = key.priority_requirement
+        for service in revoked_services:
+            revoke_dict["service"].append({"id": service.alias})
+            if (
+                service.priority_requirement is not None
+                and service.priority_requirement > min_priority_requirement
+            ):
+                min_priority_requirement = service.priority_requirement
+
+        # Entries in the "add" section of a DIDUpdate entry
+        add_dict = defaultdict(list)
+        for key in new_management_keys:
+            add_dict["managementKey"].append(key.to_entry_dict())
+        for key in new_did_keys:
+            add_dict["didKey"].append(key.to_entry_dict())
+        for service in new_services:
+            add_dict["service"].append(service.to_entry_dict())
+
+        # If there is nothing to revoke or add, return None
+        if not revoke_dict and not add_dict:
+            return None
+
+        import itertools as it
+        import operator as op
+
+        min_priority_key = sorted(
+            it.chain(self.orig_management_keys, new_management_keys),
+            key=op.attrgetter("priority"),
+        )[0]
+
+        if min_priority_key.priority > min_priority_requirement:
+            raise RuntimeError(
+                "The update requires a key with priority <= {}, but the highest priority "
+                "key available is with priority {}".format(
+                    min_priority_requirement, min_priority_key.priority
+                )
+            )
 
     @staticmethod
     def _revoke(l, criteria):
