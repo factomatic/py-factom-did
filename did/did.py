@@ -3,6 +3,7 @@ import codecs
 import hashlib
 import json
 import os
+import re
 
 from factom.exceptions import FactomAPIError
 
@@ -37,7 +38,9 @@ class DID:
 
     def __init__(self, did=None, management_keys=None, did_keys=None, services=None):
         # TODO: Add validation logic for the did
-        self.id = self._generate_did() if did is None else did
+        self.id = (
+            self._generate_did() if did is None or not self.is_valid_did(did) else did
+        )
         self.management_keys = [] if management_keys is None else management_keys
         self.did_keys = [] if did_keys is None else did_keys
         self.services = [] if services is None else services
@@ -295,6 +298,11 @@ class DID:
             raise RuntimeError(
                 "Failed while trying to record DID data on-chain: {}".format(e.data)
             )
+
+    @staticmethod
+    def is_valid_did(did):
+        # A valid DID should be 32 bytes, encoded as a lower-case hex string
+        return re.match("^[0-9a-f]{64}$", did) is not None
 
     def _get_did_document(self):
         """

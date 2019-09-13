@@ -1,22 +1,39 @@
 import json
-import os
 import pytest
 import re
 
-from did.did import (
-    DID,
-    SignatureType,
-    PurposeType,
-    ENTRY_SCHEMA_VERSION,
-    DID_METHOD_SPEC_VERSION,
-    DID_METHOD_NAME,
-)
+from did.constants import ENTRY_SCHEMA_VERSION, DID_METHOD_SPEC_VERSION, DID_METHOD_NAME
+from did.did import DID, SignatureType, PurposeType
 from did.enums import EntryType
 
 
 @pytest.fixture
 def did():
     return DID()
+
+
+class TestDidValidator:
+    def test_did_validator(self):
+        assert DID.is_valid_did("") is False
+        assert DID.is_valid_did("asdf") is False
+        assert (
+            DID.is_valid_did(
+                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            )
+            is True
+        )
+        assert (
+            DID.is_valid_did(
+                "z3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            )
+            is False
+        )
+        assert (
+            DID.is_valid_did(
+                "E3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            )
+            is False
+        )
 
 
 class TestEmptyDid:
