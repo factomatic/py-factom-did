@@ -3,7 +3,8 @@ from pprint import pprint
 
 from factom import Factomd, FactomWalletd
 
-from did.did import DID, DID_METHOD_NAME, SignatureType, PurposeType
+from did.constants import DID_METHOD_NAME
+from did.did import DID, SignatureType, PurposeType
 from did.encryptor import (
     decrypt_keys_from_str,
     decrypt_keys_from_json_str,

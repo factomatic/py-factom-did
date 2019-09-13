@@ -7,34 +7,59 @@ import re
 
 from factom.exceptions import FactomAPIError
 
+from did.constants import *
 from did.encryptor import encrypt_keys
 from did.enums import SignatureType, EntryType, PurposeType
-from did.keys import generate_key_pair
-from did.models import ManagementKeyModel, DidKeyModel, ServiceModel
+from did.keys import ManagementKey, DIDKey
+from did.service import Service
 
-__all__ = [
-    "DID",
-    "SignatureType",
-    "PurposeType",
-    "ENTRY_SCHEMA_VERSION",
-    "DID_METHOD_SPEC_VERSION",
-    "DID_METHOD_NAME",
-]
-
-ENTRY_SCHEMA_VERSION = "1.0.0"
-DID_METHOD_NAME = "did:factom"
-DID_METHOD_SPEC_VERSION = "0.2.0"
-ENTRY_SIZE_LIMIT = 10275
+__all__ = ["DID", "SignatureType", "PurposeType"]
 
 
 class DID:
-    def __init__(self):
-        self.id = self._generate_id()
-        self.management_keys = []
-        self.did_keys = []
-        self.services = []
+    """
+    Enables the construction of a DID document, by facilitating the construction of management keys and DID keys and the
+    addition of services. Allows exporting of the resulting DID object into a format suitable for recording on the
+    Factom blockchain.
+
+    Provides encryption functionality of private keys for the DID and their export to a string or to a JSON file.
+
+    Attributes
+    ----------
+    did: str, optional
+        The decentralized identifier, a 32 byte hexadecimal string
+    management_keys: ManagementKey[], optional
+        A list of management keys
+    did_keys: DIDKey[], optional
+        A list of DID keys
+    services: Service[], optional
+        A list of services
+    """
+
+    def __init__(self, did=None, management_keys=None, did_keys=None, services=None):
+        # TODO: Add validation logic for the did
+        self.id = (
+            self._generate_did() if did is None or not self.is_valid_did(did) else did
+        )
+        self.management_keys = [] if management_keys is None else management_keys
+        self.did_keys = [] if did_keys is None else did_keys
+        self.services = [] if services is None else services
+
         self.used_key_aliases = set()
         self.used_service_aliases = set()
+
+        for key in self.management_keys:
+            self._check_alias_is_unique_and_add_to_used(
+                self.used_key_aliases, key.alias
+            )
+        for key in self.did_keys:
+            self._check_alias_is_unique_and_add_to_used(
+                self.used_key_aliases, key.alias
+            )
+        for service in self.services:
+            self._check_alias_is_unique_and_add_to_used(
+                self.used_service_aliases, service.alias
+            )
 
     def management_key(
         self,
@@ -52,12 +77,12 @@ class DID:
         alias: str
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
         priority: int
-            A non-negative integer showing the hierarchical level of the key. The key(s) with priority 0
-            overrides any key with priority greater than 0.
+            A non-negative integer showing the hierarchical level of the key. Keys with lower priority
+            override keys with higher priority.
         signature_type: SignatureType, optional
-            Identifies the type of signature to be used when creating the key.
+            Identifies the type of signature that the key pair can be used to generate and verify.
         controller: str, optional
-            An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
+            An entity that controls the key. It must be a valid DID. If the argument is not passed in,
             the default value is used which is the current DID itself.
         priority_requirement: int, optional
             A non-negative integer showing the minimum hierarchical level a key must have in order to remove this key.
@@ -66,22 +91,12 @@ class DID:
         if not controller:
             controller = self.id
 
-        self._validate_management_key_input_params(
+        key = ManagementKey(
             alias, priority, signature_type, controller, priority_requirement
         )
+        self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
-        key_pair = generate_key_pair(signature_type)
-        self.management_keys.append(
-            ManagementKeyModel(
-                alias,
-                priority,
-                signature_type,
-                controller,
-                key_pair.public_key,
-                key_pair.private_key,
-                priority_requirement,
-            )
-        )
+        self.management_keys.append(key)
 
         return self
 
@@ -114,22 +129,12 @@ class DID:
         if not controller:
             controller = self.id
 
-        self._validate_did_key_input_params(
+        key = DIDKey(
             alias, set(purpose), signature_type, controller, priority_requirement
         )
+        self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
-        key_pair = generate_key_pair(signature_type)
-        self.did_keys.append(
-            DidKeyModel(
-                alias,
-                set(purpose),
-                signature_type,
-                controller,
-                key_pair.public_key,
-                key_pair.private_key,
-                priority_requirement,
-            )
-        )
+        self.did_keys.append(key)
 
         return self
 
@@ -140,25 +145,24 @@ class DID:
         Parameters
         ----------
         alias: str
-            A human-readable nickname for the service endpoint. It should be unique across the services
-            defined in the DID document.
+            A human-readable nickname for the service endpoint. It should be unique across the services defined in the
+            DID document.
         service_type: str
             Type of the service endpoint.
         endpoint: str
-            A service endpoint may represent any type of service the subject wishes to advertise,
-            including decentralized identity management services for further discovery,
-            authentication, authorization, or interaction.
+            A service endpoint may represent any type of service the subject wishes to advertise, including
+            decentralized identity management services for further discovery, authentication, authorization, or
+            interaction.
             The service endpoint must be a valid URL.
         priority_requirement: int, optional
-            A non-negative integer showing the minimum hierarchical level a key must have in order to remove this service.
+            A non-negative integer showing the minimum hierarchical level a key must have in order to remove this
+            service.
         """
 
-        self._validate_service_input_params(
-            alias, service_type, endpoint, priority_requirement
-        )
-        self.services.append(
-            ServiceModel(alias, service_type, endpoint, priority_requirement)
-        )
+        service = Service(alias, service_type, endpoint, priority_requirement)
+        self._check_alias_is_unique_and_add_to_used(self.used_service_aliases, alias)
+
+        self.services.append(service)
 
         return self
 
@@ -295,6 +299,11 @@ class DID:
                 "Failed while trying to record DID data on-chain: {}".format(e.data)
             )
 
+    @staticmethod
+    def is_valid_did(did):
+        # A valid DID should be 32 bytes, encoded as a lower-case hex string
+        return re.match("^[0-9a-f]{64}$", did) is not None
+
     def _get_did_document(self):
         """
         Builds a DID Document.
@@ -322,7 +331,7 @@ class DID:
 
         return did_document
 
-    def _generate_id(self):
+    def _generate_did(self):
         """
         Generates a new DID Id.
 
@@ -367,7 +376,7 @@ class DID:
             public_key_property: str(key.public_key, "utf8"),
         }
 
-        if type(key) == ManagementKeyModel:
+        if type(key) == ManagementKey:
             key_entry_object["priority"] = key.priority
         else:
             key_entry_object["purpose"] = list(key.purpose)
@@ -404,6 +413,12 @@ class DID:
         return service_entry_object
 
     @staticmethod
+    def _check_alias_is_unique_and_add_to_used(used_aliases, alias):
+        if alias in used_aliases:
+            raise ValueError('Duplicate key alias "{}" detected.'.format(alias))
+        used_aliases.add(alias)
+
+    @staticmethod
     def _calculate_chain_id(ext_ids):
         """
         Calculates chain id by hashing each ExtID, joining the hashes into a byte array and hashing the array.
@@ -424,135 +439,6 @@ class DID:
             ext_ids_hash_bytes.extend(hashlib.sha256(bytes(ext_id, "utf-8")).digest())
 
         return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
-
-    def _validate_management_key_input_params(
-        self, alias, priority, signature_type, controller, priority_requirement=None
-    ):
-        """
-        Validates management key input parameters.
-
-        Parameters
-        ----------
-        alias: str
-        priority: int
-        signature_type: SignatureType
-        controller: str
-        priority_requirement: int
-        """
-
-        if priority < 0:
-            raise ValueError("Priority must be a non-negative integer.")
-
-        self._validate_key_input_params(
-            alias, signature_type, controller, priority_requirement
-        )
-
-    def _validate_did_key_input_params(
-        self, alias, purpose, signature_type, controller, priority_requirement
-    ):
-        """
-        Validates did key input parameters.
-
-        Parameters
-        ----------
-        alias: str
-        purpose: set
-        signature_type: SignatureType
-        controller: str
-        priority_requirement: int
-        """
-
-        for purpose_type in purpose:
-            if purpose_type not in (
-                PurposeType.PublicKey.value,
-                PurposeType.AuthenticationKey.value,
-            ):
-                raise ValueError("Purpose must contain only valid PurposeTypes.")
-
-        self._validate_key_input_params(
-            alias, signature_type, controller, priority_requirement
-        )
-
-    def _validate_key_input_params(
-        self, alias, signature_type, controller, priority_requirement
-    ):
-        """
-        Validates key input parameters.
-
-        Parameters
-        ----------
-        alias: str
-        signature_type: SignatureType
-        controller: str
-        priority_requirement: int
-        """
-
-        if not re.match("^[a-z0-9-]{1,32}$", alias):
-            raise ValueError(
-                "Alias must not be more than 32 characters long and must contain only lower-case "
-                "letters, digits and hyphens."
-            )
-
-        if alias in self.used_key_aliases:
-            raise ValueError(
-                'The given key alias "{}" has already been used.'.format(alias)
-            )
-
-        self.used_key_aliases.add(alias)
-
-        if signature_type not in (
-            SignatureType.ECDSA.value,
-            SignatureType.EdDSA.value,
-            SignatureType.RSA.value,
-        ):
-            raise ValueError("Type must be a valid signature type.")
-
-        if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
-            raise ValueError("Controller must be a valid DID.")
-
-        if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError("Priority requirement must be a non-negative integer.")
-
-    def _validate_service_input_params(
-        self, alias, service_type, endpoint, priority_requirement
-    ):
-        """
-        Validates service input parameters.
-
-        Parameters
-        ----------
-        alias: str
-        service_type: str
-        endpoint: str
-        priority_requirement: int
-        """
-
-        if not re.match("^[a-z0-9-]{1,32}$", alias):
-            raise ValueError(
-                "Alias must not be more than 32 characters long and must contain only lower-case "
-                "letters, digits and hyphens."
-            )
-
-        if alias in self.used_service_aliases:
-            raise ValueError(
-                'The given service alias "{}" has already been used.'.format(alias)
-            )
-
-        self.used_service_aliases.add(alias)
-
-        if len(service_type) == 0:
-            raise ValueError("Type is required.")
-
-        if not re.match(
-            r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$",
-            endpoint,
-        ):
-            raise ValueError(
-                "Endpoint must be a valid URL address starting with http:// or https://."
-            )
-
-        if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError("Priority requirement must be a non-negative integer.")
 
     @staticmethod
     def _calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
