@@ -301,8 +301,7 @@ class DID:
 
     @staticmethod
     def is_valid_did(did):
-        # A valid DID should be 32 bytes, encoded as a lower-case hex string
-        return re.match("^[0-9a-f]{64}$", did) is not None
+        return re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), did) is not None
 
     def _get_did_document(self):
         """

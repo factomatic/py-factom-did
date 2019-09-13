@@ -18,19 +18,19 @@ class TestDidValidator:
         assert DID.is_valid_did("asdf") is False
         assert (
             DID.is_valid_did(
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                "did:factom:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             )
             is True
         )
         assert (
             DID.is_valid_did(
-                "z3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                "did:factom:z3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             )
             is False
         )
         assert (
             DID.is_valid_did(
-                "E3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                "did:factom:E3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             )
             is False
         )
