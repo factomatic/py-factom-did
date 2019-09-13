@@ -60,6 +60,25 @@ class AbstractDIDKey:
         else:
             self.public_key, self.private_key = public_key, private_key
 
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return (
+                self.alias,
+                self.signature_type,
+                self.controller,
+                self.priority_requirement,
+                self.public_key,
+                self.private_key,
+            ) == (
+                other.alias,
+                other.signature_type,
+                other.controller,
+                other.priority_requirement,
+                other.public_key,
+                other.private_key,
+            )
+        return NotImplemented
+
     def generate_key_pair(self):
         """
         Generates a new key pair.
@@ -83,6 +102,18 @@ class AbstractDIDKey:
             return self._generate_rsa_key_pair()
         else:
             raise RuntimeError("Invalid signature type.")
+
+    def to_entry_dict(self):
+        """
+        Converts the object to a dictionary suitable for recording on-chain.
+        """
+
+        d = vars(self)
+        del d["private_key"]
+        if self.priority_requirement is None:
+            del d["priority_requirement"]
+        d["id"] = "{}:{}".format(DID_METHOD_NAME, self.alias)
+        return d
 
     @staticmethod
     def _generate_ed_dsa_key_pair():
@@ -149,7 +180,7 @@ class ManagementKey(AbstractDIDKey):
         higher priority.
     signature_type: SignatureType
     controller: str
-    priority_requirement: int
+    priority_requirement: int, optional
     public_key: str, optional
     private_key: str, optional
     """
@@ -160,7 +191,7 @@ class ManagementKey(AbstractDIDKey):
         priority,
         signature_type,
         controller,
-        priority_requirement,
+        priority_requirement=None,
         public_key=None,
         private_key=None,
     ):
@@ -178,6 +209,24 @@ class ManagementKey(AbstractDIDKey):
 
         self.priority = priority
 
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return super().__eq__(other) and self.priority == other.priority
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(
+            (
+                self.alias,
+                self.priority,
+                self.signature_type,
+                self.controller,
+                self.priority_requirement,
+                self.public_key,
+                self.private_key,
+            )
+        )
+
 
 class DIDKey(AbstractDIDKey):
     """
@@ -190,7 +239,7 @@ class DIDKey(AbstractDIDKey):
         A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
     signature_type: SignatureType
     controller: str
-    priority_requirement: int
+    priority_requirement: int, optional
     public_key: str, optional
     private_key: str, optional
     """
@@ -201,7 +250,7 @@ class DIDKey(AbstractDIDKey):
         purpose,
         signature_type,
         controller,
-        priority_requirement,
+        priority_requirement=None,
         public_key=None,
         private_key=None,
     ):
@@ -222,3 +271,21 @@ class DIDKey(AbstractDIDKey):
                 raise ValueError("Purpose must contain only valid PurposeTypes.")
 
         self.purpose = purpose
+
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return super().__eq__(other) and self.purpose == other.purpose
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(
+            (
+                self.alias,
+                self.purpose,
+                self.signature_type,
+                self.controller,
+                self.priority_requirement,
+                self.public_key,
+                self.private_key,
+            )
+        )
