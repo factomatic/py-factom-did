@@ -1,6 +1,13 @@
 from collections import defaultdict
+import itertools as it
+import json
+import math
+import operator as op
 
+from did.blockchain import calculate_entry_size, record_entry_on_chain
+from did.constants import ENTRY_SCHEMA_VERSION, ENTRY_SIZE_LIMIT
 from did.did import SignatureType
+from did.enums import EntryType
 
 
 # TODO: Handle removal by id?
@@ -135,7 +142,6 @@ class DIDUpdater:
         RuntimeError
             If a management key of sufficient priority is not available to sign the update.
         """
-        import math
 
         revoked_management_keys = self.orig_management_keys.difference(
             self.did.management_keys
@@ -189,9 +195,6 @@ class DIDUpdater:
         if not revoke_dict and not add_dict:
             return None
 
-        import itertools as it
-        import operator as op
-
         min_priority_key = sorted(
             it.chain(self.orig_management_keys, new_management_keys),
             key=op.attrgetter("priority"),
@@ -204,6 +207,40 @@ class DIDUpdater:
                     min_priority_requirement, min_priority_key.priority
                 )
             )
+
+        entry_content = json.dumps({"revoke": revoke_dict, "add": add_dict})
+
+        data_to_sign = "".join(
+            [
+                EntryType.Update.value,
+                ENTRY_SCHEMA_VERSION,
+                min_priority_key.full_id(),
+                entry_content,
+            ]
+        ).replace(" ", "")
+
+        signature = min_priority_key.sign(data_to_sign.encode("utf-8"))
+
+        ext_ids = [
+            EntryType.Update.value.encode("utf-8"),
+            ENTRY_SCHEMA_VERSION.encode("utf-8"),
+            signature,
+        ]
+
+        entry_size = calculate_entry_size(ext_ids, entry_content.encode("utf-8"))
+
+        if entry_size > ENTRY_SIZE_LIMIT:
+            raise RuntimeError(
+                "You have exceeded the entry size limit! Please "
+                "remove some of your keys or services."
+            )
+
+        return {"ext_ids": ext_ids, "content": entry_content}
+
+    def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
+        record_entry_on_chain(
+            self.export_entry_data(), factomd, walletd, ec_address, verbose
+        )
 
     @staticmethod
     def _revoke(l, criteria):
