@@ -1,4 +1,5 @@
 import hashlib
+import re
 
 from factom.exceptions import FactomAPIError
 
@@ -27,11 +28,17 @@ def calculate_entry_size(ext_ids, content):
             total_entry_size += len(ext_id)
         else:
             # If the ExtID is not bytes, it's assumed to be a hex string
+            assert (
+                re.match("[0-9a-f]+", ext_id) is not None
+            ), "ExtID must be bytes or hex string"
             total_entry_size += len(ext_id) / 2
 
     if type(content) is bytes:
         total_entry_size += len(content)
     else:
+        assert (
+            re.match("[0-9a-f]+", content) is not None
+        ), "Content must be bytes or hex string"
         total_entry_size += len(content) / 2
 
     return total_entry_size
@@ -44,7 +51,7 @@ def calculate_chain_id(ext_ids):
     Parameters
     ----------
     ext_ids: list
-        A list of ExtIds.
+        A list of ExtIDs.
 
     Returns
     -------
@@ -54,7 +61,10 @@ def calculate_chain_id(ext_ids):
 
     ext_ids_hash_bytes = bytearray(b"")
     for ext_id in ext_ids:
-        ext_ids_hash_bytes.extend(hashlib.sha256(bytes(ext_id, "utf-8")).digest())
+        if type(ext_id) is bytes:
+            ext_ids_hash_bytes.extend(hashlib.sha256(ext_id).digest())
+        else:
+            ext_ids_hash_bytes.extend(hashlib.sha256(bytes(ext_id, "utf-8")).digest())
 
     return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
 
@@ -66,8 +76,8 @@ def record_entry_on_chain(entry_data, factomd, walletd, ec_address, verbose=Fals
     Parameters
     ----------
     entry_data: dict
-        A dictionary with two keys: ext_ids and content. The value of ext_ids is a list
-        of str, while the value of content is a str.
+        A dictionary with two keys: ext_ids and content. The value of ext_ids must be a list
+        of bytes or hex encoded string, while the value of content must be bytes or hex encoded str.
     factomd: obj
         Factomd instance, instantiated from the Python factom-api package.
     walletd: obj
@@ -89,12 +99,10 @@ def record_entry_on_chain(entry_data, factomd, walletd, ec_address, verbose=Fals
     if verbose:
         pprint(entry_data)
 
-    # Encode the entry data
-    ext_ids = map(lambda x: x.encode("utf-8"), entry_data["ext_ids"])
-    content = entry_data["content"].encode("utf-8")
-
     try:
-        walletd.new_chain(factomd, ext_ids, content, ec_address=ec_address)
+        walletd.new_chain(
+            factomd, entry_data["ext_ids"], entry_data["content"], ec_address=ec_address
+        )
     except FactomAPIError as e:
         raise RuntimeError(
             "Failed while trying to record DID data on-chain: {}".format(e.data)

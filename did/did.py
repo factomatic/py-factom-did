@@ -192,23 +192,22 @@ class DID:
         if not any(map(lambda key: key["priority"] == 0, management_keys)):
             raise ValueError("At least one management key must have priority 0.")
 
+        ext_ids = [
+            EntryType.Create.value.encode("utf-8"),
+            ENTRY_SCHEMA_VERSION.encode("utf-8"),
+            self.nonce,
+        ]
         entry_content = json.dumps(self._get_did_document())
-        entry_type = EntryType.Create.value
 
-        entry_size = calculate_entry_size(
-            [self.nonce], [entry_type, ENTRY_SCHEMA_VERSION], entry_content
-        )
+        entry_size = calculate_entry_size(ext_ids, entry_content)
 
         if entry_size > ENTRY_SIZE_LIMIT:
-            raise ValueError(
+            raise RuntimeError(
                 "You have exceeded the entry size limit! Please "
                 "remove some of your keys or services."
             )
 
-        return {
-            "ext_ids": [entry_type, ENTRY_SCHEMA_VERSION, self.nonce],
-            "content": entry_content,
-        }
+        return {"ext_ids": ext_ids, "content": entry_content}
 
     def export_encrypted_keys_as_str(self, password):
         """
