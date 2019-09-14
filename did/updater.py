@@ -101,7 +101,7 @@ class DIDUpdater:
             The alias of the key to be revoked
         """
         self.did.management_keys = self._revoke(
-            self.did.management_keys, lambda key: key.alias == alias
+            self.did.management_keys, lambda key: key.alias != alias
         )
         return self
 
@@ -115,7 +115,7 @@ class DIDUpdater:
             The alias of the key to be revoked
         """
         self.did.did_keys = self._revoke(
-            self.did.did_keys, lambda key: key.alias == alias
+            self.did.did_keys, lambda key: key.alias != alias
         )
         return self
 
@@ -129,7 +129,7 @@ class DIDUpdater:
             The alias of the service to be revoked
         """
         self.did.services = self._revoke(
-            self.did.services, lambda service: service.alias == alias
+            self.did.services, lambda service: service.alias != alias
         )
         return self
 
@@ -144,15 +144,15 @@ class DIDUpdater:
         """
 
         revoked_management_keys = self.orig_management_keys.difference(
-            self.did.management_keys
+            set(self.did.management_keys)
         )
-        revoked_did_keys = self.orig_did_keys.difference(self.did.did_keys)
-        revoked_services = self.orig_services.difference(self.did.services)
-        new_management_keys = self.did.management_keys.difference(
+        revoked_did_keys = self.orig_did_keys.difference(set(self.did.did_keys))
+        revoked_services = self.orig_services.difference(set(self.did.services))
+        new_management_keys = set(self.did.management_keys).difference(
             self.orig_management_keys
         )
-        new_did_keys = self.did.did_keys.difference(self.orig_did_keys)
-        new_services = self.did.services.difference(self.orig_services)
+        new_did_keys = set(self.did.did_keys).difference(self.orig_did_keys)
+        new_services = set(self.did.services).difference(self.orig_services)
 
         # Entries in the "revoke" section of a DIDUpdate entry
         revoke_dict = defaultdict(list)
@@ -208,7 +208,12 @@ class DIDUpdater:
                 )
             )
 
-        entry_content = json.dumps({"revoke": revoke_dict, "add": add_dict})
+        entry_content_dict = {}
+        if revoke_dict:
+            entry_content_dict["revoke"] = revoke_dict
+        if add_dict:
+            entry_content_dict["add"] = add_dict
+        entry_content = json.dumps(entry_content_dict)
 
         data_to_sign = "".join(
             [

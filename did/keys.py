@@ -141,11 +141,11 @@ class AbstractDIDKey:
         assert type(msg) is bytes, "Message must be supplied as bytes."
 
         if self.signature_type == SignatureType.ECDSA.value:
-            self.signing_key.sign_digest_deterministic(hash_f(msg).digest())
+            return self.signing_key.sign_digest_deterministic(hash_f(msg).digest())
         elif self.signature_type == SignatureType.EdDSA.value:
-            self.signing_key.sign(hash_f(msg).digest())
+            return self.signing_key.sign(hash_f(msg).digest())
         elif self.signature_type == SignatureType.RSA.value:
-            pkcs1_15.new(self.signing_key).sign(SHA256.new(msg))
+            return pkcs1_15.new(self.signing_key).sign(SHA256.new(msg))
         else:
             raise NotImplementedError(
                 "Unsupported signature type: {}".format(self.signature_type)
@@ -325,7 +325,7 @@ class DIDKey(AbstractDIDKey):
         return hash(
             (
                 self.alias,
-                self.purpose,
+                "".join(self.purpose),
                 self.signature_type,
                 self.controller,
                 self.priority_requirement,
