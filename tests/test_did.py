@@ -343,8 +343,8 @@ class TestExportEntryData:
         entry_data = did.export_entry_data()
 
         ext_ids = entry_data["ext_ids"]
-        assert EntryType.Create.value == ext_ids[0]
-        assert ENTRY_SCHEMA_VERSION == ext_ids[1]
+        assert EntryType.Create.value == ext_ids[0].decode()
+        assert ENTRY_SCHEMA_VERSION == ext_ids[1].decode()
         assert did.nonce == ext_ids[2]
 
     def test_export_entry_data_with_management_key(self, did):
@@ -428,7 +428,7 @@ class TestExportEntryData:
         for x in range(0, 35):
             did.management_key("management-key-{}".format(x), 0)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(RuntimeError):
             did.export_entry_data()
 
     def test_export_without_management_key_throws_error(self, did):
