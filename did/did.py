@@ -40,7 +40,6 @@ class DID:
     """
 
     def __init__(self, did=None, management_keys=None, did_keys=None, services=None):
-        # TODO: Add validation logic for the did
         self.id = (
             self._generate_did() if did is None or not self.is_valid_did(did) else did
         )

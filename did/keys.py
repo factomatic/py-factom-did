@@ -199,7 +199,6 @@ class AbstractDIDKey:
         self.signing_key = RSA.generate(2048)
         self.verifying_key = self.signing_key.publickey()
 
-        # TODO: Change default formatting for signing key when exporting it
         return self.verifying_key.export_key(), self.signing_key.export_key()
 
     @staticmethod
