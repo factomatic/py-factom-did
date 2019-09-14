@@ -106,16 +106,36 @@ class AbstractDIDKey:
         else:
             raise RuntimeError("Invalid signature type.")
 
-    def to_entry_dict(self):
+    def to_entry_dict(self, did):
         """
         Converts the object to a dictionary suitable for recording on-chain.
-        """
 
-        d = vars(self)
-        del d["private_key"]
-        if self.priority_requirement is None:
-            del d["priority_requirement"]
-        d["id"] = self.full_id()
+        Params
+        ------
+        did: str
+            The DID with which this key is associated. Note that this can be different from the key controller.
+
+        Returns
+        -------
+        dict
+            Dictionary with `id`, `type`, `controller` and an optional `priorityRequirement` fields. In addition to
+            those, there is one extra field for the public key: if the selected signature type is SignatureType.RSA,
+            then this field is called `publicKeyPem`, otherwise it is called `publicKeyBase58`.
+
+        """
+        d = dict()
+
+        d["id"] = self.full_id(did)
+        d["type"] = "{}VerificationKey".format(self.signature_type)
+        d["controller"] = self.controller
+        if self.signature_type == SignatureType.RSA.value:
+            d["publicKeyPem"] = str(self.public_key, "utf-8")
+        else:
+            d["publicKeyBase58"] = str(self.public_key, "utf-8")
+
+        if self.priority_requirement is not None:
+            d["priorityRequirement"] = self.priority_requirement
+
         return d
 
     def sign(self, msg, hash_f=hashlib.sha256):
@@ -151,14 +171,14 @@ class AbstractDIDKey:
                 "Unsupported signature type: {}".format(self.signature_type)
             )
 
-    def full_id(self):
+    def full_id(self, did):
         """
         Returns
         -------
         str
             The full id for the key, constituting of the DID_METHOD_NAME, the controller and the key alias.
         """
-        return "{}:{}#{}".format(DID_METHOD_NAME, self.controller, self.alias)
+        return "{}#{}".format(did, self.alias)
 
     def _generate_ed_dsa_key_pair(self):
         self.signing_key, self.verifying_key = ed25519.create_keypair()
@@ -179,6 +199,7 @@ class AbstractDIDKey:
         self.signing_key = RSA.generate(2048)
         self.verifying_key = self.signing_key.publickey()
 
+        # TODO: Change default formatting for signing key when exporting it
         return self.verifying_key.export_key(), self.signing_key.export_key()
 
     @staticmethod
@@ -271,6 +292,11 @@ class ManagementKey(AbstractDIDKey):
             )
         )
 
+    def to_entry_dict(self, did):
+        d = super().to_entry_dict(did)
+        d["priority"] = self.priority
+        return d
+
 
 class DIDKey(AbstractDIDKey):
     """
@@ -333,3 +359,8 @@ class DIDKey(AbstractDIDKey):
                 self.private_key,
             )
         )
+
+    def to_entry_dict(self, did):
+        d = super().to_entry_dict(did)
+        d["purpose"] = self.purpose
+        return d

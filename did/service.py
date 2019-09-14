@@ -68,24 +68,33 @@ class Service:
             )
         )
 
-    def to_entry_dict(self):
+    def to_entry_dict(self, did):
         """
         Converts the object to a dictionary suitable for recording on-chain.
+
+        Params
+        ------
+        did: str
+            The DID to which this service belongs.
         """
-        d = vars(self)
-        d["id"] = self.full_id()
-        if self.priority_requirement is None:
-            del d["priority_requirement"]
+        d = dict()
+
+        d["id"] = self.full_id(did)
+        d["type"] = self.service_type
+        d["serviceEndpoint"] = self.endpoint
+        if self.priority_requirement is not None:
+            d["priorityRequirement"] = self.priority_requirement
+
         return d
 
-    def full_id(self):
+    def full_id(self, did):
         """
         Returns
         -------
         str
             The full id for the service, constituting of the DID_METHOD_NAME, the controller and the service alias.
         """
-        return "{}:{}#{}".format(DID_METHOD_NAME, self.controller, self.alias)
+        return "{}#{}".format(did, self.alias)
 
     @staticmethod
     def _validate_service_input_params(

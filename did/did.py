@@ -189,7 +189,9 @@ class DID:
             If the entry size exceeds the entry size limit.
         """
 
-        management_keys = list(map(self._build_key_entry_object, self.management_keys))
+        management_keys = list(
+            map(lambda k: k.to_entry_dict(self.id), self.management_keys)
+        )
 
         if len(management_keys) < 1:
             raise ValueError("The DID must have at least one management key.")
@@ -305,18 +307,20 @@ class DID:
             A dictionary with the DID Document properties.
         """
 
-        management_keys = list(map(self._build_key_entry_object, self.management_keys))
+        management_keys = list(
+            map(lambda k: k.to_entry_dict(self.id), self.management_keys)
+        )
 
         did_document = {
             "didMethodVersion": DID_METHOD_SPEC_VERSION,
             "managementKey": management_keys,
         }
 
-        did_keys = list(map(self._build_key_entry_object, self.did_keys))
+        did_keys = list(map(lambda k: k.to_entry_dict(self.id), self.did_keys))
         if len(did_keys) > 0:
             did_document["didKey"] = did_keys
 
-        services = list(map(self._build_service_entry_object, self.services))
+        services = list(map(lambda s: s.to_entry_dict(self.id), self.services))
         if len(services) > 0:
             did_document["service"] = services
 
@@ -338,70 +342,6 @@ class DID:
         )
         did_id = "{}:{}".format(DID_METHOD_NAME, chain_id)
         return did_id
-
-    def _build_key_entry_object(self, key):
-        """
-        Builds a key object to include in the DID Document.
-
-        Parameters
-        ----------
-        key: KeyModel
-            A key to use when building the object.
-
-        Returns
-        -------
-        obj
-            A key object to include in the DID Document.
-        """
-
-        public_key_property = (
-            "publicKeyPem"
-            if key.signature_type == SignatureType.RSA.value
-            else "publicKeyBase58"
-        )
-
-        key_entry_object = {
-            "id": "{}#{}".format(self.id, key.alias),
-            "type": "{}VerificationKey".format(key.signature_type),
-            "controller": key.controller,
-            public_key_property: str(key.public_key, "utf8"),
-        }
-
-        if type(key) == ManagementKey:
-            key_entry_object["priority"] = key.priority
-        else:
-            key_entry_object["purpose"] = list(key.purpose)
-
-        if key.priority_requirement is not None:
-            key_entry_object["priorityRequirement"] = key.priority_requirement
-
-        return key_entry_object
-
-    def _build_service_entry_object(self, service):
-        """
-        Builds a service object to include in the DID Document.
-
-        Parameters
-        ----------
-        service: ServiceModel
-            A service to use when building the object.
-
-        Returns
-        -------
-        obj
-            A service object to include in the DID Document.
-        """
-
-        service_entry_object = {
-            "id": "{}#{}".format(self.id, service.alias),
-            "type": service.service_type,
-            "serviceEndpoint": service.endpoint,
-        }
-
-        if service.priority_requirement is not None:
-            service_entry_object["priorityRequirement"] = service.priority_requirement
-
-        return service_entry_object
 
     @staticmethod
     def _check_alias_is_unique_and_add_to_used(used_aliases, alias):
