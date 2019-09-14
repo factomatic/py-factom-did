@@ -156,7 +156,7 @@ class TestManagementKeys:
                 did.management_key(alias, 1, SignatureType.EdDSA.value, controller)
 
 
-class DidKeysTestCase:
+class TestDidKeys:
     def test_add_did_keys(self, did):
         did_key_1_alias = "did-key-1"
         did_key_1_purpose = [PurposeType.PublicKey.value]
