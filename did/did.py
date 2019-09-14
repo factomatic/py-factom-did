@@ -14,6 +14,7 @@ from did.encryptor import encrypt_keys
 from did.enums import SignatureType, EntryType, PurposeType
 from did.keys import ManagementKey, DIDKey
 from did.service import Service
+from did.updater import DIDUpdater
 
 __all__ = ["DID", "SignatureType", "PurposeType"]
 
@@ -62,6 +63,11 @@ class DID:
             self._check_alias_is_unique_and_add_to_used(
                 self.used_service_aliases, service.alias
             )
+
+    def update(self):
+        if not self.management_keys:
+            raise RuntimeError("Cannot update DID without management keys.")
+        return DIDUpdater(self)
 
     def management_key(
         self,
@@ -131,9 +137,7 @@ class DID:
         if not controller:
             controller = self.id
 
-        key = DIDKey(
-            alias, set(purpose), signature_type, controller, priority_requirement
-        )
+        key = DIDKey(alias, purpose, signature_type, controller, priority_requirement)
         self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
         self.did_keys.append(key)
