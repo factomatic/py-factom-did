@@ -23,13 +23,15 @@ def calculate_entry_size(ext_ids, content):
     fixed_header_size = 35
     total_entry_size += fixed_header_size + 2 * len(ext_ids)
 
+    hex_str_re = re.compile("[0-9a-f]+")
+
     for ext_id in ext_ids:
         if type(ext_id) is bytes:
             total_entry_size += len(ext_id)
         else:
             # If the ExtID is not bytes, it's assumed to be a hex string
             assert (
-                re.match("[0-9a-f]+", ext_id) is not None
+                hex_str_re.match(ext_id) is not None
             ), "ExtID must be bytes or hex string"
             total_entry_size += len(ext_id) / 2
 
@@ -37,7 +39,7 @@ def calculate_entry_size(ext_ids, content):
         total_entry_size += len(content)
     else:
         assert (
-            re.match("[0-9a-f]+", content) is not None
+            hex_str_re.match(content) is not None
         ), "Content must be bytes or hex string"
         total_entry_size += len(content) / 2
 
