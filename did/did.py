@@ -11,12 +11,12 @@ from did.blockchain import (
 )
 from did.constants import *
 from did.encryptor import encrypt_keys
-from did.enums import SignatureType, EntryType, PurposeType
+from did.enums import SignatureType, EntryType, DIDKeyPurpose
 from did.keys import ManagementKey, DIDKey
 from did.service import Service
 from did.updater import DIDUpdater
 
-__all__ = ["DID", "SignatureType", "PurposeType"]
+__all__ = ["DID", "SignatureType", "DIDKeyPurpose"]
 
 
 class DID:

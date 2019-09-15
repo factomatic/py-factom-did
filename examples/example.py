@@ -4,7 +4,7 @@ from pprint import pprint
 from factom import Factomd, FactomWalletd
 
 from did.constants import DID_METHOD_NAME
-from did.did import DID, SignatureType, PurposeType
+from did.did import DID, SignatureType, DIDKeyPurpose
 from did.encryptor import (
     decrypt_keys_from_str,
     decrypt_keys_from_json_str,
@@ -34,18 +34,18 @@ def create_new_did():
 
     # New public key with default signature type and controller
     did_key_1_alias = "my-did-key-1"
-    did_key_1_purpose = [PurposeType.PublicKey.value]
+    did_key_1_purpose = [DIDKeyPurpose.PublicKey.value]
 
     # New authentication key with specified signature type
     did_key_2_alias = "my-did-key-2"
-    did_key_2_purpose = [PurposeType.AuthenticationKey.value]
+    did_key_2_purpose = [DIDKeyPurpose.AuthenticationKey.value]
     did_key_2_signature_type = SignatureType.RSA.value
 
     # New public and authentication key with specified signature type, controller and priority requirement
     did_key_3_alias = "my-did-key-3"
     did_key_3_purpose = [
-        PurposeType.PublicKey.value,
-        PurposeType.AuthenticationKey.value,
+        DIDKeyPurpose.PublicKey.value,
+        DIDKeyPurpose.AuthenticationKey.value,
     ]
     did_key_3_signature_type = SignatureType.EdDSA.value
     did_key_3_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(

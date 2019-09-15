@@ -68,7 +68,7 @@ class DIDUpdater:
         Parameters
         ----------
         alias: str
-        purpose: did.enums.PurposeType
+        purpose: did.enums.DIDKeyPurpose
         signature_type: SignatureType, optional
         controller: str, optional
         priority_requirement: int, optional

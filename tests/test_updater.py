@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from did.did import DID, PurposeType, SignatureType
+from did.did import DID, DIDKeyPurpose, SignatureType
 
 
 @pytest.fixture
@@ -24,14 +24,14 @@ def full_did():
         .management_key("man-key3", 1)
         .management_key("man-key4", 2, SignatureType.RSA.value)
         .did_key(
-            "did-key1", PurposeType.AuthenticationKey.value, priority_requirement=2
+            "did-key1", DIDKeyPurpose.AuthenticationKey.value, priority_requirement=2
         )
         .did_key(
             "did-key2",
-            [PurposeType.AuthenticationKey.value, PurposeType.PublicKey.value],
+            [DIDKeyPurpose.AuthenticationKey.value, DIDKeyPurpose.PublicKey.value],
             priority_requirement=3,
         )
-        .did_key("did-key3", PurposeType.PublicKey.value, priority_requirement=1)
+        .did_key("did-key3", DIDKeyPurpose.PublicKey.value, priority_requirement=1)
         .service("gmail-service", "email-service", "https://gmail.com", 2)
         .service(
             "banking-credential-service",
@@ -72,7 +72,7 @@ class TestDIDKeys:
     def test_did_key_addition(self, did):
         updated = (
             did.update()
-            .add_did_key("did-key1", PurposeType.AuthenticationKey.value)
+            .add_did_key("did-key1", DIDKeyPurpose.AuthenticationKey.value)
             .get_updated()
         )
         assert len(updated.management_keys) == 1
@@ -122,7 +122,9 @@ class TestExportUpdateEntryData:
             .add_management_key("man-key2", 0)
             .add_management_key("man-key3", 1, signature_type=SignatureType.RSA.value)
             .add_did_key(
-                "did-key1", purpose=PurposeType.PublicKey.value, priority_requirement=1
+                "did-key1",
+                purpose=DIDKeyPurpose.PublicKey.value,
+                priority_requirement=1,
             )
             .add_service(
                 "signature-service",
@@ -208,7 +210,7 @@ class TestExportUpdateEntryData:
         update_entry = (
             full_did.update()
             .add_management_key("man-key5", 0)
-            .add_did_key("auth-key1", PurposeType.AuthenticationKey.value)
+            .add_did_key("auth-key1", DIDKeyPurpose.AuthenticationKey.value)
             .add_service(
                 "encrypted-chat", "chat-service", "https://my-chat-service.com"
             )

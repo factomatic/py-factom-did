@@ -9,7 +9,7 @@ from ecdsa import SigningKey, SECP256k1
 import ed25519
 
 from did.constants import DID_METHOD_NAME
-from did.enums import PurposeType, SignatureType
+from did.enums import DIDKeyPurpose, SignatureType
 
 __all__ = ["AbstractDIDKey", "ManagementKey", "DIDKey"]
 
@@ -339,8 +339,8 @@ class DIDKey(AbstractDIDKey):
 
         for purpose_type in purpose_l:
             if purpose_type not in {
-                PurposeType.PublicKey.value,
-                PurposeType.AuthenticationKey.value,
+                DIDKeyPurpose.PublicKey.value,
+                DIDKeyPurpose.AuthenticationKey.value,
             }:
                 raise ValueError("Purpose must contain only valid PurposeTypes.")
 
