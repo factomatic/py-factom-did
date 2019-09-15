@@ -332,14 +332,19 @@ class DIDKey(AbstractDIDKey):
             private_key,
         )
 
-        for purpose_type in purpose:
-            if purpose_type not in (
+        if type(purpose) is list:
+            purpose_l = purpose
+        else:
+            purpose_l = [purpose]
+
+        for purpose_type in purpose_l:
+            if purpose_type not in {
                 PurposeType.PublicKey.value,
                 PurposeType.AuthenticationKey.value,
-            ):
+            }:
                 raise ValueError("Purpose must contain only valid PurposeTypes.")
 
-        self.purpose = purpose
+        self.purpose = purpose_l
 
     def __eq__(self, other):
         if self.__class__ is other.__class__:

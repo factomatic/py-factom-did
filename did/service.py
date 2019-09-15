@@ -1,7 +1,5 @@
 import re
 
-from did.constants import DID_METHOD_NAME
-
 __all__ = ["Service"]
 
 
@@ -14,8 +12,6 @@ class Service:
     ----------
     alias: str
         A human-readable nickname for the service endpoint.
-    controller: str
-        The DID behind this service. The controller must be a valid DID.
     service_type: str
         Type of the service endpoint (e.g. email, credential store).
     endpoint: str
@@ -27,15 +23,12 @@ class Service:
         A non-negative integer showing the minimum hierarchical level a key must have in order to remove this service.
     """
 
-    def __init__(
-        self, alias, controller, service_type, endpoint, priority_requirement=None
-    ):
+    def __init__(self, alias, service_type, endpoint, priority_requirement=None):
         self._validate_service_input_params(
-            alias, controller, service_type, endpoint, priority_requirement
+            alias, service_type, endpoint, priority_requirement
         )
 
         self.alias = alias
-        self.controller = controller
         self.service_type = service_type
         self.endpoint = endpoint
         self.priority_requirement = priority_requirement
@@ -44,13 +37,11 @@ class Service:
         if self.__class__ is other.__class__:
             return (
                 self.alias,
-                self.controller,
                 self.service_type,
                 self.endpoint,
                 self.priority_requirement,
             ) == (
                 other.alias,
-                other.controller,
                 other.service_type,
                 other.endpoint,
                 other.priority_requirement,
@@ -59,13 +50,7 @@ class Service:
 
     def __hash__(self):
         return hash(
-            (
-                self.alias,
-                self.controller,
-                self.service_type,
-                self.endpoint,
-                self.priority_requirement,
-            )
+            (self.alias, self.service_type, self.endpoint, self.priority_requirement)
         )
 
     def to_entry_dict(self, did):
@@ -98,7 +83,7 @@ class Service:
 
     @staticmethod
     def _validate_service_input_params(
-        alias, controller, service_type, endpoint, priority_requirement
+        alias, service_type, endpoint, priority_requirement
     ):
         if not re.match("^[a-z0-9-]{1,32}$", alias):
             raise ValueError(
@@ -116,9 +101,6 @@ class Service:
             raise ValueError(
                 "Endpoint must be a valid URL address starting with http:// or https://."
             )
-
-        if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
-            raise ValueError("Controller must be a valid DID.")
 
         if priority_requirement is not None and priority_requirement < 0:
             raise ValueError("Priority requirement must be a non-negative integer.")
