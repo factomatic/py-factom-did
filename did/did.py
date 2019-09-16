@@ -329,7 +329,7 @@ class DID:
             A DID Id.
         """
 
-        self.nonce = bytes.fromhex(os.urandom(32).hex())
+        self.nonce = os.urandom(32)
         chain_id = calculate_chain_id(
             [EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce]
         )
