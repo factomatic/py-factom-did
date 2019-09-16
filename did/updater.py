@@ -164,6 +164,9 @@ class DIDUpdater:
             update_key_required_priority = self._get_required_key_priority_for_update(
                 key, update_key_required_priority, lambda k: k.priority_requirement
             )
+            update_key_required_priority = self._get_required_key_priority_for_update(
+                key, update_key_required_priority, lambda k: k.priority
+            )
         for key in revoked_did_keys:
             revoke_dict["didKey"].append({"id": key.alias})
             update_key_required_priority = self._get_required_key_priority_for_update(
