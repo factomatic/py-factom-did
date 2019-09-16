@@ -3,7 +3,7 @@ import json
 import math
 import operator as op
 
-from did.blockchain import calculate_entry_size, record_entry_on_chain
+from did.blockchain import calculate_entry_size, record_entry
 from did.constants import ENTRY_SCHEMA_VERSION, ENTRY_SIZE_LIMIT
 from did.did import SignatureType
 from did.enums import EntryType
@@ -241,11 +241,10 @@ class DIDUpdater:
 
     def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
         """
-        Records the DIDUpdate entry on-chain.
+        Attempts to record the DIDUpdate entry on-chain.
         """
-        # TODO: Change to a method that creates an entry, not a chain
-        record_entry_on_chain(
-            self.export_entry_data(), factomd, walletd, ec_address, verbose
+        record_entry(
+            self.did.id, self.export_entry_data(), factomd, walletd, ec_address, verbose
         )
 
     def _get_revoked(self):

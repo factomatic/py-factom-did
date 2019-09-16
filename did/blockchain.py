@@ -71,9 +71,9 @@ def calculate_chain_id(ext_ids):
     return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
 
 
-def record_entry_on_chain(entry_data, factomd, walletd, ec_address, verbose=False):
+def create_chain(entry_data, factomd, walletd, ec_address, verbose=False):
     """
-    Attempts to record the DID document on-chain.
+    Attempts to create a Factom chain from the provided entry data.
 
     Parameters
     ----------
@@ -106,6 +106,50 @@ def record_entry_on_chain(entry_data, factomd, walletd, ec_address, verbose=Fals
             factomd, entry_data["ext_ids"], entry_data["content"], ec_address=ec_address
         )
     except FactomAPIError as e:
+        raise RuntimeError("Failed while trying to create the chain: {}".format(e.data))
+
+
+def record_entry(chain_id, entry_data, factomd, walletd, ec_address, verbose=False):
+    """
+    Attempts to record a Factom entry in the give chain with the provided entry data.
+
+    Parameters
+    ----------
+    chain_id: str
+        The chain in which to record the entry.
+    entry_data: dict
+        A dictionary with two keys: ext_ids and content. The value of ext_ids must be a list
+        of bytes or hex encoded string, while the value of content must be bytes or hex encoded str.
+    factomd: obj
+        Factomd instance, instantiated from the Python factom-api package.
+    walletd: obj
+        Factom walletd instance, instantiated from the Python factom-api package.
+    ec_address: str
+        EC address used to pay for the chain & entry creation.
+    verbose: bool, optional
+        If true, display the contents of the entry that will be recorded
+        on-chain.
+
+    Raises
+    ------
+        RuntimeError
+            If the entry cannot be created
+    """
+
+    from pprint import pprint
+
+    if verbose:
+        pprint(entry_data)
+
+    try:
+        walletd.new_entry(
+            factomd,
+            chain_id,
+            entry_data["ext_ids"],
+            entry_data["content"],
+            ec_address=ec_address,
+        )
+    except FactomAPIError as e:
         raise RuntimeError(
-            "Failed while trying to record DID data on-chain: {}".format(e.data)
+            "Failed while trying to record entry data on-chain: {}".format(e.data)
         )

@@ -4,11 +4,7 @@ import os
 import re
 
 
-from did.blockchain import (
-    calculate_chain_id,
-    calculate_entry_size,
-    record_entry_on_chain,
-)
+from did.blockchain import calculate_chain_id, calculate_entry_size, create_chain
 from did.constants import *
 from did.encryptor import encrypt_keys
 from did.enums import SignatureType, EntryType, DIDKeyPurpose
@@ -268,7 +264,7 @@ class DID:
 
     def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
         """
-        Attempts to record the DID document on-chain.
+        Attempts to create the DIDManagement chain.
 
         Parameters
         ----------
@@ -288,9 +284,7 @@ class DID:
                 If the chain cannot be created
         """
 
-        record_entry_on_chain(
-            self.export_entry_data(), factomd, walletd, ec_address, verbose
-        )
+        create_chain(self.export_entry_data(), factomd, walletd, ec_address, verbose)
 
     @staticmethod
     def is_valid_did(did):
