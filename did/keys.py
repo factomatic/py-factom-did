@@ -1,12 +1,15 @@
+import hashlib
 import re
 
 import base58
+from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
+from Crypto.Signature import pkcs1_15
 from ecdsa import SigningKey, SECP256k1
 import ed25519
 
 from did.constants import DID_METHOD_NAME
-from did.enums import PurposeType, SignatureType
+from did.enums import DIDKeyPurpose, SignatureType
 
 __all__ = ["AbstractDIDKey", "ManagementKey", "DIDKey"]
 
@@ -60,6 +63,25 @@ class AbstractDIDKey:
         else:
             self.public_key, self.private_key = public_key, private_key
 
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return (
+                self.alias,
+                self.signature_type,
+                self.controller,
+                self.priority_requirement,
+                self.public_key,
+                self.private_key,
+            ) == (
+                other.alias,
+                other.signature_type,
+                other.controller,
+                other.priority_requirement,
+                other.public_key,
+                other.private_key,
+            )
+        return NotImplemented
+
     def generate_key_pair(self):
         """
         Generates a new key pair.
@@ -84,27 +106,100 @@ class AbstractDIDKey:
         else:
             raise RuntimeError("Invalid signature type.")
 
-    @staticmethod
-    def _generate_ed_dsa_key_pair():
-        signing_key, verifying_key = ed25519.create_keypair()
+    def to_entry_dict(self, did):
+        """
+        Converts the object to a dictionary suitable for recording on-chain.
+
+        Params
+        ------
+        did: str
+            The DID with which this key is associated. Note that this can be different from the key controller.
+
+        Returns
+        -------
+        dict
+            Dictionary with `id`, `type`, `controller` and an optional `priorityRequirement` fields. In addition to
+            those, there is one extra field for the public key: if the selected signature type is SignatureType.RSA,
+            then this field is called `publicKeyPem`, otherwise it is called `publicKeyBase58`.
+
+        """
+        d = dict()
+
+        d["id"] = self.full_id(did)
+        d["type"] = "{}VerificationKey".format(self.signature_type)
+        d["controller"] = self.controller
+        if self.signature_type == SignatureType.RSA.value:
+            d["publicKeyPem"] = str(self.public_key, "utf-8")
+        else:
+            d["publicKeyBase58"] = str(self.public_key, "utf-8")
+
+        if self.priority_requirement is not None:
+            d["priorityRequirement"] = self.priority_requirement
+
+        return d
+
+    def sign(self, msg, hash_f=hashlib.sha256):
+        """
+        Signs a message with the existing private key and signature type.
+
+        The message is hashed before being signed, with the provided hash function. The default hash function used is
+        SHA-256. Note that for RSA signature types, only SHA-256 hashing is currently supported.
+
+        Parameters
+        ----------
+        msg: bytes
+            The message to sign.
+        hash_f: function, optional
+            The hash function used to compute the digest of the message before signing it.
+
+        Returns
+        -------
+        bytes
+            The bytes of the signatures.
+        """
+
+        assert type(msg) is bytes, "Message must be supplied as bytes."
+
+        if self.signature_type == SignatureType.ECDSA.value:
+            return self.signing_key.sign_digest_deterministic(hash_f(msg).digest())
+        elif self.signature_type == SignatureType.EdDSA.value:
+            return self.signing_key.sign(hash_f(msg).digest())
+        elif self.signature_type == SignatureType.RSA.value:
+            return pkcs1_15.new(self.signing_key).sign(SHA256.new(msg))
+        else:
+            raise NotImplementedError(
+                "Unsupported signature type: {}".format(self.signature_type)
+            )
+
+    def full_id(self, did):
+        """
+        Returns
+        -------
+        str
+            The full id for the key, constituting of the DID_METHOD_NAME, the DID and the key alias.
+        """
+        return "{}#{}".format(did, self.alias)
+
+    def _generate_ed_dsa_key_pair(self):
+        self.signing_key, self.verifying_key = ed25519.create_keypair()
         return (
-            base58.b58encode(verifying_key.to_bytes()),
-            base58.b58encode(signing_key.to_bytes()),
+            base58.b58encode(self.verifying_key.to_bytes()),
+            base58.b58encode(self.signing_key.to_bytes()),
         )
 
-    @staticmethod
-    def _generate_ec_dsa_key_pair():
-        signing_key = SigningKey.generate(curve=SECP256k1)
-        verifying_key = signing_key.get_verifying_key()
+    def _generate_ec_dsa_key_pair(self):
+        self.signing_key = SigningKey.generate(curve=SECP256k1)
+        self.verifying_key = self.signing_key.get_verifying_key()
         return (
-            base58.b58encode(verifying_key.to_string()),
-            base58.b58encode(signing_key.to_string()),
+            base58.b58encode(self.verifying_key.to_string()),
+            base58.b58encode(self.signing_key.to_string()),
         )
 
-    @staticmethod
-    def _generate_rsa_key_pair():
-        key = RSA.generate(2048)
-        return key.publickey().export_key(), key.export_key()
+    def _generate_rsa_key_pair(self):
+        self.signing_key = RSA.generate(2048)
+        self.verifying_key = self.signing_key.publickey()
+
+        return self.verifying_key.export_key(), self.signing_key.export_key()
 
     @staticmethod
     def _validate_key_input_params(
@@ -149,7 +244,7 @@ class ManagementKey(AbstractDIDKey):
         higher priority.
     signature_type: SignatureType
     controller: str
-    priority_requirement: int
+    priority_requirement: int, optional
     public_key: str, optional
     private_key: str, optional
     """
@@ -160,7 +255,7 @@ class ManagementKey(AbstractDIDKey):
         priority,
         signature_type,
         controller,
-        priority_requirement,
+        priority_requirement=None,
         public_key=None,
         private_key=None,
     ):
@@ -178,6 +273,29 @@ class ManagementKey(AbstractDIDKey):
 
         self.priority = priority
 
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return super().__eq__(other) and self.priority == other.priority
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(
+            (
+                self.alias,
+                self.priority,
+                self.signature_type,
+                self.controller,
+                self.priority_requirement,
+                self.public_key,
+                self.private_key,
+            )
+        )
+
+    def to_entry_dict(self, did):
+        d = super().to_entry_dict(did)
+        d["priority"] = self.priority
+        return d
+
 
 class DIDKey(AbstractDIDKey):
     """
@@ -186,11 +304,11 @@ class DIDKey(AbstractDIDKey):
     Attributes
     ----------
     alias: str
-    purpose: PurposeType[]
-        A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
+    purpose: DIDKeyPurpose or DIDKeyPurpose[]
+        Shows what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
     signature_type: SignatureType
     controller: str
-    priority_requirement: int
+    priority_requirement: int, optional
     public_key: str, optional
     private_key: str, optional
     """
@@ -201,7 +319,7 @@ class DIDKey(AbstractDIDKey):
         purpose,
         signature_type,
         controller,
-        priority_requirement,
+        priority_requirement=None,
         public_key=None,
         private_key=None,
     ):
@@ -214,11 +332,41 @@ class DIDKey(AbstractDIDKey):
             private_key,
         )
 
-        for purpose_type in purpose:
-            if purpose_type not in (
-                PurposeType.PublicKey.value,
-                PurposeType.AuthenticationKey.value,
-            ):
-                raise ValueError("Purpose must contain only valid PurposeTypes.")
+        if type(purpose) is list:
+            purpose_l = purpose
+        else:
+            purpose_l = [purpose]
 
-        self.purpose = purpose
+        for purpose_type in purpose_l:
+            if purpose_type not in {
+                DIDKeyPurpose.PublicKey.value,
+                DIDKeyPurpose.AuthenticationKey.value,
+            }:
+                raise ValueError(
+                    "Purpose must contain only valid DIDKeyPurpose values."
+                )
+
+        self.purpose = purpose_l
+
+    def __eq__(self, other):
+        if self.__class__ is other.__class__:
+            return super().__eq__(other) and self.purpose == other.purpose
+        return NotImplemented
+
+    def __hash__(self):
+        return hash(
+            (
+                self.alias,
+                "".join(self.purpose),
+                self.signature_type,
+                self.controller,
+                self.priority_requirement,
+                self.public_key,
+                self.private_key,
+            )
+        )
+
+    def to_entry_dict(self, did):
+        d = super().to_entry_dict(did)
+        d["purpose"] = self.purpose
+        return d

@@ -4,3 +4,5 @@
 .. include:: ./did.enums.rst
 .. include:: ./did.keys.rst
 .. include:: ./did.models.rst
+.. include:: ./did.service.rst
+.. include:: ./did.updater.rst

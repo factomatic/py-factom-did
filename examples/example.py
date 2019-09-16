@@ -1,10 +1,11 @@
 import os
 from pprint import pprint
+import time
 
 from factom import Factomd, FactomWalletd
 
 from did.constants import DID_METHOD_NAME
-from did.did import DID, SignatureType, PurposeType
+from did.did import DID, SignatureType, DIDKeyPurpose
 from did.encryptor import (
     decrypt_keys_from_str,
     decrypt_keys_from_json_str,
@@ -34,18 +35,18 @@ def create_new_did():
 
     # New public key with default signature type and controller
     did_key_1_alias = "my-did-key-1"
-    did_key_1_purpose = [PurposeType.PublicKey.value]
+    did_key_1_purpose = [DIDKeyPurpose.PublicKey.value]
 
     # New authentication key with specified signature type
     did_key_2_alias = "my-did-key-2"
-    did_key_2_purpose = [PurposeType.AuthenticationKey.value]
+    did_key_2_purpose = [DIDKeyPurpose.AuthenticationKey.value]
     did_key_2_signature_type = SignatureType.RSA.value
 
     # New public and authentication key with specified signature type, controller and priority requirement
     did_key_3_alias = "my-did-key-3"
     did_key_3_purpose = [
-        PurposeType.PublicKey.value,
-        PurposeType.AuthenticationKey.value,
+        DIDKeyPurpose.PublicKey.value,
+        DIDKeyPurpose.AuthenticationKey.value,
     ]
     did_key_3_signature_type = SignatureType.EdDSA.value
     did_key_3_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
@@ -82,10 +83,30 @@ def create_new_did():
     return new_did
 
 
-def record_did_on_chain():
-    new_did = create_new_did()
+def record_did_on_chain(did):
     # Show the data to be recorded for illustration purposes
-    new_did.record_on_chain(factomd, walletd, ec_address, verbose=True)
+    did.record_on_chain(factomd, walletd, ec_address, verbose=True)
+
+
+def update_existing_did(did):
+    did.update().add_did_key(
+        "my-did-key-4", DIDKeyPurpose.AuthenticationKey.value
+    ).add_did_key(
+        "my-did-key-5",
+        [DIDKeyPurpose.AuthenticationKey.value, DIDKeyPurpose.PublicKey.value],
+    ).add_management_key(
+        "my-management-key-42", 1
+    ).add_service(
+        "gmail-service", "email-service", "https://gmail.com"
+    ).revoke_did_key(
+        "my-did-key-2"
+    ).revoke_management_key(
+        "my-second-management-key"
+    ).revoke_service(
+        "my-photo-service"
+    ).record_on_chain(
+        factomd, walletd, ec_address, verbose=True
+    )
 
 
 def encrypt_keys_as_str_and_decrypt():
@@ -140,4 +161,7 @@ def decrypt_keys_from_file():
 
 
 if __name__ == "__main__":
-    record_did_on_chain()
+    did = create_new_did()
+    record_did_on_chain(did)
+    time.sleep(1)
+    update_existing_did(did)

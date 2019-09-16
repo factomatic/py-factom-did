@@ -1,19 +1,18 @@
 from base64 import urlsafe_b64encode
-import codecs
-import hashlib
 import json
 import os
 import re
 
-from factom.exceptions import FactomAPIError
 
+from did.blockchain import calculate_chain_id, calculate_entry_size, create_chain
 from did.constants import *
 from did.encryptor import encrypt_keys
-from did.enums import SignatureType, EntryType, PurposeType
+from did.enums import SignatureType, EntryType, DIDKeyPurpose
 from did.keys import ManagementKey, DIDKey
 from did.service import Service
+from did.updater import DIDUpdater
 
-__all__ = ["DID", "SignatureType", "PurposeType"]
+__all__ = ["DID", "SignatureType", "DIDKeyPurpose"]
 
 
 class DID:
@@ -37,7 +36,6 @@ class DID:
     """
 
     def __init__(self, did=None, management_keys=None, did_keys=None, services=None):
-        # TODO: Add validation logic for the did
         self.id = (
             self._generate_did() if did is None or not self.is_valid_did(did) else did
         )
@@ -60,6 +58,28 @@ class DID:
             self._check_alias_is_unique_and_add_to_used(
                 self.used_service_aliases, service.alias
             )
+
+    def get_chain(self):
+        """
+        Returns
+        -------
+        str
+            The chain ID where this DID is (or will be) stored
+        """
+        # Since we do a validation of the DID in the constructor (or add it automatically, if it's not provided),
+        # we have a guarantee that it will be well-formed, hence no need for exception checking here
+        return self.id.split(":")[2]
+
+    def update(self):
+        """
+        Returns
+        -------
+        did.did.DID
+            The updated DID object
+        """
+        if not self.management_keys:
+            raise RuntimeError("Cannot update DID without management keys.")
+        return DIDUpdater(self)
 
     def management_key(
         self,
@@ -115,8 +135,8 @@ class DID:
         ----------
         alias: str
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
-        purpose: PurposeType[]
-            A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
+        purpose: DIDKeyPurpose or DIDKeyPurpose[]
+            Shows what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
         signature_type: SignatureType, optional
             Identifies the type of signature to be used when creating the key.
         controller: str, optional
@@ -129,9 +149,7 @@ class DID:
         if not controller:
             controller = self.id
 
-        key = DIDKey(
-            alias, set(purpose), signature_type, controller, priority_requirement
-        )
+        key = DIDKey(alias, purpose, signature_type, controller, priority_requirement)
         self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
         self.did_keys.append(key)
@@ -183,30 +201,31 @@ class DID:
             If the entry size exceeds the entry size limit.
         """
 
-        management_keys = list(map(self._build_key_entry_object, self.management_keys))
+        management_keys = list(
+            map(lambda k: k.to_entry_dict(self.id), self.management_keys)
+        )
 
         if len(management_keys) < 1:
             raise ValueError("The DID must have at least one management key.")
         if not any(map(lambda key: key["priority"] == 0, management_keys)):
             raise ValueError("At least one management key must have priority 0.")
 
-        entry_content = json.dumps(self._get_did_document())
-        entry_type = EntryType.Create.value
+        ext_ids = [
+            EntryType.Create.value.encode("utf-8"),
+            ENTRY_SCHEMA_VERSION.encode("utf-8"),
+            self.nonce,
+        ]
+        entry_content = json.dumps(self._get_did_document()).encode("utf-8")
 
-        entry_size = self._calculate_entry_size(
-            [self.nonce], [entry_type, ENTRY_SCHEMA_VERSION], entry_content
-        )
+        entry_size = calculate_entry_size(ext_ids, entry_content)
 
         if entry_size > ENTRY_SIZE_LIMIT:
-            raise ValueError(
+            raise RuntimeError(
                 "You have exceeded the entry size limit! Please "
                 "remove some of your keys or services."
             )
 
-        return {
-            "ext_ids": [entry_type, ENTRY_SCHEMA_VERSION, self.nonce],
-            "content": entry_content,
-        }
+        return {"ext_ids": ext_ids, "content": entry_content}
 
     def export_encrypted_keys_as_str(self, password):
         """
@@ -262,7 +281,7 @@ class DID:
 
     def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
         """
-        Attempts to record the DID document on-chain.
+        Attempts to create the DIDManagement chain.
 
         Parameters
         ----------
@@ -282,27 +301,11 @@ class DID:
                 If the chain cannot be created
         """
 
-        from pprint import pprint
-
-        entry_data = self.export_entry_data()
-        if verbose:
-            pprint(entry_data)
-
-        # Encode the entry data
-        ext_ids = map(lambda x: x.encode("utf-8"), entry_data["ext_ids"])
-        content = entry_data["content"].encode("utf-8")
-
-        try:
-            walletd.new_chain(factomd, ext_ids, content, ec_address=ec_address)
-        except FactomAPIError as e:
-            raise RuntimeError(
-                "Failed while trying to record DID data on-chain: {}".format(e.data)
-            )
+        create_chain(self.export_entry_data(), factomd, walletd, ec_address, verbose)
 
     @staticmethod
     def is_valid_did(did):
-        # A valid DID should be 32 bytes, encoded as a lower-case hex string
-        return re.match("^[0-9a-f]{64}$", did) is not None
+        return re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), did) is not None
 
     def _get_did_document(self):
         """
@@ -314,18 +317,20 @@ class DID:
             A dictionary with the DID Document properties.
         """
 
-        management_keys = list(map(self._build_key_entry_object, self.management_keys))
+        management_keys = list(
+            map(lambda k: k.to_entry_dict(self.id), self.management_keys)
+        )
 
         did_document = {
             "didMethodVersion": DID_METHOD_SPEC_VERSION,
             "managementKey": management_keys,
         }
 
-        did_keys = list(map(self._build_key_entry_object, self.did_keys))
+        did_keys = list(map(lambda k: k.to_entry_dict(self.id), self.did_keys))
         if len(did_keys) > 0:
             did_document["didKey"] = did_keys
 
-        services = list(map(self._build_service_entry_object, self.services))
+        services = list(map(lambda s: s.to_entry_dict(self.id), self.services))
         if len(services) > 0:
             did_document["service"] = services
 
@@ -341,133 +346,15 @@ class DID:
             A DID Id.
         """
 
-        self.nonce = codecs.encode(os.urandom(32), "hex").decode()
-        chain_id = self._calculate_chain_id(
+        self.nonce = os.urandom(32)
+        chain_id = calculate_chain_id(
             [EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce]
         )
         did_id = "{}:{}".format(DID_METHOD_NAME, chain_id)
         return did_id
-
-    def _build_key_entry_object(self, key):
-        """
-        Builds a key object to include in the DID Document.
-
-        Parameters
-        ----------
-        key: KeyModel
-            A key to use when building the object.
-
-        Returns
-        -------
-        obj
-            A key object to include in the DID Document.
-        """
-
-        public_key_property = (
-            "publicKeyPem"
-            if key.signature_type == SignatureType.RSA.value
-            else "publicKeyBase58"
-        )
-
-        key_entry_object = {
-            "id": "{}#{}".format(self.id, key.alias),
-            "type": "{}VerificationKey".format(key.signature_type),
-            "controller": key.controller,
-            public_key_property: str(key.public_key, "utf8"),
-        }
-
-        if type(key) == ManagementKey:
-            key_entry_object["priority"] = key.priority
-        else:
-            key_entry_object["purpose"] = list(key.purpose)
-
-        if key.priority_requirement is not None:
-            key_entry_object["priorityRequirement"] = key.priority_requirement
-
-        return key_entry_object
-
-    def _build_service_entry_object(self, service):
-        """
-        Builds a service object to include in the DID Document.
-
-        Parameters
-        ----------
-        service: ServiceModel
-            A service to use when building the object.
-
-        Returns
-        -------
-        obj
-            A service object to include in the DID Document.
-        """
-
-        service_entry_object = {
-            "id": "{}#{}".format(self.id, service.alias),
-            "type": service.service_type,
-            "serviceEndpoint": service.endpoint,
-        }
-
-        if service.priority_requirement is not None:
-            service_entry_object["priorityRequirement"] = service.priority_requirement
-
-        return service_entry_object
 
     @staticmethod
     def _check_alias_is_unique_and_add_to_used(used_aliases, alias):
         if alias in used_aliases:
             raise ValueError('Duplicate key alias "{}" detected.'.format(alias))
         used_aliases.add(alias)
-
-    @staticmethod
-    def _calculate_chain_id(ext_ids):
-        """
-        Calculates chain id by hashing each ExtID, joining the hashes into a byte array and hashing the array.
-
-        Parameters
-        ----------
-        ext_ids: list
-            A list of ExtIds.
-
-        Returns
-        -------
-        str
-            A chain id.
-        """
-
-        ext_ids_hash_bytes = bytearray(b"")
-        for ext_id in ext_ids:
-            ext_ids_hash_bytes.extend(hashlib.sha256(bytes(ext_id, "utf-8")).digest())
-
-        return hashlib.sha256(ext_ids_hash_bytes).hexdigest()
-
-    @staticmethod
-    def _calculate_entry_size(hex_ext_ids, utf8_ext_ids, content):
-        """
-        Calculates entry size in bytes.
-
-        Parameters
-        ----------
-        hex_ext_ids: list
-        utf8_ext_ids: list
-        content: str
-
-        Returns
-        -------
-        int
-            A total size of the entry in bytes.
-        """
-
-        total_entry_size = 0
-        fixed_header_size = 35
-        total_entry_size += (
-            fixed_header_size + 2 * len(hex_ext_ids) + 2 * len(utf8_ext_ids)
-        )
-
-        for ext_id in hex_ext_ids:
-            total_entry_size += len(ext_id) / 2
-
-        for ext_id in utf8_ext_ids:
-            total_entry_size += len(bytes(ext_id, "utf-8"))
-
-        total_entry_size += len(bytes(content, "utf-8"))
-        return total_entry_size

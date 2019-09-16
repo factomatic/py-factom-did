@@ -11,3 +11,5 @@ Submodules
    did.enums
    did.keys
    did.models
+   did.service
+   did.updater

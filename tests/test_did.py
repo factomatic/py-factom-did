@@ -3,7 +3,7 @@ import pytest
 import re
 
 from did.constants import ENTRY_SCHEMA_VERSION, DID_METHOD_SPEC_VERSION, DID_METHOD_NAME
-from did.did import DID, SignatureType, PurposeType
+from did.did import DID, SignatureType, DIDKeyPurpose
 from did.enums import EntryType
 
 
@@ -18,28 +18,42 @@ class TestDidValidator:
         assert DID.is_valid_did("asdf") is False
         assert (
             DID.is_valid_did(
-                "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                "did:factom:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             )
             is True
         )
         assert (
             DID.is_valid_did(
-                "z3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                "did:factom:z3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             )
             is False
         )
         assert (
             DID.is_valid_did(
-                "E3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                "did:factom:E3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             )
             is False
+        )
+
+
+class TestGetChain:
+    def test_get_chain_with_automatically_created_did(self, did):
+        assert re.match("[0-9a-f]{64}", did.get_chain()) is not None
+
+    def test_get_chain_with_provided_did(self):
+        did = DID(
+            did="did:factom:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        )
+        assert (
+            did.get_chain()
+            == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         )
 
 
 class TestEmptyDid:
     def test_generating_new_empty_did(self, did):
         assert re.search("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), did.id)
-        assert 64 == len(did.nonce)
+        assert 32 == len(did.nonce)
         assert [] == did.management_keys
         assert [] == did.did_keys
         assert [] == did.services
@@ -156,23 +170,23 @@ class TestManagementKeys:
                 did.management_key(alias, 1, SignatureType.EdDSA.value, controller)
 
 
-class DidKeysTestCase:
+class TestDidKeys:
     def test_add_did_keys(self, did):
         did_key_1_alias = "did-key-1"
-        did_key_1_purpose = [PurposeType.PublicKey.value]
+        did_key_1_purpose = [DIDKeyPurpose.PublicKey.value]
         did.did_key(did_key_1_alias, did_key_1_purpose)
         generated_did_key_1 = did.did_keys[0]
 
         assert did_key_1_alias == generated_did_key_1.alias
-        assert set(did_key_1_purpose) == generated_did_key_1.purpose
+        assert did_key_1_purpose == generated_did_key_1.purpose
         assert SignatureType.EdDSA.value == generated_did_key_1.signature_type
         assert did.id == generated_did_key_1.controller
-        assert None == generated_did_key_1.priority_requirement
+        assert generated_did_key_1.priority_requirement is None
 
         did_key_2_alias = "did-key-2"
         did_key_2_purpose = [
-            PurposeType.PublicKey.value,
-            PurposeType.AuthenticationKey.value,
+            DIDKeyPurpose.PublicKey.value,
+            DIDKeyPurpose.AuthenticationKey.value,
         ]
         did_key_2_signature_type = SignatureType.ECDSA.value
         did_key_2_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
@@ -189,7 +203,7 @@ class DidKeysTestCase:
         generated_did_key_2 = did.did_keys[1]
 
         assert did_key_2_alias == generated_did_key_2.alias
-        assert set(did_key_2_purpose) == generated_did_key_2.purpose
+        assert did_key_2_purpose == generated_did_key_2.purpose
         assert did_key_2_signature_type == generated_did_key_2.signature_type
         assert did_key_2_controller == generated_did_key_2.controller
         assert (
@@ -201,29 +215,29 @@ class DidKeysTestCase:
         test_cases = ["myDidKey", "my-d!d-key", "my_did_key"]
         for alias in test_cases:
             with pytest.raises(ValueError):
-                did.did_key(alias, [PurposeType.PublicKey.value])
+                did.did_key(alias, [DIDKeyPurpose.PublicKey.value])
 
-    def test_invalid_purpose_type_throws_exception(self):
+    def test_invalid_purpose_type_throws_exception(self, did):
         did_key_alias = "did-key"
-        did_key_purpose = [PurposeType.PublicKey.value, "InvalidPurposeType"]
+        did_key_purpose = [DIDKeyPurpose.PublicKey.value, "InvalidPurposeType"]
         with pytest.raises(ValueError):
-            did.add_did_key(did_key_alias, did_key_purpose)
+            did.did_key(did_key_alias, did_key_purpose)
 
-    def test_used_alias_throws_exception(self):
+    def test_used_alias_throws_exception(self, did):
         alias = "my-key-1"
-        did.add_management_key(alias, 1)
+        did.management_key(alias, 1)
         with pytest.raises(ValueError):
-            did.add_did_key(alias, [PurposeType.PublicKey.value])
+            did.did_key(alias, [DIDKeyPurpose.PublicKey.value])
 
-    def test_invalid_signature_type_throws_exception(self):
+    def test_invalid_signature_type_throws_exception(self, did):
         did_key_alias = "management-key"
         did_key_signature_type = "invalid_signature_type"
         with pytest.raises(ValueError):
-            did.add_did_key(
-                did_key_alias, [PurposeType.PublicKey.value], did_key_signature_type
+            did.did_key(
+                did_key_alias, [DIDKeyPurpose.PublicKey.value], did_key_signature_type
             )
 
-    def test_invalid_controller_throws_exception(self):
+    def test_invalid_controller_throws_exception(self, did):
         test_cases = [
             (
                 "did-key-1",
@@ -237,21 +251,21 @@ class DidKeysTestCase:
 
         for alias, controller in test_cases:
             with pytest.raises(ValueError):
-                did.add_did_key(
+                did.did_key(
                     alias,
-                    [PurposeType.PublicKey.value],
+                    [DIDKeyPurpose.PublicKey.value],
                     SignatureType.EdDSA.value,
                     controller,
                 )
 
-    def test_invalid_priority_requirement_throws_exception(self):
+    def test_invalid_priority_requirement_throws_exception(self, did):
         test_cases = [-1, -2]
         for priority_requirement in test_cases:
             did_key_alias = "did-key-{}".format(str(priority_requirement))
             with pytest.raises(ValueError):
-                did.add_did_key(
+                did.did_key(
                     did_key_alias,
-                    [PurposeType.PublicKey.value],
+                    [DIDKeyPurpose.PublicKey.value],
                     SignatureType.EdDSA.value,
                     None,
                     priority_requirement,
@@ -343,8 +357,8 @@ class TestExportEntryData:
         entry_data = did.export_entry_data()
 
         ext_ids = entry_data["ext_ids"]
-        assert EntryType.Create.value == ext_ids[0]
-        assert ENTRY_SCHEMA_VERSION == ext_ids[1]
+        assert EntryType.Create.value == ext_ids[0].decode()
+        assert ENTRY_SCHEMA_VERSION == ext_ids[1].decode()
         assert did.nonce == ext_ids[2]
 
     def test_export_entry_data_with_management_key(self, did):
@@ -378,7 +392,7 @@ class TestExportEntryData:
 
     def test_export_entry_data_with_did_key_and_service(self, did):
         did_key_alias = "my-public-key"
-        did_key_purpose = [PurposeType.PublicKey.value]
+        did_key_purpose = [DIDKeyPurpose.PublicKey.value]
         did_key_signature_type = SignatureType.RSA.value
         did_key_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
@@ -428,7 +442,7 @@ class TestExportEntryData:
         for x in range(0, 35):
             did.management_key("management-key-{}".format(x), 0)
 
-        with pytest.raises(ValueError):
+        with pytest.raises(RuntimeError):
             did.export_entry_data()
 
     def test_export_without_management_key_throws_error(self, did):

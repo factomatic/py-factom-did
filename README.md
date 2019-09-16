@@ -5,8 +5,8 @@
 
 # py-factom-did
 
-py-factom-did is a Python library, allowing the creation of a Decentralized Identifier (DID) and
-the exporting of the public metadata for it, which can be recorded on the Factom blockchain.
+py-factom-did is a Python library, allowing the creation and update of Decentralized Identifiers (DIDs) and
+the exporting of public metadata for them, which can be recorded on the Factom blockchain.
 The library enables:
 
 * creating a new DID
@@ -15,6 +15,8 @@ The library enables:
 * adding service(s) for the DID
 * exporting public metadata to be recorded on Factom
 * encrypting the newly created keys
+* updating an existing DID: adding/revoking management keys, DID keys and services and producing a signed DID
+update entry
 
 You can find an example of the library workflow in the `examples/` directory. In order to run the
 example, please note that it is necessary to:
