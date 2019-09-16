@@ -342,7 +342,9 @@ class DIDKey(AbstractDIDKey):
                 DIDKeyPurpose.PublicKey.value,
                 DIDKeyPurpose.AuthenticationKey.value,
             }:
-                raise ValueError("Purpose must contain only valid PurposeTypes.")
+                raise ValueError(
+                    "Purpose must contain only valid DIDKeyPurpose values."
+                )
 
         self.purpose = purpose_l
 
