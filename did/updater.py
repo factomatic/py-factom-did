@@ -1,4 +1,5 @@
 from collections import defaultdict
+import hashlib
 import json
 import math
 import operator as op
@@ -223,7 +224,9 @@ class DIDUpdater:
                 entry_content,
             ]
         ).replace(" ", "")
-        signature = signing_key.sign(data_to_sign.encode("utf-8"))
+        signature = signing_key.sign(
+            hashlib.sha256(data_to_sign.encode("utf-8")).digest()
+        )
 
         ext_ids = [
             EntryType.Update.value.encode("utf-8"),
