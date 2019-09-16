@@ -250,7 +250,7 @@ class DIDUpdater:
         Attempts to record the DIDUpdate entry on-chain.
         """
         record_entry(
-            self.did.id.split(":")[2],
+            self.did.get_chain(),
             self.export_entry_data(),
             factomd,
             walletd,

@@ -304,8 +304,8 @@ class DIDKey(AbstractDIDKey):
     Attributes
     ----------
     alias: str
-    purpose: PurposeType[]
-        A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
+    purpose: DIDKeyPurpose or DIDKeyPurpose[]
+        Shows what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
     signature_type: SignatureType
     controller: str
     priority_requirement: int, optional

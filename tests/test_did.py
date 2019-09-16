@@ -36,6 +36,20 @@ class TestDidValidator:
         )
 
 
+class TestGetChain:
+    def test_get_chain_with_automatically_created_did(self, did):
+        assert re.match("[0-9a-f]{64}", did.get_chain()) is not None
+
+    def test_get_chain_with_provided_did(self):
+        did = DID(
+            did="did:factom:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        )
+        assert (
+            did.get_chain()
+            == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        )
+
+
 class TestEmptyDid:
     def test_generating_new_empty_did(self, did):
         assert re.search("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), did.id)

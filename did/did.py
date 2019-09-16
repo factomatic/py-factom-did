@@ -59,7 +59,24 @@ class DID:
                 self.used_service_aliases, service.alias
             )
 
+    def get_chain(self):
+        """
+        Returns
+        -------
+        str
+            The chain ID where this DID is (or will be) stored
+        """
+        # Since we do a validation of the DID in the constructor (or add it automatically, if it's not provided),
+        # we have a guarantee that it will be well-formed, hence no need for exception checking here
+        return self.id.split(":")[2]
+
     def update(self):
+        """
+        Returns
+        -------
+        did.did.DID
+            The updated DID object
+        """
         if not self.management_keys:
             raise RuntimeError("Cannot update DID without management keys.")
         return DIDUpdater(self)
@@ -118,8 +135,8 @@ class DID:
         ----------
         alias: str
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
-        purpose: PurposeType[]
-            A list of PurposeTypes showing what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
+        purpose: DIDKeyPurpose or DIDKeyPurpose[]
+            Shows what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
         signature_type: SignatureType, optional
             Identifies the type of signature to be used when creating the key.
         controller: str, optional
