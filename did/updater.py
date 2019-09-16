@@ -103,7 +103,7 @@ class DIDUpdater:
             The alias of the key to be revoked
         """
         self.did.management_keys = self._revoke(
-            self.did.management_keys, lambda key: key.alias != alias
+            self.did.management_keys, lambda key: key.alias == alias
         )
         return self
 
@@ -117,7 +117,7 @@ class DIDUpdater:
             The alias of the key to be revoked
         """
         self.did.did_keys = self._revoke(
-            self.did.did_keys, lambda key: key.alias != alias
+            self.did.did_keys, lambda key: key.alias == alias
         )
         return self
 
@@ -131,7 +131,7 @@ class DIDUpdater:
             The alias of the service to be revoked
         """
         self.did.services = self._revoke(
-            self.did.services, lambda service: service.alias != alias
+            self.did.services, lambda service: service.alias == alias
         )
         return self
 
@@ -237,14 +237,19 @@ class DIDUpdater:
                 "remove some of your keys or services."
             )
 
-        return {"ext_ids": ext_ids, "content": entry_content}
+        return {"ext_ids": ext_ids, "content": entry_content.encode("utf-8")}
 
     def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
         """
         Attempts to record the DIDUpdate entry on-chain.
         """
         record_entry(
-            self.did.id, self.export_entry_data(), factomd, walletd, ec_address, verbose
+            self.did.id.split(":")[2],
+            self.export_entry_data(),
+            factomd,
+            walletd,
+            ec_address,
+            verbose,
         )
 
     def _get_revoked(self):
@@ -280,4 +285,4 @@ class DIDUpdater:
 
     @staticmethod
     def _revoke(l, criteria):
-        return list(filter(criteria, l))
+        return list(filter(lambda x: not criteria(x), l))

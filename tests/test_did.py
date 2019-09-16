@@ -39,7 +39,7 @@ class TestDidValidator:
 class TestEmptyDid:
     def test_generating_new_empty_did(self, did):
         assert re.search("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), did.id)
-        assert 64 == len(did.nonce)
+        assert 32 == len(did.nonce)
         assert [] == did.management_keys
         assert [] == did.did_keys
         assert [] == did.services
