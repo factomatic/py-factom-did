@@ -196,15 +196,15 @@ class DIDUpdater:
 
         # It is safe to access the first element of the sorted list of management keys as the DID.update method throws
         # if there are no management keys
-        min_priority_key = sorted(
-            self.orig_management_keys, key=op.attrgetter("priority")
-        )[0]
+        signing_key = sorted(self.orig_management_keys, key=op.attrgetter("priority"))[
+            0
+        ]
 
-        if min_priority_key.priority > update_key_required_priority:
+        if signing_key.priority > update_key_required_priority:
             raise RuntimeError(
                 "The update requires a key with priority <= {}, but the highest priority "
                 "key available is with priority {}".format(
-                    update_key_required_priority, min_priority_key.priority
+                    update_key_required_priority, signing_key.priority
                 )
             )
 
@@ -219,16 +219,16 @@ class DIDUpdater:
             [
                 EntryType.Update.value,
                 ENTRY_SCHEMA_VERSION,
-                min_priority_key.full_id(self.did.id),
+                signing_key.full_id(self.did.id),
                 entry_content,
             ]
         ).replace(" ", "")
-        signature = min_priority_key.sign(data_to_sign.encode("utf-8"))
+        signature = signing_key.sign(data_to_sign.encode("utf-8"))
 
         ext_ids = [
             EntryType.Update.value.encode("utf-8"),
             ENTRY_SCHEMA_VERSION.encode("utf-8"),
-            min_priority_key.full_id(self.did.id).encode("utf-8"),
+            signing_key.full_id(self.did.id).encode("utf-8"),
             signature,
         ]
 
