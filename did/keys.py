@@ -176,7 +176,7 @@ class AbstractDIDKey:
         Returns
         -------
         str
-            The full id for the key, constituting of the DID_METHOD_NAME, the controller and the key alias.
+            The full id for the key, constituting of the DID_METHOD_NAME, the DID and the key alias.
         """
         return "{}#{}".format(did, self.alias)
 
