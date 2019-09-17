@@ -1,0 +1,2 @@
+class MalformedDIDManagementEntry(Exception):
+    pass

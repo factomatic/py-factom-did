@@ -1,0 +1,16 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Service schema",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"},
+    "type": {
+      "enum": ["Ed25519VerificationKey", "ECDSASecp256k1VerificationKey", "RSAVerificationKey"]
+    },
+    "serviceEndpoint": {"type": "string", "format": "uri"},
+    "priorityRequirement": {"type": "string"}
+  },
+  "additionalProperties": false,
+  "required": ["id", "type", "serviceEndpoint"]
+}
+
