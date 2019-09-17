@@ -8,7 +8,7 @@ from jsonschema.validators import validator_for
 
 from client.constants import DID_METHOD_NAME
 from client.enums import DIDKeyPurpose, SignatureType
-from client.keys import ManagementKey, DIDKey
+from client.keys import DIDKey, ManagementKey
 from client.service import Service
 from resolver.exceptions import MalformedDIDManagementEntry
 from resolver.validators import validate_did_management_entry_format
