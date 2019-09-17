@@ -4,10 +4,10 @@ import json
 import math
 import operator as op
 
-from did.blockchain import calculate_entry_size, record_entry
-from did.constants import ENTRY_SCHEMA_VERSION, ENTRY_SIZE_LIMIT
-from did.did import SignatureType
-from did.enums import EntryType
+from client.blockchain import calculate_entry_size, record_entry
+from client.constants import ENTRY_SCHEMA_VERSION, ENTRY_SIZE_LIMIT
+from client.did import SignatureType
+from client.enums import EntryType
 
 
 class DIDUpdater:

@@ -8,8 +8,8 @@ from Crypto.Signature import pkcs1_15
 from ecdsa import SigningKey, SECP256k1
 import ed25519
 
-from did.constants import DID_METHOD_NAME
-from did.enums import DIDKeyPurpose, SignatureType
+from client.constants import DID_METHOD_NAME
+from client.enums import DIDKeyPurpose, SignatureType
 
 __all__ = ["AbstractDIDKey", "ManagementKey", "DIDKey"]
 

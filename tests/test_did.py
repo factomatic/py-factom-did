@@ -2,9 +2,13 @@ import json
 import pytest
 import re
 
-from did.constants import ENTRY_SCHEMA_VERSION, DID_METHOD_SPEC_VERSION, DID_METHOD_NAME
-from did.did import DID, SignatureType, DIDKeyPurpose
-from did.enums import EntryType
+from client.constants import (
+    ENTRY_SCHEMA_VERSION,
+    DID_METHOD_SPEC_VERSION,
+    DID_METHOD_NAME,
+)
+from client.did import DID, SignatureType, DIDKeyPurpose
+from client.enums import EntryType
 
 
 @pytest.fixture

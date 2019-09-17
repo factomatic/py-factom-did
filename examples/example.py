@@ -4,9 +4,9 @@ import time
 
 from factom import Factomd, FactomWalletd
 
-from did.constants import DID_METHOD_NAME
-from did.did import DID, SignatureType, DIDKeyPurpose
-from did.encryptor import (
+from client.constants import DID_METHOD_NAME
+from client.did import DID, SignatureType, DIDKeyPurpose
+from client.encryptor import (
     decrypt_keys_from_str,
     decrypt_keys_from_json_str,
     decrypt_keys_from_json_file,

@@ -9,6 +9,6 @@ install:
 - pip install pipenv
 - pipenv install -d --pre
 script:
-- pytest --cov=./did/
+- pytest --cov=./client/
 after_success:
 - coveralls

@@ -4,13 +4,13 @@ import os
 import re
 
 
-from did.blockchain import calculate_chain_id, calculate_entry_size, create_chain
-from did.constants import *
-from did.encryptor import encrypt_keys
-from did.enums import SignatureType, EntryType, DIDKeyPurpose
-from did.keys import ManagementKey, DIDKey
-from did.service import Service
-from did.updater import DIDUpdater
+from client.blockchain import calculate_chain_id, calculate_entry_size, create_chain
+from client.constants import *
+from client.encryptor import encrypt_keys
+from client.enums import SignatureType, EntryType, DIDKeyPurpose
+from client.keys import ManagementKey, DIDKey
+from client.service import Service
+from client.updater import DIDUpdater
 
 __all__ = ["DID", "SignatureType", "DIDKeyPurpose"]
 
