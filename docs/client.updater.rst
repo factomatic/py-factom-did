@@ -1,7 +1,7 @@
-did.service module
+client.updater module
 ===============
 
-.. automodule:: did.service
+.. automodule:: client.updater
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,7 +1,7 @@
-did.keys module
+client.keys module
 ===============
 
-.. automodule:: did.keys
+.. automodule:: client.keys
     :members:
     :undoc-members:
     :show-inheritance:

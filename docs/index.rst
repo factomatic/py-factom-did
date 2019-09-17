@@ -1,8 +1,8 @@
-.. include:: ./did.rst
-.. include:: ./did.did.rst
-.. include:: ./did.encryptor.rst
-.. include:: ./did.enums.rst
-.. include:: ./did.keys.rst
-.. include:: ./did.models.rst
-.. include:: ./did.service.rst
-.. include:: ./did.updater.rst
+.. include:: ./client.rst
+.. include:: ./client.did.rst
+.. include:: ./client.encryptor.rst
+.. include:: ./client.enums.rst
+.. include:: ./client.keys.rst
+.. include:: ./client.models.rst
+.. include:: ./client.service.rst
+.. include:: ./client.updater.rst

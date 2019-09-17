@@ -1,7 +1,7 @@
-did.encryptor module
+client.encryptor module
 ====================
 
-.. automodule:: did.encryptor
+.. automodule:: client.encryptor
     :members:
     :undoc-members:
     :show-inheritance:

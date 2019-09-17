@@ -1,8 +1,8 @@
 import os
 import pytest
 
-from did.did import DID
-from did.encryptor import (
+from client.did import DID
+from client.encryptor import (
     decrypt_keys_from_str,
     decrypt_keys_from_json_str,
     decrypt_keys_from_json_file,

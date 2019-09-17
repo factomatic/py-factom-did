@@ -1,7 +1,7 @@
-did.did module
+client.did module
 ==============
 
-.. automodule:: did.did
+.. automodule:: client.did
     :members:
     :exclude-members: SignatureType, DIDKeyPurpose
     :undoc-members:

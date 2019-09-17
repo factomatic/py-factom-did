@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from did.did import DID, DIDKeyPurpose, SignatureType
+from client.did import DID, DIDKeyPurpose, SignatureType
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
-did.enums module
+client.enums module
 ================
 
-.. automodule:: did.enums
+.. automodule:: client.enums
     :members:
     :undoc-members:
     :show-inheritance:
