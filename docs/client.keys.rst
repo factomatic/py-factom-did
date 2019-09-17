@@ -1,5 +1,5 @@
 client.keys module
-===============
+==================
 
 .. automodule:: client.keys
     :members:

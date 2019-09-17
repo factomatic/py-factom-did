@@ -1,5 +1,5 @@
 client.service module
-===============
+=====================
 
 .. automodule:: client.service
     :members:

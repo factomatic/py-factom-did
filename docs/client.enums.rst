@@ -1,5 +1,5 @@
 client.enums module
-================
+===================
 
 .. automodule:: client.enums
     :members:

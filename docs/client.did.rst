@@ -1,5 +1,5 @@
 client.did module
-==============
+=================
 
 .. automodule:: client.did
     :members:

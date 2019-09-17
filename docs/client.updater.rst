@@ -1,5 +1,5 @@
 client.updater module
-===============
+=====================
 
 .. automodule:: client.updater
     :members:
