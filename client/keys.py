@@ -205,10 +205,10 @@ class AbstractDIDKey:
     def _minify_rsa_public_key(public_key):
         start_index = public_key.find("\n") + 1
         end_index = public_key.rfind("\n")
-        return (
-            public_key[start_index : start_index + 20]
-            + "..."
-            + public_key[end_index - 8 : end_index]
+
+        return "{0}...{1}".format(
+            public_key[start_index : start_index + 20],
+            public_key[end_index - 8 : end_index],
         )
 
     @staticmethod
