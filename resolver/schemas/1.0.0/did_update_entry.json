@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DIDUpdate entry schema",
+  "type": "object",
+  "properties": {
+    "revoke": {
+      "type": "object",
+      "properties": {
+        "managementKey": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"}
+            },
+            "required": ["id"]
+          }
+        },
+        "didKey": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"},
+              "purpose": {
+                "type": "array",
+                "items": {
+                  "enum": ["publicKey", "authentication"]
+                }
+              }
+            },
+            "required": ["id"]
+          }
+        },
+        "service": {
+          "type": "array",
+          "items":{
+            "type": "object",
+            "properties": {
+              "id": {"type": "string"}
+            },
+            "required": ["id"]
+          }
+        }
+      }
+    },
+    "add": {
+      "type": "object",
+      "properties": {
+        "managementKey": {
+          "type": "array",
+          "items": {"$ref": "management_key.json"}
+        },
+        "didKey": {
+          "type": "array",
+          "items": {"$ref": "did_key.json"}
+        },
+        "service": {
+          "type": "array",
+          "items": {"$ref": "service.json"}
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
+

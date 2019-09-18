@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Management key schema",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"},
+    "type": {
+      "enum": ["Ed25519VerificationKey", "ECDSASecp256k1VerificationKey", "RSAVerificationKey"]
+    },
+    "controller": {"type": "string"},
+    "publicKeyBase58": {"type": "string"},
+    "publicKeyPem": {"type": "string"},
+    "priority": {"type": "string"},
+    "priorityRequirement": {"type": "string"},
+    "bip44": {"type": "string"}
+  },
+  "additionalProperties": false,
+  "required": ["id", "type", "controller", "priority"],
+  "oneOf": [
+    {
+      "required": [
+        "publicKeyBase58"
+      ]
+    },
+    {
+      "required": [
+        "publicKeyPem"
+      ]
+    }
+  ]
+}
+

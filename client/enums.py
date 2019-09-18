@@ -12,6 +12,8 @@ class SignatureType(Enum):
 class EntryType(Enum):
     Create = "DIDManagement"
     Update = "DIDUpdate"
+    VersionUpgrade = "DIDMethodVersionUpgrade"
+    Deactivation = "DIDDeactivation"
 
 
 class DIDKeyPurpose(Enum):

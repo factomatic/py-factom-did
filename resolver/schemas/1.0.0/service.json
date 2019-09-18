@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Service schema",
+  "type": "object",
+  "properties": {
+    "id": {"type": "string"},
+    "type": {"type": "string"},
+    "serviceEndpoint": {"type": "string", "format": "uri"},
+    "priorityRequirement": {"type": "string"}
+  },
+  "additionalProperties": false,
+  "required": ["id", "type", "serviceEndpoint"]
+}
+
