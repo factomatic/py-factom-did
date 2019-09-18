@@ -5,7 +5,8 @@ import base58
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
-from ecdsa import SigningKey, SECP256k1
+from ecdsa.curves import SECP256k1
+from ecdsa.keys import SigningKey
 import ed25519
 
 from client.constants import DID_METHOD_NAME
@@ -138,7 +139,7 @@ class AbstractDIDKey:
 
         return d
 
-    def sign(self, msg, hash_f=hashlib.sha256):
+    def sign(self, message, hash_f=hashlib.sha256):
         """
         Signs a message with the existing private key and signature type.
 
@@ -147,7 +148,7 @@ class AbstractDIDKey:
 
         Parameters
         ----------
-        msg: bytes
+        message: bytes
             The message to sign.
         hash_f: function, optional
             The hash function used to compute the digest of the message before signing it.
@@ -156,16 +157,76 @@ class AbstractDIDKey:
         -------
         bytes
             The bytes of the signatures.
+
+        Raises
+        ------
+        NotImplementedError
+            If the signature type is not supported.
         """
 
-        assert type(msg) is bytes, "Message must be supplied as bytes."
+        assert type(message) is bytes, "Message must be supplied as bytes."
 
         if self.signature_type == SignatureType.ECDSA.value:
-            return self.signing_key.sign_digest_deterministic(hash_f(msg).digest())
+            return self.signing_key.sign_digest(hash_f(message).digest())
         elif self.signature_type == SignatureType.EdDSA.value:
-            return self.signing_key.sign(hash_f(msg).digest())
+            return self.signing_key.sign(hash_f(message).digest())
         elif self.signature_type == SignatureType.RSA.value:
-            return pkcs1_15.new(self.signing_key).sign(SHA256.new(msg))
+            return pkcs1_15.new(self.signing_key).sign(SHA256.new(message))
+        else:
+            raise NotImplementedError(
+                "Unsupported signature type: {}".format(self.signature_type)
+            )
+
+    def verify(self, message, signature, hash_f=hashlib.sha256):
+        """
+        Verifies the signature of the given message
+
+        Parameters
+        ----------
+        message: bytes
+            The (allegedly) signed message.
+        signature: bytes
+            The signature to verify.
+        hash_f: function, optional
+            The hash function used to compute the digest of the message.
+
+        Returns
+        -------
+        bool
+            True if the signature is successfully verified, False otherwise.
+
+        Raises
+        ------
+        NotImplementedError
+            If the signature type is not supported.
+        """
+        from ecdsa.keys import BadSignatureError as ECDSABadSignatureError
+        from ed25519 import BadSignatureError as Ed25519BadSignatureError
+
+        assert type(message) is bytes, "Message must be supplied as bytes."
+        assert type(signature) is bytes, "Signature must be supplied as bytes."
+
+        if self.signature_type == SignatureType.ECDSA.value:
+            try:
+                return self.verifying_key.verify_digest(
+                    signature, hash_f(message).digest()
+                )
+            except ECDSABadSignatureError:
+                return False
+        elif self.signature_type == SignatureType.EdDSA.value:
+            try:
+                self.verifying_key.verify(signature, hash_f(message).digest())
+            except Ed25519BadSignatureError:
+                return False
+            else:
+                return True
+        elif self.signature_type == SignatureType.RSA.value:
+            try:
+                pkcs1_15.new(self.verifying_key).verify(SHA256.new(message), signature)
+            except ValueError:
+                return False
+            else:
+                return True
         else:
             raise NotImplementedError(
                 "Unsupported signature type: {}".format(self.signature_type)
@@ -222,7 +283,7 @@ class AbstractDIDKey:
             public_key is not None and private_key is None
         ):
             raise ValueError(
-                "Both private key and public must be specified, or both must be unspecified"
+                "Both private key and public key must be specified, or both must be unspecified"
             )
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
