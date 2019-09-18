@@ -9,6 +9,8 @@ from client.constants import (
 )
 from client.did import DID, SignatureType, DIDKeyPurpose
 from client.enums import EntryType
+from client.keys import AbstractDIDKey, DIDKey, ManagementKey
+from client.service import Service
 
 
 @pytest.fixture
@@ -54,6 +56,22 @@ class TestGetChain:
         )
 
 
+class TestMinifyRSAPublicKey:
+    def test_minify_rsa_public_key(self, did):
+        management_key_alias = "my-management-key"
+        management_key_priority = 1
+        management_key_signature_type = SignatureType.RSA.value
+
+        did.management_key(
+            management_key_alias, management_key_priority, management_key_signature_type
+        )
+        rsa_public_key = str(did.management_keys[0].public_key, "utf-8")
+        minified_public_key = AbstractDIDKey._minify_rsa_public_key(rsa_public_key)
+
+        assert len(minified_public_key) < len(rsa_public_key)
+        assert len(minified_public_key) == 31
+
+
 class TestEmptyDid:
     def test_generating_new_empty_did(self, did):
         assert re.search("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), did.id)
@@ -63,6 +81,17 @@ class TestEmptyDid:
         assert [] == did.services
         assert set() == did.used_key_aliases
         assert set() == did.used_service_aliases
+
+    def test__repr__method(self, did):
+        expected__repr__method_output = "<{0}.{1} (management_keys={2}, did_keys={3}, services={4})>".format(
+            DID.__module__,
+            DID.__name__,
+            len(did.management_keys),
+            len(did.did_keys),
+            len(did.services),
+        )
+
+        assert str(did) == expected__repr__method_output
 
 
 class TestManagementKeys:
@@ -173,6 +202,58 @@ class TestManagementKeys:
             with pytest.raises(ValueError):
                 did.management_key(alias, 1, SignatureType.EdDSA.value, controller)
 
+    def test__repr__method(self, did):
+        management_key_alias = "management-key-1"
+        management_key_priority = 0
+
+        did.management_key(management_key_alias, management_key_priority)
+        generated_management_key = did.management_keys[0]
+
+        expected__repr__method_output = (
+            "<{0}.{1} (alias={2}, priority={3}, signature_type={4},"
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+                ManagementKey.__module__,
+                ManagementKey.__name__,
+                management_key_alias,
+                management_key_priority,
+                SignatureType.EdDSA.value,
+                generated_management_key.controller,
+                None,
+                str(generated_management_key.public_key, "utf-8"),
+            )
+        )
+
+        assert str(generated_management_key) == expected__repr__method_output
+
+    def test__repr__method_with_rsa_key(self, did):
+        management_key_alias = "management-key-1"
+        management_key_priority = 0
+        management_key_signature_type = SignatureType.RSA.value
+
+        did.management_key(
+            management_key_alias, management_key_priority, management_key_signature_type
+        )
+        generated_management_key = did.management_keys[0]
+
+        min_public_key = AbstractDIDKey._minify_rsa_public_key(
+            str(generated_management_key.public_key, "utf-8")
+        )
+        expected__repr__method_output = (
+            "<{0}.{1} (alias={2}, priority={3}, signature_type={4},"
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+                ManagementKey.__module__,
+                ManagementKey.__name__,
+                management_key_alias,
+                management_key_priority,
+                management_key_signature_type,
+                generated_management_key.controller,
+                None,
+                min_public_key,
+            )
+        )
+
+        assert str(generated_management_key) == expected__repr__method_output
+
 
 class TestDidKeys:
     def test_add_did_keys(self, did):
@@ -275,6 +356,70 @@ class TestDidKeys:
                     priority_requirement,
                 )
 
+    def test__repr__method(self, did):
+        did_key_alias = "did-key-1"
+        did_key_purpose = [DIDKeyPurpose.PublicKey.value]
+        did_key_signature_type = SignatureType.EdDSA.value
+        did_key_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
+            DID_METHOD_NAME
+        )
+        did_key_priority_requirement = 1
+
+        did.did_key(
+            did_key_alias,
+            did_key_purpose,
+            did_key_signature_type,
+            did_key_controller,
+            did_key_priority_requirement,
+        )
+        generated_did_key = did.did_keys[0]
+
+        expected__repr__method_output = (
+            "<{0}.{1} (alias={2}, purpose={3}, signature_type={4},"
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+                DIDKey.__module__,
+                DIDKey.__name__,
+                did_key_alias,
+                did_key_purpose,
+                did_key_signature_type,
+                did_key_controller,
+                did_key_priority_requirement,
+                str(generated_did_key.public_key, "utf-8"),
+            )
+        )
+
+        assert str(generated_did_key) == expected__repr__method_output
+
+    def test__repr__method_with_rsa_key(self, did):
+        did_key_alias = "did-key-1"
+        did_key_purpose = [
+            DIDKeyPurpose.PublicKey.value,
+            DIDKeyPurpose.AuthenticationKey.value,
+        ]
+        did_key_signature_type = SignatureType.RSA.value
+
+        did.did_key(did_key_alias, did_key_purpose, did_key_signature_type)
+        generated_did_key = did.did_keys[0]
+
+        min_public_key = AbstractDIDKey._minify_rsa_public_key(
+            str(generated_did_key.public_key, "utf-8")
+        )
+        expected__repr__method_output = (
+            "<{0}.{1} (alias={2}, purpose={3}, signature_type={4},"
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+                DIDKey.__module__,
+                DIDKey.__name__,
+                did_key_alias,
+                did_key_purpose,
+                did_key_signature_type,
+                generated_did_key.controller,
+                None,
+                min_public_key,
+            )
+        )
+
+        assert str(generated_did_key) == expected__repr__method_output
+
 
 class TestService:
     def test_add_service(self, did):
@@ -353,6 +498,30 @@ class TestService:
                 did.service(
                     service_alias, service_type, service_endpoint, priority_requirement
                 )
+
+    def test__repr__method(self, did):
+        service_alias = "photo-service"
+        service_type = "PhotoStreamService"
+        service_endpoint = "https://myphoto.com"
+        service_priority_requirement = 1
+        did.service(
+            service_alias, service_type, service_endpoint, service_priority_requirement
+        )
+        generated_service = did.services[0]
+
+        expected__repr__method_output = (
+            "<{0}.{1} (alias={2}, service_type={3}, "
+            "endpoint={4}, priority_requirement={5})>".format(
+                Service.__module__,
+                Service.__name__,
+                service_alias,
+                service_type,
+                service_endpoint,
+                service_priority_requirement,
+            )
+        )
+
+        assert str(generated_service) == expected__repr__method_output
 
 
 class TestExportEntryData:

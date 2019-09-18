@@ -59,6 +59,15 @@ class DID:
                 self.used_service_aliases, service.alias
             )
 
+    def __repr__(self):
+        return "<{0}.{1} (management_keys={2}, did_keys={3}, services={4})>".format(
+            self.__module__,
+            type(self).__name__,
+            len(self.management_keys),
+            len(self.did_keys),
+            len(self.services),
+        )
+
     def get_chain(self):
         """
         Returns
