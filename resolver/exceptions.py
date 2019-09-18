@@ -8,3 +8,7 @@ class MalformedDIDUpdateEntry(Exception):
 
 class MalformedDIDMethodVersionUpgradeEntry(Exception):
     pass
+
+
+class MalformedDIDDeactivationEntry(Exception):
+    pass
