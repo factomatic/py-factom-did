@@ -49,7 +49,7 @@ class TestDIDManagementEntryValidation:
     def test_insufficient_extids(self):
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
             validate_did_management_entry_format(["DIDManagement"], {}, self.VALIDATOR)
-        assert str(excinfo.value) == "DIDManagement entry must have at least two ExtIDs"
+        assert str(excinfo.value) == "DIDManagement entry must have at least 2 ExtIDs"
 
     def test_malformed_extids(self):
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
@@ -154,7 +154,7 @@ class TestDIDUpdateEntryValidation:
                 {},
                 self.VALIDATOR,
             )
-        assert str(excinfo.value) == "DIDUpdate entry must have at least four ExtIDs"
+        assert str(excinfo.value) == "DIDUpdate entry must have at least 4 ExtIDs"
 
     def test_malformed_extids(self):
         key_id = "{}:{}#{}".format(
@@ -392,7 +392,7 @@ class TestDIDMethodVersionUpgradeEntryValidation:
             )
         assert (
             str(excinfo.value)
-            == "DIDMethodVersionUpgrade entry must have at least four ExtIDs"
+            == "DIDMethodVersionUpgrade entry must have at least 4 ExtIDs"
         )
 
     def test_malformed_extids(self):
@@ -519,9 +519,7 @@ class TestDIDDeactivationEntryValidation:
                 ],
                 {},
             )
-        assert (
-            str(excinfo.value) == "DIDDeactivation entry must have at least four ExtIDs"
-        )
+        assert str(excinfo.value) == "DIDDeactivation entry must have at least 4 ExtIDs"
 
     def test_malformed_extids(self):
         key_id = "{}:{}#{}".format(
