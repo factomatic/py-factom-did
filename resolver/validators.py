@@ -8,6 +8,23 @@ from jsonschema.exceptions import ValidationError
 
 
 def validate_did_management_entry_format(ext_ids, content, schema_validator):
+    """
+    Validates the format of a DIDManagement entry.
+
+    Parameters
+    ----------
+    ext_ids: list of str
+        The ExtIDs of the entry
+    content: str
+        The entry content
+    schema_validator: jsonschema.validators.Draft7Validator
+        The entry content schema validator
+
+    Raises
+    ------
+    MalformedDIDManagementEntry
+        If the ExtIDs or the entry content do not follow the Factom DID method specification
+    """
     if len(ext_ids) < 2:
         raise MalformedDIDManagementEntry(
             "DIDManagement entry must have at least two ExtIDs"
@@ -30,6 +47,23 @@ def validate_did_management_entry_format(ext_ids, content, schema_validator):
 
 
 def validate_did_update_entry_format(ext_ids, content, schema_validator):
+    """
+    Validates the format of a DIDUpdate entry.
+
+    Parameters
+    ----------
+    ext_ids: list of str
+        The ExtIDs of the entry
+    content: str
+        The entry content
+    schema_validator: jsonschema.validators.Draft7Validator
+        The entry content schema validator
+
+    Raises
+    ------
+    MalformedDIDUpdateEntry
+        If the ExtIDs or the entry content do not follow the Factom DID method specification
+    """
     if len(ext_ids) < 4:
         raise MalformedDIDUpdateEntry("DIDUpdate entry must have at least four ExtIDs")
     if ext_ids[0] != EntryType.Update.value:
