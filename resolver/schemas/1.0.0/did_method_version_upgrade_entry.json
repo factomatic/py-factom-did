@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DIDMethodVersionUpgrade entry schema",
+  "type": "object",
+  "properties": {
+    "didMethodVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["didMethodVersion"]
+}
+

@@ -4,3 +4,7 @@ class MalformedDIDManagementEntry(Exception):
 
 class MalformedDIDUpdateEntry(Exception):
     pass
+
+
+class MalformedDIDMethodVersionUpgradeEntry(Exception):
+    pass
