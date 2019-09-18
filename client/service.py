@@ -53,6 +53,16 @@ class Service:
             (self.alias, self.service_type, self.endpoint, self.priority_requirement)
         )
 
+    def __repr__(self):
+        return "<{0}.{1} (alias={2}, service_type={3}, endpoint={4}, priority_requirement={5})>".format(
+            self.__module__,
+            type(self).__name__,
+            self.alias,
+            self.service_type,
+            self.endpoint,
+            self.priority_requirement,
+        )
+
     def to_entry_dict(self, did):
         """
         Converts the object to a dictionary suitable for recording on-chain.

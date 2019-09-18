@@ -202,6 +202,16 @@ class AbstractDIDKey:
         return self.verifying_key.export_key(), self.signing_key.export_key()
 
     @staticmethod
+    def _minify_rsa_public_key(public_key):
+        start_index = public_key.find("\n") + 1
+        end_index = public_key.rfind("\n")
+        return (
+            public_key[start_index : start_index + 20]
+            + "..."
+            + public_key[end_index - 8 : end_index]
+        )
+
+    @staticmethod
     def _validate_key_input_params(
         alias, signature_type, controller, priority_requirement, public_key, private_key
     ):
@@ -291,6 +301,25 @@ class ManagementKey(AbstractDIDKey):
             )
         )
 
+    def __repr__(self):
+        public_key = str(self.public_key, "utf-8")
+        if self.signature_type == SignatureType.RSA.value:
+            public_key = AbstractDIDKey._minify_rsa_public_key(public_key)
+
+        return (
+            "<{0}.{1} (alias={2}, priority={3}, signature_type={4},"
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+                self.__module__,
+                type(self).__name__,
+                self.alias,
+                self.priority,
+                self.signature_type,
+                self.controller,
+                self.priority_requirement,
+                public_key,
+            )
+        )
+
     def to_entry_dict(self, did):
         d = super().to_entry_dict(did)
         d["priority"] = self.priority
@@ -363,6 +392,25 @@ class DIDKey(AbstractDIDKey):
                 self.priority_requirement,
                 self.public_key,
                 self.private_key,
+            )
+        )
+
+    def __repr__(self):
+        public_key = str(self.public_key, "utf-8")
+        if self.signature_type == SignatureType.RSA.value:
+            public_key = AbstractDIDKey._minify_rsa_public_key(public_key)
+
+        return (
+            "<{0}.{1} (alias={2}, purpose={3}, signature_type={4},"
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+                self.__module__,
+                type(self).__name__,
+                self.alias,
+                self.purpose,
+                self.signature_type,
+                self.controller,
+                self.priority_requirement,
+                public_key,
             )
         )
 
