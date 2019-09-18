@@ -115,7 +115,9 @@ def validate_did_update_entry_format(ext_ids, content, schema_validator):
         )
 
 
-def validate_version_upgrade_entry_content(ext_ids, content, schema_validator):
+def validate_did_method_version_upgrade_entry_format(
+    ext_ids, content, schema_validator
+):
     """
     Validates the format of a DIDMethodVersionUpgrade entry.
 
@@ -139,7 +141,7 @@ def validate_version_upgrade_entry_content(ext_ids, content, schema_validator):
                 EntryType.VersionUpgrade.value
             )
         )
-    if ext_ids[0] != EntryType.Update.value:
+    if ext_ids[0] != EntryType.VersionUpgrade.value:
         raise MalformedDIDMethodVersionUpgradeEntry(
             "First ExtID of {} entry must be {}".format(
                 EntryType.VersionUpgrade.value, EntryType.VersionUpgrade.value
@@ -177,7 +179,7 @@ def validate_version_upgrade_entry_content(ext_ids, content, schema_validator):
         )
 
 
-def validate_did_deactivation_entry_content(ext_ids, content):
+def validate_did_deactivation_entry_format(ext_ids, content):
     """
     Validates the format of a DIDDeactivation entry.
 
@@ -199,7 +201,7 @@ def validate_did_deactivation_entry_content(ext_ids, content):
                 EntryType.Deactivation.value
             )
         )
-    if ext_ids[0] != EntryType.Update.value:
+    if ext_ids[0] != EntryType.Deactivation.value:
         raise MalformedDIDDeactivationEntry(
             "First ExtID of {} entry must be {}".format(
                 EntryType.Deactivation.value, EntryType.Deactivation.value

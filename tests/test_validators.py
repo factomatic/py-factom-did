@@ -10,10 +10,17 @@ from client.constants import DID_METHOD_NAME
 from client.enums import DIDKeyPurpose, SignatureType
 from client.keys import DIDKey, ManagementKey
 from client.service import Service
-from resolver.exceptions import MalformedDIDManagementEntry, MalformedDIDUpdateEntry
+from resolver.exceptions import (
+    MalformedDIDDeactivationEntry,
+    MalformedDIDManagementEntry,
+    MalformedDIDMethodVersionUpgradeEntry,
+    MalformedDIDUpdateEntry,
+)
 from resolver.validators import (
+    validate_did_deactivation_entry_format,
     validate_did_management_entry_format,
     validate_did_update_entry_format,
+    validate_did_method_version_upgrade_entry_format,
 )
 
 
@@ -37,21 +44,17 @@ def get_validator(schema):
 
 
 class TestDIDManagementEntryValidation:
-    DID_MANAGEMENT_VALIDATOR = get_validator(
-        load_json_schema("did_management_entry.json")
-    )
+    VALIDATOR = get_validator(load_json_schema("did_management_entry.json"))
 
     def test_insufficient_extids(self):
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
-            validate_did_management_entry_format(
-                ["DIDManagement"], "", self.DID_MANAGEMENT_VALIDATOR
-            )
+            validate_did_management_entry_format(["DIDManagement"], {}, self.VALIDATOR)
         assert str(excinfo.value) == "DIDManagement entry must have at least two ExtIDs"
 
     def test_malformed_extids(self):
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
             validate_did_management_entry_format(
-                ["DIdManagement", "1.0.0"], "", self.DID_MANAGEMENT_VALIDATOR
+                ["DIdManagement", "1.0.0"], {}, self.VALIDATOR
             )
         assert (
             str(excinfo.value)
@@ -60,7 +63,7 @@ class TestDIDManagementEntryValidation:
 
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
             validate_did_management_entry_format(
-                ["DIDManagement", "1.0.a"], "", self.DID_MANAGEMENT_VALIDATOR
+                ["DIDManagement", "1.0.a"], {}, self.VALIDATOR
             )
         assert (
             str(excinfo.value)
@@ -70,16 +73,14 @@ class TestDIDManagementEntryValidation:
     def test_entry_with_missing_required_fields(self):
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
             validate_did_management_entry_format(
-                ["DIDManagement", "1.0.0"], "{}", self.DID_MANAGEMENT_VALIDATOR
+                ["DIDManagement", "1.0.0"], {}, self.VALIDATOR
             )
         assert str(excinfo.value) == "Malformed DIDManagement entry content"
 
         missing_management_keys = json.dumps({"didMethodVersion": "0.2.0"})
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
             validate_did_management_entry_format(
-                ["DIDManagement", "1.0.0"],
-                missing_management_keys,
-                self.DID_MANAGEMENT_VALIDATOR,
+                ["DIDManagement", "1.0.0"], missing_management_keys, self.VALIDATOR
             )
         assert str(excinfo.value) == "Malformed DIDManagement entry content"
 
@@ -96,9 +97,7 @@ class TestDIDManagementEntryValidation:
         }
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
             validate_did_management_entry_format(
-                ["DIDManagement", "1.0.0"],
-                missing_did_method_version,
-                self.DID_MANAGEMENT_VALIDATOR,
+                ["DIDManagement", "1.0.0"], missing_did_method_version, self.VALIDATOR
             )
         assert str(excinfo.value) == "Malformed DIDManagement entry content"
 
@@ -137,12 +136,12 @@ class TestDIDManagementEntryValidation:
             ],
         }
         validate_did_management_entry_format(
-            ["DIDManagement", "1.0.0"], valid_entry, self.DID_MANAGEMENT_VALIDATOR
+            ["DIDManagement", "1.0.0"], valid_entry, self.VALIDATOR
         )
 
 
 class TestDIDUpdateEntryValidation:
-    DID_UPDATE_VALIDATOR = get_validator(load_json_schema("did_update_entry.json"))
+    VALIDATOR = get_validator(load_json_schema("did_update_entry.json"))
 
     def test_insufficient_extids(self):
         with pytest.raises(MalformedDIDUpdateEntry) as excinfo:
@@ -152,8 +151,8 @@ class TestDIDUpdateEntryValidation:
                     "1.0.0",
                     "{}:{}#my-key".format(DID_METHOD_NAME, secrets.token_hex(32)),
                 ],
-                "",
-                self.DID_UPDATE_VALIDATOR,
+                {},
+                self.VALIDATOR,
             )
         assert str(excinfo.value) == "DIDUpdate entry must have at least four ExtIDs"
 
@@ -163,13 +162,13 @@ class TestDIDUpdateEntryValidation:
         )
         with pytest.raises(MalformedDIDUpdateEntry) as excinfo:
             validate_did_update_entry_format(
-                ["DIdUpdate", "1.0.0", key_id, "0xaf01"], "", self.DID_UPDATE_VALIDATOR
+                ["DIdUpdate", "1.0.0", key_id, "0xaf01"], {}, self.VALIDATOR
             )
         assert str(excinfo.value) == "First ExtID of DIDUpdate entry must be DIDUpdate"
 
         with pytest.raises(MalformedDIDUpdateEntry) as excinfo:
             validate_did_update_entry_format(
-                ["DIDUpdate", "1.0.", key_id, "0xaf01"], "", self.DID_UPDATE_VALIDATOR
+                ["DIDUpdate", "1.0.", key_id, "0xaf01"], {}, self.VALIDATOR
             )
         assert (
             str(excinfo.value)
@@ -179,8 +178,8 @@ class TestDIDUpdateEntryValidation:
         with pytest.raises(MalformedDIDUpdateEntry) as excinfo:
             validate_did_update_entry_format(
                 ["DIDUpdate", "1.0.0", key_id[: key_id.find("#")], "0xaf01"],
-                "",
-                self.DID_UPDATE_VALIDATOR,
+                {},
+                self.VALIDATOR,
             )
         assert (
             str(excinfo.value)
@@ -189,7 +188,7 @@ class TestDIDUpdateEntryValidation:
 
         with pytest.raises(MalformedDIDUpdateEntry) as excinfo:
             validate_did_update_entry_format(
-                ["DIDUpdate", "1.0.0", key_id, "aff0"], "", self.DID_UPDATE_VALIDATOR
+                ["DIDUpdate", "1.0.0", key_id, "aff0"], {}, self.VALIDATOR
             )
         assert (
             str(excinfo.value)
@@ -198,7 +197,7 @@ class TestDIDUpdateEntryValidation:
 
         with pytest.raises(MalformedDIDUpdateEntry) as excinfo:
             validate_did_update_entry_format(
-                ["DIDUpdate", "1.0.0", key_id, "0xaffz"], "", self.DID_UPDATE_VALIDATOR
+                ["DIDUpdate", "1.0.0", key_id, "0xaffz"], {}, self.VALIDATOR
             )
         assert (
             str(excinfo.value)
@@ -225,7 +224,7 @@ class TestDIDUpdateEntryValidation:
                         ]
                     }
                 },
-                self.DID_UPDATE_VALIDATOR,
+                self.VALIDATOR,
             )
         assert str(excinfo.value) == "Malformed DIDUpdate entry content"
 
@@ -246,7 +245,7 @@ class TestDIDUpdateEntryValidation:
                     },
                     "remove": {"managementKey": [{"id": "management-1"}]},
                 },
-                self.DID_UPDATE_VALIDATOR,
+                self.VALIDATOR,
             )
         assert str(excinfo.value) == "Malformed DIDUpdate entry content"
 
@@ -268,7 +267,7 @@ class TestDIDUpdateEntryValidation:
                     "revoke": {"managementKey": [{"id": "management-1"}]},
                     "additional": {},
                 },
-                self.DID_UPDATE_VALIDATOR,
+                self.VALIDATOR,
             )
         assert str(excinfo.value) == "Malformed DIDUpdate entry content"
 
@@ -278,7 +277,7 @@ class TestDIDUpdateEntryValidation:
 
         # Empty entry content should be valid
         validate_did_update_entry_format(
-            ["DIDUpdate", "1.0.0", key_id, "0xaffe"], {}, self.DID_UPDATE_VALIDATOR
+            ["DIDUpdate", "1.0.0", key_id, "0xaffe"], {}, self.VALIDATOR
         )
 
         # Entry with only additions should be valid
@@ -310,7 +309,7 @@ class TestDIDUpdateEntryValidation:
                     ],
                 }
             },
-            self.DID_UPDATE_VALIDATOR,
+            self.VALIDATOR,
         )
 
         # Entry with only revocations should be valid
@@ -326,7 +325,7 @@ class TestDIDUpdateEntryValidation:
                     "service": [{"id": "service-1"}],
                 }
             },
-            self.DID_UPDATE_VALIDATOR,
+            self.VALIDATOR,
         )
 
         # Entry with both additions and revocations should be valid
@@ -373,5 +372,220 @@ class TestDIDUpdateEntryValidation:
                     "service": [{"id": "service-1"}],
                 },
             },
-            self.DID_UPDATE_VALIDATOR,
+            self.VALIDATOR,
+        )
+
+
+class TestDIDMethodVersionUpgradeEntryValidation:
+    VALIDATOR = get_validator(load_json_schema("did_method_version_upgrade_entry.json"))
+
+    def test_insufficient_extids(self):
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                [
+                    "DIDMethodVersionUpgrade",
+                    "1.0.0",
+                    "{}:{}#my-key".format(DID_METHOD_NAME, secrets.token_hex(32)),
+                ],
+                {},
+                self.VALIDATOR,
+            )
+        assert (
+            str(excinfo.value)
+            == "DIDMethodVersionUpgrade entry must have at least four ExtIDs"
+        )
+
+    def test_malformed_extids(self):
+        key_id = "{}:{}#{}".format(
+            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
+        )
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                ["DIDMethodVersionsUpgrade", "1.0.0", key_id, "0xaf01"],
+                {},
+                self.VALIDATOR,
+            )
+        assert (
+            str(excinfo.value)
+            == "First ExtID of DIDMethodVersionUpgrade entry must be DIDMethodVersionUpgrade"
+        )
+
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                ["DIDMethodVersionUpgrade", "1.0.", key_id, "0xaf01"],
+                {},
+                self.VALIDATOR,
+            )
+        assert (
+            str(excinfo.value)
+            == "Second ExtID of DIDMethodVersionUpgrade entry must be a semantic version number"
+        )
+
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                [
+                    "DIDMethodVersionUpgrade",
+                    "1.0.0",
+                    key_id[: key_id.find("#")],
+                    "0xaf01",
+                ],
+                {},
+                self.VALIDATOR,
+            )
+        assert (
+            str(excinfo.value)
+            == "Third ExtID of DIDMethodVersionUpgrade entry must be a valid full key identifier"
+        )
+
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                ["DIDMethodVersionUpgrade", "1.0.0", key_id, "aff0"], {}, self.VALIDATOR
+            )
+        assert (
+            str(excinfo.value)
+            == "Fourth ExtID of DIDMethodVersionUpgrade entry must be a hex string with leading 0x"
+        )
+
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                ["DIDMethodVersionUpgrade", "1.0.0", key_id, "0xaffz"],
+                {},
+                self.VALIDATOR,
+            )
+        assert (
+            str(excinfo.value)
+            == "Fourth ExtID of DIDMethodVersionUpgrade entry must be a hex string with leading 0x"
+        )
+
+    def test_invalid_entry(self):
+        did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
+        key_id = "{}#{}".format(did, "my-man-key-1")
+
+        # Empty Entry
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                ["DIDMethodVersionUpgrade", "1.0.0", key_id, "0xaf014"],
+                {},
+                self.VALIDATOR,
+            )
+        assert str(excinfo.value) == "Malformed DIDMethodVersionUpgrade entry content"
+
+        # Entry with an invalid property name
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                ["DIDMethodVersionUpgrade", "1.0.0", key_id, "0xaf014"],
+                {"didMethodVersions": "1.0.2"},
+                self.VALIDATOR,
+            )
+        assert str(excinfo.value) == "Malformed DIDMethodVersionUpgrade entry content"
+
+        # Entry with an invalid property value
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                ["DIDMethodVersionUpgrade", "1.0.0", key_id, "0xaf014"],
+                {"didMethodVersion": "1.0.2a"},
+                self.VALIDATOR,
+            )
+        assert str(excinfo.value) == "Malformed DIDMethodVersionUpgrade entry content"
+
+        # Entry with additional properties
+        with pytest.raises(MalformedDIDMethodVersionUpgradeEntry) as excinfo:
+            validate_did_method_version_upgrade_entry_format(
+                ["DIDMethodVersionUpgrade", "1.0.0", key_id, "0xaf014"],
+                {"didMethodVersion": "1.0.2", "additional": 1},
+                self.VALIDATOR,
+            )
+        assert str(excinfo.value) == "Malformed DIDMethodVersionUpgrade entry content"
+
+    def test_valid_entry(self):
+        did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
+        key_id = "{}#{}".format(did, "my-man-key-1")
+
+        validate_did_method_version_upgrade_entry_format(
+            ["DIDMethodVersionUpgrade", "1.0.0", key_id, "0xaf014"],
+            {"didMethodVersion": "1.0.2"},
+            self.VALIDATOR,
+        )
+
+
+class TestDIDDeactivationEntryValidation:
+    def test_insufficient_extids(self):
+        with pytest.raises(MalformedDIDDeactivationEntry) as excinfo:
+            validate_did_deactivation_entry_format(
+                [
+                    "DIDDeactivation",
+                    "1.0.0",
+                    "{}:{}#my-key".format(DID_METHOD_NAME, secrets.token_hex(32)),
+                ],
+                {},
+            )
+        assert (
+            str(excinfo.value) == "DIDDeactivation entry must have at least four ExtIDs"
+        )
+
+    def test_malformed_extids(self):
+        key_id = "{}:{}#{}".format(
+            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
+        )
+        with pytest.raises(MalformedDIDDeactivationEntry) as excinfo:
+            validate_did_deactivation_entry_format(
+                ["DIDDeactivated", "1.0.0", key_id, "0xaf01"], {}
+            )
+        assert (
+            str(excinfo.value)
+            == "First ExtID of DIDDeactivation entry must be DIDDeactivation"
+        )
+
+        with pytest.raises(MalformedDIDDeactivationEntry) as excinfo:
+            validate_did_deactivation_entry_format(
+                ["DIDDeactivation", "1.0.", key_id, "0xaf01"], {}
+            )
+        assert (
+            str(excinfo.value)
+            == "Second ExtID of DIDDeactivation entry must be a semantic version number"
+        )
+
+        with pytest.raises(MalformedDIDDeactivationEntry) as excinfo:
+            validate_did_deactivation_entry_format(
+                ["DIDDeactivation", "1.0.0", key_id[: key_id.find("#")], "0xaf01"], {}
+            )
+        assert (
+            str(excinfo.value)
+            == "Third ExtID of DIDDeactivation entry must be a valid full key identifier"
+        )
+
+        with pytest.raises(MalformedDIDDeactivationEntry) as excinfo:
+            validate_did_deactivation_entry_format(
+                ["DIDDeactivation", "1.0.0", key_id, "aff0"], {}
+            )
+        assert (
+            str(excinfo.value)
+            == "Fourth ExtID of DIDDeactivation entry must be a hex string with leading 0x"
+        )
+
+        with pytest.raises(MalformedDIDDeactivationEntry) as excinfo:
+            validate_did_deactivation_entry_format(
+                ["DIDDeactivation", "1.0.0", key_id, "0xaffz"], {}
+            )
+        assert (
+            str(excinfo.value)
+            == "Fourth ExtID of DIDDeactivation entry must be a hex string with leading 0x"
+        )
+
+    def test_invalid_entry(self):
+        key_id = "{}:{}#{}".format(
+            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
+        )
+        with pytest.raises(MalformedDIDDeactivationEntry) as excinfo:
+            validate_did_deactivation_entry_format(
+                ["DIDDeactivation", "1.0.0", key_id, "0xaff0"], {"some": "data"}
+            )
+        assert str(excinfo.value) == "Malformed DIDDeactivation entry content"
+
+    def test_valid_entry(self):
+        key_id = "{}:{}#{}".format(
+            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
+        )
+        validate_did_deactivation_entry_format(
+            ["DIDDeactivation", "1.0.0", key_id, "0xaff0"], {}
         )
