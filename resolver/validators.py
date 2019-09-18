@@ -34,13 +34,9 @@ def validate_did_management_entry_format(ext_ids, content, schema_validator):
     _validate_ext_ids_length(ext_ids, 2, EntryType.Create, MalformedDIDManagementEntry)
     _validate_entry_type(ext_ids, EntryType.Create, MalformedDIDManagementEntry)
     _validate_schema_version(ext_ids, EntryType.Create, MalformedDIDManagementEntry)
-
-    try:
-        schema_validator.validate(content)
-    except ValidationError:
-        raise MalformedDIDManagementEntry(
-            "Malformed {} entry content".format(EntryType.Create.value)
-        )
+    _validate_entry_content(
+        content, EntryType.Create, schema_validator, MalformedDIDManagementEntry
+    )
 
 
 def validate_did_update_entry_format(ext_ids, content, schema_validator):
@@ -66,13 +62,9 @@ def validate_did_update_entry_format(ext_ids, content, schema_validator):
     _validate_schema_version(ext_ids, EntryType.Update, MalformedDIDUpdateEntry)
     _validate_key_identifier(ext_ids, EntryType.Update, MalformedDIDUpdateEntry)
     _validate_signature_format(ext_ids, EntryType.Update, MalformedDIDUpdateEntry)
-
-    try:
-        schema_validator.validate(content)
-    except ValidationError:
-        raise MalformedDIDUpdateEntry(
-            "Malformed {} entry content".format(EntryType.Update.value)
-        )
+    _validate_entry_content(
+        content, EntryType.Update, schema_validator, MalformedDIDUpdateEntry
+    )
 
 
 def validate_did_method_version_upgrade_entry_format(
@@ -110,13 +102,12 @@ def validate_did_method_version_upgrade_entry_format(
     _validate_signature_format(
         ext_ids, EntryType.VersionUpgrade, MalformedDIDMethodVersionUpgradeEntry
     )
-
-    try:
-        schema_validator.validate(content)
-    except ValidationError:
-        raise MalformedDIDMethodVersionUpgradeEntry(
-            "Malformed {} entry content".format(EntryType.VersionUpgrade.value)
-        )
+    _validate_entry_content(
+        content,
+        EntryType.VersionUpgrade,
+        schema_validator,
+        MalformedDIDMethodVersionUpgradeEntry,
+    )
 
 
 def validate_did_deactivation_entry_format(ext_ids, content):
@@ -202,3 +193,10 @@ def _validate_signature_format(ext_ids, entry_type, exception):
                 entry_type.value
             )
         )
+
+
+def _validate_entry_content(content, entry_type, schema_validator, exception):
+    try:
+        schema_validator.validate(content)
+    except ValidationError:
+        raise exception("Malformed {} entry content".format(entry_type.value))
