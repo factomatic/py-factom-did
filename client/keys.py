@@ -199,7 +199,10 @@ class AbstractDIDKey:
         self.signing_key = RSA.generate(2048)
         self.verifying_key = self.signing_key.publickey()
 
-        return self.verifying_key.export_key(), self.signing_key.export_key()
+        return (
+            self.verifying_key.export_key(),
+            self.signing_key.export_key(format="PEM", passphrase=None, pkcs=8),
+        )
 
     @staticmethod
     def _minify_rsa_public_key(public_key):
