@@ -112,11 +112,11 @@ class AbstractDIDKey:
         """
 
         if self.signature_type == SignatureType.EdDSA.value:
-            return self._generate_ed_dsa_key_pair()
+            self._generate_ed_dsa_key_pair()
         elif self.signature_type == SignatureType.ECDSA.value:
-            return self._generate_ec_dsa_key_pair()
+            self._generate_ec_dsa_key_pair()
         elif self.signature_type == SignatureType.RSA.value:
-            return self._generate_rsa_key_pair()
+            self._generate_rsa_key_pair()
         else:
             raise NotImplementedError(
                 "Unsupported signature type: {}".format(self.signature_type)
@@ -154,6 +154,25 @@ class AbstractDIDKey:
             d["priorityRequirement"] = self.priority_requirement
 
         return d
+
+    def rotate(self):
+        """
+            Generates new key pair for the key.
+        """
+
+        self.generate_key_pair()
+
+        if self.signature_type == SignatureType.EdDSA.value:
+            self.public_key = base58.b58encode(self.verifying_key.to_bytes())
+            self.private_key = base58.b58encode(self.signing_key.to_bytes())
+        elif self.signature_type == SignatureType.ECDSA.value:
+            self.public_key = base58.b58encode(self.verifying_key.to_string())
+            self.private_key = base58.b58encode(self.signing_key.to_string())
+        elif self.signature_type == SignatureType.RSA.value:
+            self.public_key = self.verifying_key.export_key()
+            self.private_key = self.signing_key.export_key(
+                format="PEM", passphrase=None, pkcs=8
+            )
 
     def sign(self, message, hash_f=hashlib.sha256):
         """

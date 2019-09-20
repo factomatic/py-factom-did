@@ -136,6 +136,38 @@ class DIDUpdater:
         )
         return self
 
+    def rotate_management_key(self, alias):
+        """
+        Rotates a management key.
+
+        Parameters
+        ----------
+        alias: str
+            The alias of the management key to be rotated
+        """
+        for mgt_key in self.did.management_keys:
+            if mgt_key.alias == alias:
+                mgt_key.rotate()
+                return self
+
+        return self
+
+    def rotate_did_key(self, alias):
+        """
+        Rotates a DID key.
+
+        Parameters
+        ----------
+        alias: str
+            The alias of the DID key to be rotated
+        """
+        for did_key in self.did.did_keys:
+            if did_key.alias == alias:
+                did_key.rotate()
+                return self
+
+        return self
+
     def export_entry_data(self):
         """
         Constructs a signed DIDUpdate entry ready for recording on-chain.
