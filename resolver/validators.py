@@ -12,6 +12,7 @@ from resolver.exceptions import (
 from jsonschema.exceptions import ValidationError
 
 
+# TODO: Split validators in ExtID validator and content validator
 def validate_did_management_entry_format(ext_ids, content, schema_validator):
     """
     Validates the format of a DIDManagement entry.

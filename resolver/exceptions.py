@@ -12,3 +12,7 @@ class MalformedDIDMethodVersionUpgradeEntry(Exception):
 
 class MalformedDIDDeactivationEntry(Exception):
     pass
+
+
+class InvalidDIDChain(Exception):
+    pass
