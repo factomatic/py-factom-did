@@ -89,8 +89,10 @@ def parse_did_chain_entries(entries):
                     did_keys,
                     services,
                 )
+            except ValidationError:
+                raise InvalidDIDChain("Invalid DIDManagement entry content")
             except MalformedDIDManagementEntry as e:
-                raise InvalidDIDChain("{}: {}".format(type(e).__name__, e.args[0]))
+                raise InvalidDIDChain("{}".format(e.args[0]))
             except KeyError:
                 raise InvalidDIDChain("Unknown schema version or entry type")
             except IndexError:

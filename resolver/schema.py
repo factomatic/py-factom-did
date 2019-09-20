@@ -33,6 +33,6 @@ def get_schema_validator(schema_file, version="1.0.0"):
         The validator instance for the given schema and version
     """
     schema = load_json_schema(schema_file, version)
-    cls = validator_for(load_json_schema(schema))
+    cls = validator_for(schema)
     cls.check_schema(schema)
     return cls(schema)
