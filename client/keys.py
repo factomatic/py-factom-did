@@ -5,7 +5,8 @@ import base58
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
-from ecdsa import SigningKey, SECP256k1
+import ecdsa
+from ecdsa.curves import SECP256k1
 import ed25519
 
 from client.constants import DID_METHOD_NAME
@@ -28,10 +29,10 @@ class AbstractDIDKey:
         An entity that controls the key.
     priority_requirement: int
         A non-negative integer showing the minimum hierarchical level a key must have in order to remove this key.
-    public_key: str, optional
-        The public key, encoded in base58.
-    private_key: str, optional
-        The private key, encoded in base58.
+    public_key: bytes or str, optional
+        The public key.
+    private_key: bytes or str, optional
+        The private key.
     """
 
     def __init__(
@@ -58,10 +59,23 @@ class AbstractDIDKey:
         self.controller = controller
         self.priority_requirement = priority_requirement
 
-        if public_key is None and private_key is None:
-            self.public_key, self.private_key = self.generate_key_pair()
+        self._derive_signing_and_verifying_key(public_key, private_key)
+
+        if self.signature_type == SignatureType.EdDSA.value:
+            self.public_key = base58.b58encode(self.verifying_key.to_bytes())
+            self.private_key = base58.b58encode(self.signing_key.to_bytes())
+        elif self.signature_type == SignatureType.ECDSA.value:
+            self.public_key = base58.b58encode(self.verifying_key.to_string())
+            self.private_key = base58.b58encode(self.signing_key.to_string())
+        elif self.signature_type == SignatureType.RSA.value:
+            self.public_key = self.verifying_key.export_key()
+            self.private_key = self.signing_key.export_key(
+                format="PEM", passphrase=None, pkcs=8
+            )
         else:
-            self.public_key, self.private_key = public_key, private_key
+            raise NotImplementedError(
+                "Unsupported signature type: {}".format(self.signature_type)
+            )
 
     def __eq__(self, other):
         if self.__class__ is other.__class__:
@@ -104,7 +118,9 @@ class AbstractDIDKey:
         elif self.signature_type == SignatureType.RSA.value:
             return self._generate_rsa_key_pair()
         else:
-            raise RuntimeError("Invalid signature type.")
+            raise NotImplementedError(
+                "Unsupported signature type: {}".format(self.signature_type)
+            )
 
     def to_entry_dict(self, did):
         """
@@ -128,6 +144,7 @@ class AbstractDIDKey:
         d["id"] = self.full_id(did)
         d["type"] = "{}VerificationKey".format(self.signature_type)
         d["controller"] = self.controller
+
         if self.signature_type == SignatureType.RSA.value:
             d["publicKeyPem"] = str(self.public_key, "utf-8")
         else:
@@ -138,7 +155,7 @@ class AbstractDIDKey:
 
         return d
 
-    def sign(self, msg, hash_f=hashlib.sha256):
+    def sign(self, message, hash_f=hashlib.sha256):
         """
         Signs a message with the existing private key and signature type.
 
@@ -147,7 +164,7 @@ class AbstractDIDKey:
 
         Parameters
         ----------
-        msg: bytes
+        message: bytes
             The message to sign.
         hash_f: function, optional
             The hash function used to compute the digest of the message before signing it.
@@ -156,16 +173,76 @@ class AbstractDIDKey:
         -------
         bytes
             The bytes of the signatures.
+
+        Raises
+        ------
+        NotImplementedError
+            If the signature type is not supported.
         """
 
-        assert type(msg) is bytes, "Message must be supplied as bytes."
+        assert type(message) is bytes, "Message must be supplied as bytes."
 
         if self.signature_type == SignatureType.ECDSA.value:
-            return self.signing_key.sign_digest_deterministic(hash_f(msg).digest())
+            return self.signing_key.sign_digest(hash_f(message).digest())
         elif self.signature_type == SignatureType.EdDSA.value:
-            return self.signing_key.sign(hash_f(msg).digest())
+            return self.signing_key.sign(hash_f(message).digest())
         elif self.signature_type == SignatureType.RSA.value:
-            return pkcs1_15.new(self.signing_key).sign(SHA256.new(msg))
+            return pkcs1_15.new(self.signing_key).sign(SHA256.new(message))
+        else:
+            raise NotImplementedError(
+                "Unsupported signature type: {}".format(self.signature_type)
+            )
+
+    def verify(self, message, signature, hash_f=hashlib.sha256):
+        """
+        Verifies the signature of the given message
+
+        Parameters
+        ----------
+        message: bytes
+            The (allegedly) signed message.
+        signature: bytes
+            The signature to verify.
+        hash_f: function, optional
+            The hash function used to compute the digest of the message.
+
+        Returns
+        -------
+        bool
+            True if the signature is successfully verified, False otherwise.
+
+        Raises
+        ------
+        NotImplementedError
+            If the signature type is not supported.
+        """
+        from ecdsa.keys import BadSignatureError as ECDSABadSignatureError
+        from ed25519 import BadSignatureError as Ed25519BadSignatureError
+
+        assert type(message) is bytes, "Message must be supplied as bytes."
+        assert type(signature) is bytes, "Signature must be supplied as bytes."
+
+        if self.signature_type == SignatureType.ECDSA.value:
+            try:
+                return self.verifying_key.verify_digest(
+                    signature, hash_f(message).digest()
+                )
+            except ECDSABadSignatureError:
+                return False
+        elif self.signature_type == SignatureType.EdDSA.value:
+            try:
+                self.verifying_key.verify(signature, hash_f(message).digest())
+            except Ed25519BadSignatureError:
+                return False
+            else:
+                return True
+        elif self.signature_type == SignatureType.RSA.value:
+            try:
+                pkcs1_15.new(self.verifying_key).verify(SHA256.new(message), signature)
+            except ValueError:
+                return False
+            else:
+                return True
         else:
             raise NotImplementedError(
                 "Unsupported signature type: {}".format(self.signature_type)
@@ -182,27 +259,80 @@ class AbstractDIDKey:
 
     def _generate_ed_dsa_key_pair(self):
         self.signing_key, self.verifying_key = ed25519.create_keypair()
-        return (
-            base58.b58encode(self.verifying_key.to_bytes()),
-            base58.b58encode(self.signing_key.to_bytes()),
-        )
 
     def _generate_ec_dsa_key_pair(self):
-        self.signing_key = SigningKey.generate(curve=SECP256k1)
+        self.signing_key = ecdsa.SigningKey.generate(curve=SECP256k1)
         self.verifying_key = self.signing_key.get_verifying_key()
-        return (
-            base58.b58encode(self.verifying_key.to_string()),
-            base58.b58encode(self.signing_key.to_string()),
-        )
 
     def _generate_rsa_key_pair(self):
         self.signing_key = RSA.generate(2048)
         self.verifying_key = self.signing_key.publickey()
 
-        return (
-            self.verifying_key.export_key(),
-            self.signing_key.export_key(format="PEM", passphrase=None, pkcs=8),
-        )
+    def _derive_signing_and_verifying_key(self, public_key, private_key):
+        if public_key is None and private_key is None:
+            self.generate_key_pair()
+            return
+
+        # At this point, private_key is not None, due to the check above and the one in
+        # _validate_key_input_params, so we can proceed with the derivation of the
+        # signing key object based on the signature type
+        if self.signature_type == SignatureType.EdDSA.value:
+            try:
+                self.signing_key = ed25519.SigningKey(private_key)
+                self.verifying_key = self.signing_key.get_verifying_key()
+            except ValueError:
+                raise ValueError("Invalid EdDSA private key. Must be a 32-byte seed.")
+        elif self.signature_type == SignatureType.ECDSA.value:
+            try:
+                self.signing_key = ecdsa.SigningKey.from_string(
+                    private_key, curve=SECP256k1
+                )
+                self.verifying_key = self.signing_key.get_verifying_key()
+            except (AssertionError, ValueError):
+                raise ValueError(
+                    "Invalid ECDSA private key. Must be a 32-byte secret exponent."
+                )
+        elif self.signature_type == SignatureType.RSA.value:
+            # Raise the default exception in case this fails, as it's informative enough
+            self.signing_key = RSA.import_key(private_key)
+            self.verifying_key = self.signing_key.publickey()
+        else:
+            raise NotImplementedError(
+                "Unsupported signature type: {}".format(self.signature_type)
+            )
+
+        # If a public key is provided in conjunction with the private key, validate that
+        # the public key matches the generated verification key, otherwise raise an
+        # exception
+        if public_key is not None:
+            non_matching_public_key_msg = (
+                "The provided public key does not match the one derived "
+                "from the provided private key"
+            )
+            if self.signature_type == SignatureType.EdDSA.value:
+                if type(public_key) is bytes:
+                    assert (
+                        self.verifying_key.to_bytes() == public_key
+                    ), non_matching_public_key_msg
+                else:
+                    assert (
+                        self.verifying_key.to_bytes().decode() == public_key
+                    ), non_matching_public_key_msg
+            elif self.signature_type == SignatureType.ECDSA.value:
+                if type(public_key) is bytes:
+                    assert (
+                        self.verifying_key.to_string() == public_key
+                    ), non_matching_public_key_msg
+                else:
+                    assert (
+                        self.verifying_key.to_string().decode() == public_key
+                    ), non_matching_public_key_msg
+            else:
+                # This must be an RSA key, as if it were anything else a NotImplementedError
+                # would have been raised above
+                assert (
+                    RSA.import_key(public_key) == self.verifying_key
+                ), non_matching_public_key_msg
 
     @staticmethod
     def _minify_rsa_public_key(public_key):
@@ -218,11 +348,9 @@ class AbstractDIDKey:
     def _validate_key_input_params(
         alias, signature_type, controller, priority_requirement, public_key, private_key
     ):
-        if (public_key is None and private_key is not None) or (
-            public_key is not None and private_key is None
-        ):
+        if public_key is not None and private_key is None:
             raise ValueError(
-                "Both private key and public must be specified, or both must be unspecified"
+                "Public key specified without a corresponding private key."
             )
 
         if not re.match("^[a-z0-9-]{1,32}$", alias):
