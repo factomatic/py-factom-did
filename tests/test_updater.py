@@ -55,6 +55,30 @@ class TestManagementKeys:
         assert updated.management_keys[1].alias == "man-key2"
         assert updated.management_keys[1].priority == 1
 
+    def test_management_key_rotation(self, did):
+        old_public_key = did.management_keys[0].public_key
+        old_private_key = did.management_keys[0].private_key
+
+        updated = did.update().rotate_management_key("man-key1").get_updated()
+        updated_public_key = updated.management_keys[0].public_key
+        updated_private_key = updated.management_keys[0].private_key
+
+        assert len(updated.management_keys) == 1
+        assert updated_public_key != old_public_key
+        assert updated_private_key != old_private_key
+
+    def test_management_key_rotation_with_invalid_alias(self, did):
+        old_public_key = did.management_keys[0].public_key
+        old_private_key = did.management_keys[0].private_key
+
+        updated = did.update().rotate_management_key("man-key11").get_updated()
+        updated_public_key = updated.management_keys[0].public_key
+        updated_private_key = updated.management_keys[0].private_key
+
+        assert len(updated.management_keys) == 1
+        assert updated_public_key == old_public_key
+        assert updated_private_key == old_private_key
+
     def test_management_key_revocation(self, full_did):
         updated = (
             full_did.update()
@@ -79,6 +103,30 @@ class TestDIDKeys:
         assert len(updated.did_keys) == 1
         assert updated.did_keys[0].alias == "did-key1"
         assert updated.did_keys[0].purpose == ["authentication"]
+
+    def test_did_key_rotation(self, full_did):
+        old_public_key = full_did.did_keys[0].public_key
+        old_private_key = full_did.did_keys[0].private_key
+
+        updated = full_did.update().rotate_did_key("did-key1").get_updated()
+        updated_public_key = updated.did_keys[0].public_key
+        updated_private_key = updated.did_keys[0].private_key
+
+        assert len(updated.did_keys) == len(full_did.did_keys)
+        assert updated_public_key != old_public_key
+        assert updated_private_key != old_private_key
+
+    def test_did_key_rotation_with_invalid_alias(self, full_did):
+        old_public_key = full_did.did_keys[0].public_key
+        old_private_key = full_did.did_keys[0].private_key
+
+        updated = full_did.update().rotate_did_key("did-key11").get_updated()
+        updated_public_key = updated.did_keys[0].public_key
+        updated_private_key = updated.did_keys[0].private_key
+
+        assert len(updated.did_keys) == len(full_did.did_keys)
+        assert updated_public_key == old_public_key
+        assert updated_private_key == old_private_key
 
     def test_did_key_revocation(self, full_did):
         updated = full_did.update().revoke_did_key("did-key2").get_updated()
