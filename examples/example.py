@@ -100,6 +100,10 @@ def update_existing_did(did):
         "gmail-service", "email-service", "https://gmail.com"
     ).revoke_did_key(
         "my-did-key-2"
+    ).rotate_did_key(
+        "my-did-key-3"
+    ).rotate_management_key(
+        "my-first-management-key"
     ).revoke_management_key(
         "my-second-management-key"
     ).revoke_service(
