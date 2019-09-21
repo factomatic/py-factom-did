@@ -2,11 +2,7 @@ import json
 import pytest
 import re
 
-from client.constants import (
-    ENTRY_SCHEMA_VERSION,
-    DID_METHOD_SPEC_VERSION,
-    DID_METHOD_NAME,
-)
+from client.constants import ENTRY_SCHEMA_V100, DID_METHOD_SPEC_V020, DID_METHOD_NAME
 from client.did import DID, SignatureType, DIDKeyPurpose
 from client.enums import EntryType
 from client.keys import AbstractDIDKey, DIDKey, ManagementKey
@@ -531,7 +527,7 @@ class TestExportEntryData:
 
         ext_ids = entry_data["ext_ids"]
         assert EntryType.Create.value == ext_ids[0].decode()
-        assert ENTRY_SCHEMA_VERSION == ext_ids[1].decode()
+        assert ENTRY_SCHEMA_V100 == ext_ids[1].decode()
         assert did.nonce == ext_ids[2]
 
     def test_export_entry_data_with_management_key(self, did):
@@ -541,7 +537,7 @@ class TestExportEntryData:
         entry_data = did.export_entry_data()
 
         content = json.loads(entry_data["content"])
-        assert DID_METHOD_SPEC_VERSION == content["didMethodVersion"]
+        assert DID_METHOD_SPEC_V020 == content["didMethodVersion"]
 
         management_keys = content["managementKey"]
         assert 1 == len(management_keys)

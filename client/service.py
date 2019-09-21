@@ -82,6 +82,10 @@ class Service:
 
         return d
 
+    @staticmethod
+    def from_entry_dict(entry_dict):
+        pass
+
     def full_id(self, did):
         """
         Returns

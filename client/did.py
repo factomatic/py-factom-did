@@ -221,7 +221,7 @@ class DID:
 
         ext_ids = [
             EntryType.Create.value.encode("utf-8"),
-            ENTRY_SCHEMA_VERSION.encode("utf-8"),
+            ENTRY_SCHEMA_V100.encode("utf-8"),
             self.nonce,
         ]
         entry_content = json.dumps(self._get_did_document()).encode("utf-8")
@@ -331,7 +331,7 @@ class DID:
         )
 
         did_document = {
-            "didMethodVersion": DID_METHOD_SPEC_VERSION,
+            "didMethodVersion": DID_METHOD_SPEC_V020,
             "managementKey": management_keys,
         }
 
@@ -357,7 +357,7 @@ class DID:
 
         self.nonce = os.urandom(32)
         chain_id = calculate_chain_id(
-            [EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce]
+            [EntryType.Create.value, ENTRY_SCHEMA_V100, self.nonce]
         )
         did_id = "{}:{}".format(DID_METHOD_NAME, chain_id)
         return did_id

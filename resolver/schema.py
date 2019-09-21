@@ -1,10 +1,12 @@
 from os.path import abspath, dirname, join
 
+from client.constants import ENTRY_SCHEMA_V100
+
 import jsonref
 from jsonschema.validators import validator_for
 
 
-def load_json_schema(filename, version):
+def _load_json_schema(filename, version=ENTRY_SCHEMA_V100):
     """Loads the given schema file"""
 
     relative_path = join("resolver", "schemas", version, filename)
@@ -17,7 +19,7 @@ def load_json_schema(filename, version):
         return jsonref.loads(schema_file.read(), base_uri=base_uri, jsonschema=True)
 
 
-def get_schema_validator(schema_file, version="1.0.0"):
+def get_schema_validator(schema_file, version=ENTRY_SCHEMA_V100):
     """Instantiates the jsonschema.Validator instance for the given schema and version
 
     Parameters
@@ -32,7 +34,7 @@ def get_schema_validator(schema_file, version="1.0.0"):
     jsonschema.Validator
         The validator instance for the given schema and version
     """
-    schema = load_json_schema(schema_file, version)
+    schema = _load_json_schema(schema_file, version)
     cls = validator_for(schema)
     cls.check_schema(schema)
     return cls(schema)

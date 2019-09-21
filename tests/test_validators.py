@@ -15,7 +15,7 @@ from resolver.validators import (
     validate_did_management_ext_ids_v100,
     validate_did_method_version_upgrade_ext_ids_v100,
     validate_did_update_ext_ids_v100,
-    DeactivationEntryContentValidator,
+    EmptyEntryContentValidator,
 )
 
 
@@ -24,16 +24,16 @@ class TestDIDManagementEntryValidation:
 
     def test_insufficient_extids(self):
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
-            validate_did_management_ext_ids_v100(["DIDManagement"])
+            validate_did_management_ext_ids_v100([b"DIDManagement"])
         assert str(excinfo.value) == "Invalid or missing DIDManagement entry ExtIDs"
 
     def test_malformed_extids(self):
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
-            validate_did_management_ext_ids_v100(["DIdManagement", "1.0.0"])
+            validate_did_management_ext_ids_v100([b"DIdManagement", b"1.0.0"])
         assert str(excinfo.value) == "Invalid or missing DIDManagement entry ExtIDs"
 
         with pytest.raises(MalformedDIDManagementEntry) as excinfo:
-            validate_did_management_ext_ids_v100(["DIDManagement", "1.0.a"])
+            validate_did_management_ext_ids_v100([b"DIDManagement", b"1.0.a"])
         assert str(excinfo.value) == "Invalid or missing DIDManagement entry ExtIDs"
 
     def test_entry_with_missing_required_fields(self):
@@ -60,6 +60,10 @@ class TestDIDManagementEntryValidation:
 
     def test_valid_entry(self):
         did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
+        validate_did_management_ext_ids_v100([b"DIDManagement", b"1.0.0"])
+        validate_did_management_ext_ids_v100(
+            [b"DIDManagement", b"1.0.0", b"asdfasdfasdf"]
+        )
         valid_entry = {
             "didMethodVersion": "0.1.0",
             "managementKey": [
@@ -102,9 +106,11 @@ class TestDIDUpdateEntryValidation:
         assert (
             validate_did_update_ext_ids_v100(
                 [
-                    "DIDUpdate",
-                    "1.0.0",
-                    "{}:{}#my-key".format(DID_METHOD_NAME, secrets.token_hex(32)),
+                    b"DIDUpdate",
+                    b"1.0.0",
+                    "{}:{}#my-key".format(
+                        DID_METHOD_NAME, secrets.token_hex(32)
+                    ).encode("utf-8"),
                 ]
             )
             is False
@@ -115,29 +121,24 @@ class TestDIDUpdateEntryValidation:
             DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
         )
         assert (
-            validate_did_update_ext_ids_v100(["DIdUpdate", "1.0.0", key_id, "0xaf01"])
+            validate_did_update_ext_ids_v100([b"DIdUpdate", b"1.0.0", key_id, b"af01"])
             is False
         )
 
         assert (
-            validate_did_update_ext_ids_v100(["DIDUpdate", "1.0.", key_id, "0xaf01"])
+            validate_did_update_ext_ids_v100([b"DIDUpdate", b"1.0.", key_id, b"af01"])
             is False
         )
 
         assert (
             validate_did_update_ext_ids_v100(
-                ["DIDUpdate", "1.0.0", key_id[: key_id.find("#")], "0xaf01"]
+                [
+                    b"DIDUpdate",
+                    b"1.0.0",
+                    key_id[: key_id.find("#")].encode("utf-8"),
+                    b"af01",
+                ]
             )
-            is False
-        )
-
-        assert (
-            validate_did_update_ext_ids_v100(["DIDUpdate", "1.0.0", key_id, "aff0"])
-            is False
-        )
-
-        assert (
-            validate_did_update_ext_ids_v100(["DIDUpdate", "1.0.0", key_id, "0xaffz"])
             is False
         )
 
@@ -202,8 +203,9 @@ class TestDIDUpdateEntryValidation:
         did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
         key_id = "{}#{}".format(did, "my-man-key-1")
 
-        # Empty entry content should be valid
-        validate_did_update_ext_ids_v100(["DIDUpdate", "1.0.0", key_id, "0xaffe"])
+        validate_did_update_ext_ids_v100(
+            [b"DIDUpdate", b"1.0.0", key_id.encode("utf-8"), b"affe"]
+        )
 
         # Entry with only additions should be valid
         self.VALIDATOR.validate(
@@ -302,9 +304,11 @@ class TestDIDMethodVersionUpgradeEntryValidation:
         assert (
             validate_did_method_version_upgrade_ext_ids_v100(
                 [
-                    "DIDMethodVersionUpgrade",
-                    "1.0.0",
-                    "{}:{}#my-key".format(DID_METHOD_NAME, secrets.token_hex(32)),
+                    b"DIDMethodVersionUpgrade",
+                    b"1.0.0",
+                    "{}:{}#my-key".format(
+                        DID_METHOD_NAME, secrets.token_hex(32)
+                    ).encode("utf-8"),
                 ]
             )
             is False
@@ -316,14 +320,14 @@ class TestDIDMethodVersionUpgradeEntryValidation:
         )
         assert (
             validate_did_method_version_upgrade_ext_ids_v100(
-                ["DIDMethodVersionsUpgrade", "1.0.0", key_id, "0xaf01"]
+                [b"DIDMethodVersionsUpgrade", b"1.0.0", key_id.encode("utf-8"), b"af01"]
             )
             is False
         )
 
         assert (
             validate_did_method_version_upgrade_ext_ids_v100(
-                ["DIDMethodVersionUpgrade", "1.0.", key_id, "0xaf01"]
+                [b"DIDMethodVersionUpgrade", b"1.0.", key_id.encode("utf-8"), b"af01"]
             )
             is False
         )
@@ -331,25 +335,11 @@ class TestDIDMethodVersionUpgradeEntryValidation:
         assert (
             validate_did_method_version_upgrade_ext_ids_v100(
                 [
-                    "DIDMethodVersionUpgrade",
-                    "1.0.0",
-                    key_id[: key_id.find("#")],
-                    "0xaf01",
+                    b"DIDMethodVersionUpgrade",
+                    b"1.0.0",
+                    key_id[: key_id.find("#")].encode("utf-8"),
+                    b"0xaf01",
                 ]
-            )
-            is False
-        )
-
-        assert (
-            validate_did_method_version_upgrade_ext_ids_v100(
-                ["DIDMethodVersionUpgrade", "1.0.0", key_id, "aff0"]
-            )
-            is False
-        )
-
-        assert (
-            validate_did_method_version_upgrade_ext_ids_v100(
-                ["DIDMethodVersionUpgrade", "1.0.0", key_id, "0xaffz"]
             )
             is False
         )
@@ -372,6 +362,15 @@ class TestDIDMethodVersionUpgradeEntryValidation:
             self.VALIDATOR.validate({"didMethodVersion": "1.0.2", "additional": 1})
 
     def test_valid_entry(self):
+        key_id = "{}:{}#{}".format(
+            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
+        )
+        assert (
+            validate_did_method_version_upgrade_ext_ids_v100(
+                [b"DIDMethodVersionUpgrade", b"1.0.0", key_id.encode("utf-8"), b"af01"]
+            )
+            is True
+        )
         self.VALIDATOR.validate({"didMethodVersion": "1.0.2"})
 
 
@@ -380,9 +379,11 @@ class TestDIDDeactivationEntryValidation:
         assert (
             validate_did_deactivation_ext_ids_v100(
                 [
-                    "DIDDeactivation",
-                    "1.0.0",
-                    "{}:{}#my-key".format(DID_METHOD_NAME, secrets.token_hex(32)),
+                    b"DIDDeactivation",
+                    b"1.0.0",
+                    "{}:{}#my-key".format(
+                        DID_METHOD_NAME, secrets.token_hex(32)
+                    ).encode("utf-8"),
                 ]
             )
             is False
@@ -394,42 +395,42 @@ class TestDIDDeactivationEntryValidation:
         )
         assert (
             validate_did_deactivation_ext_ids_v100(
-                ["DIDDeactivated", "1.0.0", key_id, "0xaf01"]
+                [b"DIDDeactivated", b"1.0.0", key_id.encode("utf-8"), b"af01"]
             )
             is False
         )
 
         assert (
             validate_did_deactivation_ext_ids_v100(
-                ["DIDDeactivation", "1.0.", key_id, "0xaf01"]
+                [b"DIDDeactivation", b"1.0.", key_id.encode("utf-8"), b"af01"]
             )
             is False
         )
 
         assert (
             validate_did_deactivation_ext_ids_v100(
-                ["DIDDeactivation", "1.0.0", key_id[: key_id.find("#")], "0xaf01"]
-            )
-            is False
-        )
-
-        assert (
-            validate_did_deactivation_ext_ids_v100(
-                ["DIDDeactivation", "1.0.0", key_id, "aff0"]
-            )
-            is False
-        )
-
-        assert (
-            validate_did_deactivation_ext_ids_v100(
-                ["DIDDeactivation", "1.0.0", key_id, "0xaffz"]
+                [
+                    b"DIDDeactivation",
+                    b"1.0.0",
+                    key_id[: key_id.find("#")].encode("utf-8"),
+                    b"af01",
+                ]
             )
             is False
         )
 
     def test_invalid_entry(self):
         with pytest.raises(ValidationError):
-            DeactivationEntryContentValidator.validate({"some": "data"})
+            EmptyEntryContentValidator.validate({"some": "data"})
 
     def test_valid_entry(self):
-        DeactivationEntryContentValidator.validate({})
+        key_id = "{}:{}#{}".format(
+            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
+        )
+        assert (
+            validate_did_deactivation_ext_ids_v100(
+                [b"DIDDeactivation", b"1.0.0", key_id.encode("utf-8"), b"af01"]
+            )
+            is True
+        )
+        EmptyEntryContentValidator.validate({})

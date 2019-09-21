@@ -1,5 +1,6 @@
 import json
 
+from client.constants import ENTRY_SCHEMA_V100
 import pytest
 
 from client.did import DID, DIDKeyPurpose, SignatureType
@@ -186,7 +187,7 @@ class TestExportUpdateEntryData:
         content = json.loads(update_entry["content"])
 
         assert ext_ids[0] == "DIDUpdate".encode("utf-8")
-        assert ext_ids[1] == "1.0.0".encode("utf-8")
+        assert ext_ids[1] == ENTRY_SCHEMA_V100.encode("utf-8")
         assert ext_ids[2] == "{}#{}".format(did.id, "man-key1").encode("utf-8")
         assert len(ext_ids) == 4
         assert "revoke" not in content
@@ -241,7 +242,7 @@ class TestExportUpdateEntryData:
         content = json.loads(update_entry["content"])
 
         assert ext_ids[0] == "DIDUpdate".encode("utf-8")
-        assert ext_ids[1] == "1.0.0".encode("utf-8")
+        assert ext_ids[1] == ENTRY_SCHEMA_V100.encode("utf-8")
         assert ext_ids[2] == "{}#{}".format(full_did.id, "man-key1").encode("utf-8")
         assert len(ext_ids) == 4
         assert "add" not in content
@@ -273,7 +274,7 @@ class TestExportUpdateEntryData:
         content = json.loads(update_entry["content"])
 
         assert ext_ids[0] == "DIDUpdate".encode("utf-8")
-        assert ext_ids[1] == "1.0.0".encode("utf-8")
+        assert ext_ids[1] == ENTRY_SCHEMA_V100.encode("utf-8")
         assert ext_ids[2] == "{}#{}".format(full_did.id, "man-key1").encode("utf-8")
         assert len(ext_ids) == 4
         assert "add" in content

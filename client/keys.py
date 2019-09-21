@@ -122,7 +122,7 @@ class AbstractDIDKey:
                 "Unsupported signature type: {}".format(self.signature_type)
             )
 
-    def to_entry_dict(self, did):
+    def to_entry_dict(self, did, version="1.0.0"):
         """
         Converts the object to a dictionary suitable for recording on-chain.
 
@@ -154,6 +154,10 @@ class AbstractDIDKey:
             d["priorityRequirement"] = self.priority_requirement
 
         return d
+
+    @staticmethod
+    def from_entry_dict(entry_dict):
+        pass
 
     def rotate(self):
         """
@@ -475,6 +479,10 @@ class ManagementKey(AbstractDIDKey):
         d["priority"] = self.priority
         return d
 
+    @staticmethod
+    def from_entry_dict(entry_dict):
+        pass
+
 
 class DIDKey(AbstractDIDKey):
     """
@@ -568,3 +576,7 @@ class DIDKey(AbstractDIDKey):
         d = super().to_entry_dict(did)
         d["purpose"] = self.purpose
         return d
+
+    @staticmethod
+    def from_entry_dict(entry_dict):
+        pass

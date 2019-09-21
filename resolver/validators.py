@@ -2,12 +2,12 @@ import re
 
 from jsonschema.exceptions import ValidationError
 
-from client.constants import DID_METHOD_NAME
+from client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
 from client.enums import EntryType
 from resolver.exceptions import MalformedDIDManagementEntry
 
 
-class DeactivationEntryContentValidator:
+class EmptyEntryContentValidator:
     @staticmethod
     def validate(content):
         if content:
@@ -22,7 +22,7 @@ def validate_did_management_ext_ids_v100(ext_ids):
 
     Parameters
     ----------
-    ext_ids: list of str
+    ext_ids: list of bytes
         The ExtIDs of the entry
 
     Raises
@@ -34,7 +34,7 @@ def validate_did_management_ext_ids_v100(ext_ids):
     if not (
         _validate_ext_ids_length(ext_ids, 2)
         and _validate_entry_type(ext_ids, EntryType.Create)
-        and _validate_schema_version(ext_ids)
+        and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
     ):
         raise MalformedDIDManagementEntry(
             "Invalid or missing {} entry ExtIDs".format(EntryType.Create.value)
@@ -47,7 +47,7 @@ def validate_did_update_ext_ids_v100(ext_ids):
 
     Parameters
     ----------
-    ext_ids: list of str
+    ext_ids: list of bytes
         The ExtIDs of the entry
 
     Returns
@@ -58,9 +58,8 @@ def validate_did_update_ext_ids_v100(ext_ids):
     if (
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.Update)
-        and _validate_schema_version(ext_ids)
+        and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_key_identifier(ext_ids)
-        and _validate_signature_format(ext_ids)
     ):
         return True
     return False
@@ -72,7 +71,7 @@ def validate_did_method_version_upgrade_ext_ids_v100(ext_ids):
 
     Parameters
     ----------
-    ext_ids: list of str
+    ext_ids: list of bytes
         The ExtIDs of the entry
 
     Returns
@@ -83,9 +82,8 @@ def validate_did_method_version_upgrade_ext_ids_v100(ext_ids):
     if (
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.VersionUpgrade)
-        and _validate_schema_version(ext_ids)
+        and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_key_identifier(ext_ids)
-        and _validate_signature_format(ext_ids)
     ):
         return True
     else:
@@ -98,7 +96,7 @@ def validate_did_deactivation_ext_ids_v100(ext_ids):
 
     Parameters
     ----------
-    ext_ids: list of str
+    ext_ids: list of bytes
         The ExtIDs of the entry
 
     Returns
@@ -109,9 +107,8 @@ def validate_did_deactivation_ext_ids_v100(ext_ids):
     if (
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.Deactivation)
-        and _validate_schema_version(ext_ids)
+        and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_key_identifier(ext_ids)
-        and _validate_signature_format(ext_ids)
     ):
         return True
     else:
@@ -119,35 +116,31 @@ def validate_did_deactivation_ext_ids_v100(ext_ids):
 
 
 def _validate_ext_ids_length(ext_ids, min_length):
-    if len(ext_ids) < min_length:
-        return False
-    return True
+    return len(ext_ids) >= min_length
 
 
 def _validate_entry_type(ext_ids, entry_type):
-    if ext_ids[0] != entry_type.value:
+    try:
+        return ext_ids[0].decode() == entry_type.value
+    except UnicodeDecodeError:
         return False
-    return True
 
 
-def _validate_schema_version(ext_ids):
-    if re.match(r"^\d+\.\d+\.\d+$", ext_ids[1]) is None:
+def _validate_schema_version(ext_ids, version):
+    try:
+        return ext_ids[1].decode() == version
+    except UnicodeDecodeError:
         return False
-    return True
 
 
 def _validate_key_identifier(ext_ids):
-    if (
-        re.match(
-            r"^{}:[0-9a-f]{{64}}#[a-zA-Z0-9-]+$".format(DID_METHOD_NAME), ext_ids[2]
+    try:
+        return (
+            re.match(
+                r"^{}:[0-9a-f]{{64}}#[a-zA-Z0-9-]+$".format(DID_METHOD_NAME),
+                ext_ids[2].decode(),
+            )
+            is not None
         )
-        is None
-    ):
+    except UnicodeDecodeError:
         return False
-    return True
-
-
-def _validate_signature_format(ext_ids):
-    if re.match(r"^0x[0-9a-f]+$", ext_ids[3]) is None:
-        return False
-    return True

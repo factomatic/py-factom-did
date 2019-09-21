@@ -5,7 +5,7 @@ import math
 import operator as op
 
 from client.blockchain import calculate_entry_size, record_entry
-from client.constants import ENTRY_SCHEMA_VERSION, ENTRY_SIZE_LIMIT
+from client.constants import ENTRY_SCHEMA_V100, ENTRY_SIZE_LIMIT
 from client.did import SignatureType
 from client.enums import EntryType
 
@@ -251,22 +251,22 @@ class DIDUpdater:
         if add_dict:
             entry_content_dict["add"] = add_dict
 
-        entry_content = json.dumps(entry_content_dict)
+        entry_content = json.dumps(entry_content_dict).replace(" ", "")
         data_to_sign = "".join(
             [
                 EntryType.Update.value,
-                ENTRY_SCHEMA_VERSION,
+                ENTRY_SCHEMA_V100,
                 signing_key.full_id(self.did.id),
                 entry_content,
             ]
-        ).replace(" ", "")
+        )
         signature = signing_key.sign(
             hashlib.sha256(data_to_sign.encode("utf-8")).digest()
         )
 
         ext_ids = [
             EntryType.Update.value.encode("utf-8"),
-            ENTRY_SCHEMA_VERSION.encode("utf-8"),
+            ENTRY_SCHEMA_V100.encode("utf-8"),
             signing_key.full_id(self.did.id).encode("utf-8"),
             signature,
         ]
