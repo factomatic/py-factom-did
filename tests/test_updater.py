@@ -3,7 +3,7 @@ import json
 from client.constants import ENTRY_SCHEMA_V100
 import pytest
 
-from client.did import DID, DIDKeyPurpose, SignatureType
+from client.did import DID, DIDKeyPurpose, KeyType
 
 
 @pytest.fixture
@@ -21,9 +21,9 @@ def full_did():
     return (
         DID()
         .management_key("man-key1", 0)
-        .management_key("man-key2", 1, SignatureType.ECDSA.value)
+        .management_key("man-key2", 1, KeyType.ECDSA.value)
         .management_key("man-key3", 1)
-        .management_key("man-key4", 2, SignatureType.RSA.value)
+        .management_key("man-key4", 2, KeyType.RSA.value)
         .did_key(
             "did-key1", DIDKeyPurpose.AuthenticationKey.value, priority_requirement=2
         )
@@ -169,7 +169,7 @@ class TestExportUpdateEntryData:
         update_entry = (
             did.update()
             .add_management_key("man-key2", 0)
-            .add_management_key("man-key3", 1, signature_type=SignatureType.RSA.value)
+            .add_management_key("man-key3", 1, key_type=KeyType.RSA.value)
             .add_did_key(
                 "did-key1",
                 purpose=DIDKeyPurpose.PublicKey.value,

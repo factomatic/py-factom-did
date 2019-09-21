@@ -1,5 +1,7 @@
 import re
 
+from client.constants import ENTRY_SCHEMA_V100
+
 __all__ = ["Service"]
 
 
@@ -63,7 +65,7 @@ class Service:
             self.priority_requirement,
         )
 
-    def to_entry_dict(self, did):
+    def to_entry_dict(self, did, version=ENTRY_SCHEMA_V100):
         """
         Converts the object to a dictionary suitable for recording on-chain.
 
@@ -72,19 +74,30 @@ class Service:
         did: str
             The DID to which this service belongs.
         """
-        d = dict()
+        if version == ENTRY_SCHEMA_V100:
+            d = dict()
 
-        d["id"] = self.full_id(did)
-        d["type"] = self.service_type
-        d["serviceEndpoint"] = self.endpoint
-        if self.priority_requirement is not None:
-            d["priorityRequirement"] = self.priority_requirement
+            d["id"] = self.full_id(did)
+            d["type"] = self.service_type
+            d["serviceEndpoint"] = self.endpoint
+            if self.priority_requirement is not None:
+                d["priorityRequirement"] = self.priority_requirement
 
-        return d
+            return d
+        else:
+            raise NotImplementedError("Unknown schema version: {}".format(version))
 
     @staticmethod
-    def from_entry_dict(entry_dict):
-        pass
+    def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
+        if version == ENTRY_SCHEMA_V100:
+            return Service(
+                alias=entry_dict.get("id", "").split("#")[-1],
+                service_type=entry_dict.get("type", ""),
+                endpoint=entry_dict.get("serviceEndpoint", ""),
+                priority_requirement=entry_dict.get("priorityRequirement"),
+            )
+        else:
+            raise NotImplementedError("Unknown schema version: {}".format(version))
 
     def full_id(self, did):
         """

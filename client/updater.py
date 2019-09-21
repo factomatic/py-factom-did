@@ -6,7 +6,7 @@ import operator as op
 
 from client.blockchain import calculate_entry_size, record_entry
 from client.constants import ENTRY_SCHEMA_V100, ENTRY_SIZE_LIMIT
-from client.did import SignatureType
+from client.did import KeyType
 from client.enums import EntryType
 
 
@@ -35,7 +35,7 @@ class DIDUpdater:
         self,
         alias,
         priority,
-        signature_type=SignatureType.EdDSA.value,
+        key_type=KeyType.EdDSA.value,
         controller=None,
         priority_requirement=None,
     ):
@@ -46,12 +46,12 @@ class DIDUpdater:
         ----------
         alias: str
         priority: int
-        signature_type: SignatureType, optional
+        key_type: KeyType, optional
         controller: str, optional
         priority_requirement: int, optional
         """
         self.did.management_key(
-            alias, priority, signature_type, controller, priority_requirement
+            alias, priority, key_type, controller, priority_requirement
         )
         return self
 
@@ -59,7 +59,7 @@ class DIDUpdater:
         self,
         alias,
         purpose,
-        signature_type=SignatureType.EdDSA.value,
+        key_type=KeyType.EdDSA.value,
         controller=None,
         priority_requirement=None,
     ):
@@ -70,14 +70,12 @@ class DIDUpdater:
         ----------
         alias: str
         purpose: did.enums.DIDKeyPurpose
-        signature_type: SignatureType, optional
+        key_type: KeyType, optional
         controller: str, optional
         priority_requirement: int, optional
         """
 
-        self.did.did_key(
-            alias, purpose, signature_type, controller, priority_requirement
-        )
+        self.did.did_key(alias, purpose, key_type, controller, priority_requirement)
         return self
 
     def add_service(self, alias, service_type, endpoint, priority_requirement=None):

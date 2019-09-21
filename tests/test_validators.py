@@ -5,7 +5,7 @@ from jsonschema.exceptions import ValidationError
 import pytest
 
 from client.constants import DID_METHOD_NAME
-from client.enums import DIDKeyPurpose, SignatureType
+from client.enums import DIDKeyPurpose, KeyType
 from client.keys import DIDKey, ManagementKey
 from client.service import Service
 from resolver.exceptions import MalformedDIDManagementEntry
@@ -50,7 +50,7 @@ class TestDIDManagementEntryValidation:
                 ManagementKey(
                     alias="my-man-key",
                     controller=did,
-                    signature_type=SignatureType.EdDSA.value,
+                    key_type=KeyType.EdDSA.value,
                     priority=0,
                 ).to_entry_dict(did)
             ]
@@ -70,13 +70,13 @@ class TestDIDManagementEntryValidation:
                 ManagementKey(
                     alias="my-man-key-1",
                     controller=did,
-                    signature_type=SignatureType.EdDSA.value,
+                    key_type=KeyType.EdDSA.value,
                     priority=0,
                 ).to_entry_dict(did),
                 ManagementKey(
                     alias="my-man-key-2",
                     controller=did,
-                    signature_type=SignatureType.RSA.value,
+                    key_type=KeyType.RSA.value,
                     priority=1,
                 ).to_entry_dict(did),
             ],
@@ -84,7 +84,7 @@ class TestDIDManagementEntryValidation:
                 DIDKey(
                     alias="my-did-key",
                     controller=did,
-                    signature_type=SignatureType.RSA.ECDSA.value,
+                    key_type=KeyType.RSA.ECDSA.value,
                     purpose=DIDKeyPurpose.PublicKey.value,
                 ).to_entry_dict(did)
             ],
@@ -154,7 +154,7 @@ class TestDIDUpdateEntryValidation:
                             ManagementKey(
                                 alias="my-man-key-1",
                                 controller=did,
-                                signature_type=SignatureType.EdDSA.value,
+                                key_type=KeyType.EdDSA.value,
                                 priority=0,
                             ).to_entry_dict(did)
                         ]
@@ -171,7 +171,7 @@ class TestDIDUpdateEntryValidation:
                             ManagementKey(
                                 alias="my-man-key-1",
                                 controller=did,
-                                signature_type=SignatureType.EdDSA.value,
+                                key_type=KeyType.EdDSA.value,
                                 priority=0,
                             ).to_entry_dict(did)
                         ]
@@ -189,7 +189,7 @@ class TestDIDUpdateEntryValidation:
                             ManagementKey(
                                 alias="my-man-key-1",
                                 controller=did,
-                                signature_type=SignatureType.EdDSA.value,
+                                key_type=KeyType.EdDSA.value,
                                 priority=0,
                             ).to_entry_dict(did)
                         ]
@@ -215,13 +215,13 @@ class TestDIDUpdateEntryValidation:
                         ManagementKey(
                             alias="my-man-key-1",
                             controller=did,
-                            signature_type=SignatureType.EdDSA.value,
+                            key_type=KeyType.EdDSA.value,
                             priority=0,
                         ).to_entry_dict(did),
                         ManagementKey(
                             alias="my-man-key-2",
                             controller=did,
-                            signature_type=SignatureType.RSA.value,
+                            key_type=KeyType.RSA.value,
                             priority=1,
                         ).to_entry_dict(did),
                     ],
@@ -229,7 +229,7 @@ class TestDIDUpdateEntryValidation:
                         DIDKey(
                             alias="my-did-key",
                             controller=did,
-                            signature_type=SignatureType.RSA.ECDSA.value,
+                            key_type=KeyType.RSA.ECDSA.value,
                             purpose=DIDKeyPurpose.PublicKey.value,
                         ).to_entry_dict(did)
                     ],
@@ -259,13 +259,13 @@ class TestDIDUpdateEntryValidation:
                         ManagementKey(
                             alias="my-man-key-1",
                             controller=did,
-                            signature_type=SignatureType.EdDSA.value,
+                            key_type=KeyType.EdDSA.value,
                             priority=0,
                         ).to_entry_dict(did),
                         ManagementKey(
                             alias="my-man-key-2",
                             controller=did,
-                            signature_type=SignatureType.RSA.value,
+                            key_type=KeyType.RSA.value,
                             priority=1,
                         ).to_entry_dict(did),
                     ],
@@ -273,7 +273,7 @@ class TestDIDUpdateEntryValidation:
                         DIDKey(
                             alias="my-did-key",
                             controller=did,
-                            signature_type=SignatureType.RSA.ECDSA.value,
+                            key_type=KeyType.RSA.ECDSA.value,
                             purpose=DIDKeyPurpose.PublicKey.value,
                         ).to_entry_dict(did)
                     ],
