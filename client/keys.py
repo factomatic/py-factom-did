@@ -46,7 +46,7 @@ class AbstractDIDKey:
     ):
 
         self._validate_key_input_params(
-            alias, key_type, controller, priority_requirement, public_key, private_key
+            alias, key_type, controller, priority_requirement
         )
 
         self.alias = alias
@@ -158,7 +158,10 @@ class AbstractDIDKey:
         if version == ENTRY_SCHEMA_V100:
             return AbstractDIDKey(
                 alias=entry_dict.get("id", "").split("#")[-1],
+                key_type=entry_dict.get("type"),
+                controller=entry_dict.get("controller"),
                 priority_requirement=entry_dict.get("priorityRequirement"),
+                public_key="",
             )
         else:
             raise NotImplementedError("Unknown schema version: {}".format(version))
@@ -301,38 +304,64 @@ class AbstractDIDKey:
             self.generate_key_pair()
             return
 
-        # At this point, private_key is not None, due to the check above and the one in
-        # _validate_key_input_params, so we can proceed with the derivation of the
-        # signing key object based on the signature type
-        if self.key_type == KeyType.EdDSA.value:
-            try:
-                self.signing_key = ed25519.SigningKey(private_key)
-                self.verifying_key = self.signing_key.get_verifying_key()
-            except ValueError:
-                raise ValueError("Invalid EdDSA private key. Must be a 32-byte seed.")
-        elif self.key_type == KeyType.ECDSA.value:
-            try:
-                self.signing_key = ecdsa.SigningKey.from_string(
-                    private_key, curve=SECP256k1
+        if public_key is not None and private_key is None:
+            if self.key_type == KeyType.EdDSA.value:
+                try:
+                    self.verifying_key = ed25519.SigningKey(private_key)
+                except ValueError:
+                    raise ValueError(
+                        "Invalid EdDSA public key. Must be a 32-byte value."
+                    )
+            elif self.key_type == KeyType.ECDSA.value:
+                try:
+                    self.verifying_key = ecdsa.VerifyingKey.from_string(
+                        public_key, curve=SECP256k1
+                    )
+                except (AssertionError, ValueError):
+                    raise ValueError(
+                        "Invalid ECDSA private key. Must be a 64-byte SECP256k1 curve point."
+                    )
+            elif self.key_type == KeyType.RSA.value:
+                # Raise the default exception in case this fails, as it's informative enough
+                self.verifying_key_key = RSA.import_key(public_key)
+            else:
+                raise NotImplementedError(
+                    "Unsupported signature type: {}".format(self.key_type)
                 )
-                self.verifying_key = self.signing_key.get_verifying_key()
-            except (AssertionError, ValueError):
-                raise ValueError(
-                    "Invalid ECDSA private key. Must be a 32-byte secret exponent."
+            return
+
+        if private_key is not None:
+            if self.key_type == KeyType.EdDSA.value:
+                try:
+                    self.signing_key = ed25519.SigningKey(private_key)
+                    self.verifying_key = self.signing_key.get_verifying_key()
+                except ValueError:
+                    raise ValueError(
+                        "Invalid EdDSA private key. Must be a 32-byte seed."
+                    )
+            elif self.key_type == KeyType.ECDSA.value:
+                try:
+                    self.signing_key = ecdsa.SigningKey.from_string(
+                        private_key, curve=SECP256k1
+                    )
+                    self.verifying_key = self.signing_key.get_verifying_key()
+                except (AssertionError, ValueError):
+                    raise ValueError(
+                        "Invalid ECDSA private key. Must be a 32-byte secret exponent."
+                    )
+            elif self.key_type == KeyType.RSA.value:
+                # Raise the default exception in case this fails, as it's informative enough
+                self.signing_key = RSA.import_key(private_key)
+                self.verifying_key = self.signing_key.publickey()
+            else:
+                raise NotImplementedError(
+                    "Unsupported signature type: {}".format(self.key_type)
                 )
-        elif self.key_type == KeyType.RSA.value:
-            # Raise the default exception in case this fails, as it's informative enough
-            self.signing_key = RSA.import_key(private_key)
-            self.verifying_key = self.signing_key.publickey()
-        else:
-            raise NotImplementedError(
-                "Unsupported signature type: {}".format(self.key_type)
-            )
 
         # If a public key is provided in conjunction with the private key, validate that
         # the public key matches the generated verification key, otherwise raise an
         # exception
-        if public_key is not None:
+        if public_key is not None and private_key is not None:
             non_matching_public_key_msg = (
                 "The provided public key does not match the one derived "
                 "from the provided private key"
@@ -373,14 +402,7 @@ class AbstractDIDKey:
         )
 
     @staticmethod
-    def _validate_key_input_params(
-        alias, key_type, controller, priority_requirement, public_key, private_key
-    ):
-        if public_key is not None and private_key is None:
-            raise ValueError(
-                "Public key specified without a corresponding private key."
-            )
-
+    def _validate_key_input_params(alias, key_type, controller, priority_requirement):
         if not re.match("^[a-z0-9-]{1,32}$", alias):
             raise ValueError(
                 "Alias must not be more than 32 characters long and must contain only lower-case "
