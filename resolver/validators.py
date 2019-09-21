@@ -55,14 +55,12 @@ def validate_did_update_ext_ids_v100(ext_ids):
     bool
         True if the ExtIDs are valid, False otherwise.
     """
-    if (
+    return (
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.Update)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_key_identifier(ext_ids)
-    ):
-        return True
-    return False
+    )
 
 
 def validate_did_method_version_upgrade_ext_ids_v100(ext_ids):
@@ -79,15 +77,12 @@ def validate_did_method_version_upgrade_ext_ids_v100(ext_ids):
     bool
         True if the ExtIDs are valid, False otherwise.
     """
-    if (
+    return (
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.VersionUpgrade)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_key_identifier(ext_ids)
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def validate_did_deactivation_ext_ids_v100(ext_ids):
@@ -104,15 +99,12 @@ def validate_did_deactivation_ext_ids_v100(ext_ids):
     bool
         True if the ExtIDs are valid, False otherwise.
     """
-    if (
+    return (
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.Deactivation)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_key_identifier(ext_ids)
-    ):
-        return True
-    else:
-        return False
+    )
 
 
 def _validate_ext_ids_length(ext_ids, min_length):
