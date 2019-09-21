@@ -399,7 +399,7 @@ class ManagementKey(AbstractDIDKey):
     Attributes
     ----------
     alias: str
-    priority: int or str
+    priority: int
         A non-negative integer showing the hierarchical level of the key. Keys with lower priority override keys with
         higher priority.
     signature_type: SignatureType
@@ -428,7 +428,7 @@ class ManagementKey(AbstractDIDKey):
             private_key,
         )
 
-        if int(priority) < 0:
+        if priority < 0:
             raise ValueError("Priority must be a non-negative integer.")
 
         self.priority = priority

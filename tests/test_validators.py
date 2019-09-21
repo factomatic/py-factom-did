@@ -51,7 +51,7 @@ class TestDIDManagementEntryValidation:
                     alias="my-man-key",
                     controller=did,
                     signature_type=SignatureType.EdDSA.value,
-                    priority="0",
+                    priority=0,
                 ).to_entry_dict(did)
             ]
         }
@@ -67,13 +67,13 @@ class TestDIDManagementEntryValidation:
                     alias="my-man-key-1",
                     controller=did,
                     signature_type=SignatureType.EdDSA.value,
-                    priority="0",
+                    priority=0,
                 ).to_entry_dict(did),
                 ManagementKey(
                     alias="my-man-key-2",
                     controller=did,
                     signature_type=SignatureType.RSA.value,
-                    priority="1",
+                    priority=1,
                 ).to_entry_dict(did),
             ],
             "didKey": [
@@ -154,7 +154,7 @@ class TestDIDUpdateEntryValidation:
                                 alias="my-man-key-1",
                                 controller=did,
                                 signature_type=SignatureType.EdDSA.value,
-                                priority="0",
+                                priority=0,
                             ).to_entry_dict(did)
                         ]
                     }
@@ -171,7 +171,7 @@ class TestDIDUpdateEntryValidation:
                                 alias="my-man-key-1",
                                 controller=did,
                                 signature_type=SignatureType.EdDSA.value,
-                                priority="0",
+                                priority=0,
                             ).to_entry_dict(did)
                         ]
                     },
@@ -189,7 +189,7 @@ class TestDIDUpdateEntryValidation:
                                 alias="my-man-key-1",
                                 controller=did,
                                 signature_type=SignatureType.EdDSA.value,
-                                priority="0",
+                                priority=0,
                             ).to_entry_dict(did)
                         ]
                     },
@@ -214,13 +214,13 @@ class TestDIDUpdateEntryValidation:
                             alias="my-man-key-1",
                             controller=did,
                             signature_type=SignatureType.EdDSA.value,
-                            priority="0",
+                            priority=0,
                         ).to_entry_dict(did),
                         ManagementKey(
                             alias="my-man-key-2",
                             controller=did,
                             signature_type=SignatureType.RSA.value,
-                            priority="1",
+                            priority=1,
                         ).to_entry_dict(did),
                     ],
                     "didKey": [
@@ -258,13 +258,13 @@ class TestDIDUpdateEntryValidation:
                             alias="my-man-key-1",
                             controller=did,
                             signature_type=SignatureType.EdDSA.value,
-                            priority="0",
+                            priority=0,
                         ).to_entry_dict(did),
                         ManagementKey(
                             alias="my-man-key-2",
                             controller=did,
                             signature_type=SignatureType.RSA.value,
-                            priority="1",
+                            priority=1,
                         ).to_entry_dict(did),
                     ],
                     "didKey": [
@@ -355,9 +355,6 @@ class TestDIDMethodVersionUpgradeEntryValidation:
         )
 
     def test_invalid_entry(self):
-        did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
-        key_id = "{}#{}".format(did, "my-man-key-1")
-
         # Empty Entry
         with pytest.raises(ValidationError):
             self.VALIDATOR.validate({})
@@ -367,11 +364,11 @@ class TestDIDMethodVersionUpgradeEntryValidation:
             self.VALIDATOR.validate({"didMethodVersions": "1.0.2"})
 
         # Entry with an invalid property value
-        with pytest.raises(ValidationError) as excinfo:
+        with pytest.raises(ValidationError):
             self.VALIDATOR.validate({"didMethodVersion": "1.0.2a"})
 
         # Entry with additional properties
-        with pytest.raises(ValidationError) as excinfo:
+        with pytest.raises(ValidationError):
             self.VALIDATOR.validate({"didMethodVersion": "1.0.2", "additional": 1})
 
     def test_valid_entry(self):
