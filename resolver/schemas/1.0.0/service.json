@@ -6,7 +6,7 @@
     "id": {"type": "string"},
     "type": {"type": "string"},
     "serviceEndpoint": {"type": "string", "format": "uri"},
-    "priorityRequirement": {"type": "string"}
+    "priorityRequirement": {"type": "integer", "minimum":  0}
   },
   "additionalProperties": false,
   "required": ["id", "type", "serviceEndpoint"]

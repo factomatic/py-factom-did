@@ -101,6 +101,25 @@ class AbstractDIDKey:
             )
         return NotImplemented
 
+    def __repr__(self):
+        public_key = str(self.public_key, "utf-8")
+        if self.key_type == KeyType.RSA.value:
+            public_key = AbstractDIDKey._minify_rsa_public_key(public_key)
+
+        return (
+            "<{0}.{1} (alias={2}, key_type={3},"
+            " controller={4}, priority_requirement={5}, public_key={6}, private_key=({7}))>".format(
+                self.__module__,
+                type(self).__name__,
+                self.alias,
+                self.key_type,
+                self.controller,
+                self.priority_requirement,
+                public_key,
+                "hidden" if self.private_key is not None else "not set",
+            )
+        )
+
     def generate_key_pair(self):
         """
         Generates a new key pair.
@@ -171,13 +190,12 @@ class AbstractDIDKey:
                 key_type=entry_dict.get("type"),
                 controller=entry_dict.get("controller"),
                 priority_requirement=entry_dict.get("priorityRequirement"),
-                public_key=entry_dict["publicKeyBase58"]
+                public_key=base58.b58decode(entry_dict["publicKeyBase58"])
                 if "publicKeyBase58" in entry_dict
                 else entry_dict.get("publicKeyPem"),
             )
         else:
             raise NotImplementedError("Unknown schema version: {}".format(version))
-        pass
 
     def rotate(self):
         """
@@ -503,7 +521,7 @@ class ManagementKey(AbstractDIDKey):
 
         return (
             "<{0}.{1} (alias={2}, priority={3}, key_type={4},"
-            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=({8}))>".format(
                 self.__module__,
                 type(self).__name__,
                 self.alias,
@@ -512,6 +530,7 @@ class ManagementKey(AbstractDIDKey):
                 self.controller,
                 self.priority_requirement,
                 public_key,
+                "hidden" if self.private_key is not None else "not set",
             )
         )
 
@@ -525,15 +544,19 @@ class ManagementKey(AbstractDIDKey):
 
     @staticmethod
     def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
-        k = super().from_entry_dict(entry_dict, version)
+        k = AbstractDIDKey.from_entry_dict(entry_dict, version)
         return ManagementKey(
             alias=k.alias,
             priority=entry_dict.get("priority"),
             key_type=k.key_type,
             controller=k.controller,
             priority_requirement=k.priority_requirement,
-            public_key=k.public_key,
-            private_key=k.private_key,
+            public_key=base58.b58decode(k.public_key)
+            if k.public_key is not None and k.key_type != KeyType.RSA.value
+            else k.public_key,
+            private_key=base58.b58decode(k.private_key)
+            if k.private_key is not None and k.private_key is not KeyType.RSA.value
+            else k.private_key,
         )
 
 
@@ -608,7 +631,7 @@ class DIDKey(AbstractDIDKey):
 
         return (
             "<{0}.{1} (alias={2}, purpose={3}, key_type={4},"
-            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=({8}))>".format(
                 self.__module__,
                 type(self).__name__,
                 self.alias,
@@ -617,6 +640,7 @@ class DIDKey(AbstractDIDKey):
                 self.controller,
                 self.priority_requirement,
                 public_key,
+                "hidden" if self.private_key is not None else "not set",
             )
         )
 
@@ -630,13 +654,17 @@ class DIDKey(AbstractDIDKey):
 
     @staticmethod
     def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
-        k = super().from_entry_dict(entry_dict, version)
+        k = AbstractDIDKey.from_entry_dict(entry_dict, version)
         return DIDKey(
             alias=k.alias,
             purpose=entry_dict.get("purpose"),
             key_type=k.key_type,
             controller=k.controller,
             priority_requirement=k.priority_requirement,
-            public_key=k.public_key,
-            private_key=k.private_key,
+            public_key=base58.b58decode(k.public_key)
+            if k.public_key is not None and k.key_type != KeyType.RSA.value
+            else k.public_key,
+            private_key=base58.b58decode(k.private_key)
+            if k.private_key is not None and k.private_key is not KeyType.RSA.value
+            else k.private_key,
         )

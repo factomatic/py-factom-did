@@ -11,9 +11,7 @@ class EmptyEntryContentValidator:
     @staticmethod
     def validate(content):
         if content:
-            raise ValidationError(
-                "Invalid {} entry content".format(EntryType.Deactivation.value)
-            )
+            raise ValidationError("Invalid entry content: must be empty")
 
 
 def validate_did_management_ext_ids_v100(ext_ids):
@@ -30,7 +28,6 @@ def validate_did_management_ext_ids_v100(ext_ids):
     MalformedDIDManagementEntry
         If the ExtIDs are not valid.
     """
-
     if not (
         _validate_ext_ids_length(ext_ids, 2)
         and _validate_entry_type(ext_ids, EntryType.Create)

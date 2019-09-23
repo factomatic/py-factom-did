@@ -1,14 +1,21 @@
+import json
+from json import JSONDecodeError
+
 from jsonschema.exceptions import ValidationError
 
 from client.constants import ENTRY_SCHEMA_V100
 from client.enums import EntryType
 from resolver.entry_processors import (
-    process_did_deactivation_entry,
-    process_did_management_entry,
-    process_did_method_version_upgrade_entry,
-    process_did_update_entry,
+    process_did_deactivation_entry_v100,
+    process_did_management_entry_v100,
+    process_did_method_version_upgrade_entry_v100,
+    process_did_update_entry_v100,
 )
-from resolver.exceptions import InvalidDIDChain, MalformedDIDManagementEntry
+from resolver.exceptions import (
+    InvalidDIDChain,
+    MalformedDIDManagementEntry,
+    UnknownDIDMethodSpecVersion,
+)
 from resolver.schema import get_schema_validator
 from resolver.validators import (
     validate_did_deactivation_ext_ids_v100,
@@ -47,21 +54,22 @@ ENTRY_EXT_ID_VALIDATORS = {
 
 ENTRY_PROCESSORS = {
     ENTRY_SCHEMA_V100: {
-        EntryType.Create.value: process_did_management_entry,
-        EntryType.Update.value: process_did_update_entry,
-        EntryType.VersionUpgrade.value: process_did_method_version_upgrade_entry,
-        EntryType.Deactivation.value: process_did_deactivation_entry,
+        EntryType.Create.value: process_did_management_entry_v100,
+        EntryType.Update.value: process_did_update_entry_v100,
+        EntryType.VersionUpgrade.value: process_did_method_version_upgrade_entry_v100,
+        EntryType.Deactivation.value: process_did_deactivation_entry_v100,
     }
 }
 
 
 def parse_did_chain_entries(entries):
-    # Dictionaries from aliases to key objects
+    # Dictionaries from aliases to key or service objects
     management_keys = {}
     did_keys = {}
     services = {}
 
-    # The current DID method version of the DID chain
+    # The current DID method version of the DID chain. This will be set, when parsing the first entry (provided that
+    # it is a valid DIDManagement entry)
     method_version = None
 
     keep_parsing = True
@@ -71,35 +79,51 @@ def parse_did_chain_entries(entries):
     # TODO: Add checks for entry uniqueness to avoid intra-chain replay attacks
     for i, entry in enumerate(entries):
         if not keep_parsing:
-            # TODO: Return DID document, total entries process, skipped entries
-            return {}
+            # TODO: Return DID document, total entries processed, skipped entries
+            return management_keys, did_keys, services
 
         processed_entries += 1
 
-        ext_ids = entry["ext_ids"]
-        content = entry["content"]
+        ext_ids = entry["extids"]
+        binary_content = entry["content"]
 
         # The first entry must be a valid DIDManagement entry
         if i == 0:
             try:
-                ENTRY_EXT_ID_VALIDATORS[ext_ids[1]][ext_ids[0]](ext_ids)
-                ENTRY_SCHEMA_VALIDATORS[ext_ids[1]][ext_ids[0]].validate(content)
-                keep_parsing, method_version = ENTRY_PROCESSORS[ext_ids[1]][ext_ids[0]](
+                parsed_content = json.loads(binary_content.decode())
+                entry_type = ext_ids[0].decode()
+                schema_version = ext_ids[1].decode()
+                ENTRY_EXT_ID_VALIDATORS[schema_version][entry_type](ext_ids)
+                ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
+                    parsed_content
+                )
+                keep_parsing, method_version = ENTRY_PROCESSORS[schema_version][
+                    entry_type
+                ](
                     ext_ids,
-                    content,
+                    binary_content,
+                    parsed_content,
                     method_version,
                     management_keys,
                     did_keys,
                     services,
                 )
-            except ValidationError:
-                raise InvalidDIDChain("Invalid DIDManagement entry content")
-            except MalformedDIDManagementEntry as e:
-                raise InvalidDIDChain("{}".format(e.args[0]))
+            except (UnicodeDecodeError, JSONDecodeError):
+                raise InvalidDIDChain("DIDManagement entry content must be valid JSON")
             except KeyError:
                 raise InvalidDIDChain("Unknown schema version or entry type")
             except IndexError:
                 raise InvalidDIDChain("DIDManagement entry has insufficient ExtIDs")
+            except ValidationError:
+                raise InvalidDIDChain("Invalid DIDManagement entry content")
+            except MalformedDIDManagementEntry as e:
+                raise InvalidDIDChain(
+                    "Malformed DIDManagement entry: {}".format(e.args[0])
+                )
+            except UnknownDIDMethodSpecVersion as e:
+                raise InvalidDIDChain(
+                    "Unknown DID method spec version: {}".format(e.args[0])
+                )
         # Subsequent entries are valid only if:
         # * they have at least 4 ExtIDs
         # * they are a DIDUpdate, DIDDeactivation or DIDMethodVersionUpgrade entry of a known
@@ -112,28 +136,37 @@ def parse_did_chain_entries(entries):
         # ExtID validator, which raises an exception in case of malformed ExtIDs. The content
         # validators are instances of jsonschema.validator and they do raise an exception, which
         # is ignored
-        elif (
-            len(ext_ids) >= 4
-            and ext_ids[0] != EntryType.Create.value
-            and ext_ids[1] in ENTRY_SCHEMA_VALIDATORS
-            and ext_ids[0] in ENTRY_SCHEMA_VALIDATORS[ext_ids[1]]
-            and ENTRY_EXT_ID_VALIDATORS[ext_ids[1]][ext_ids[0]](ext_ids)  # bool
-        ):
+        elif len(ext_ids) >= 4:
             try:
-                ENTRY_SCHEMA_VALIDATORS[ext_ids[1]][ext_ids[0]].validate(content)
-                keep_parsing, method_version = ENTRY_PROCESSORS[ext_ids[1]][ext_ids[0]](
+                entry_type = ext_ids[0].decode()
+                schema_version = ext_ids[1].decode()
+                if (
+                    entry_type == EntryType.Create.value
+                    or schema_version not in ENTRY_SCHEMA_VALIDATORS
+                    or entry_type not in ENTRY_SCHEMA_VALIDATORS[schema_version]
+                    or not ENTRY_EXT_ID_VALIDATORS[schema_version][entry_type](ext_ids)
+                ):
+                    continue
+                parsed_content = json.loads(binary_content.decode())
+                ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
+                    parsed_content
+                )
+                keep_parsing, method_version = ENTRY_PROCESSORS[schema_version][
+                    entry_type
+                ](
                     ext_ids,
-                    content,
+                    binary_content,
+                    parsed_content,
                     method_version,
                     management_keys,
                     did_keys,
                     services,
                 )
-            except ValidationError:
-                pass
+            except (UnicodeDecodeError, JSONDecodeError, ValidationError):
+                continue
         # Skip all other entries
         else:
             skipped_entries += 1
 
-    # TODO: Return DID document, total entries process, skipped entries
-    return {}
+    # TODO: Return DID document, total entries processed, skipped entries
+    return management_keys, did_keys, services
