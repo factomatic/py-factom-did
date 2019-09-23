@@ -58,14 +58,24 @@ class AbstractDIDKey:
 
         if self.key_type == KeyType.EdDSA.value:
             self.public_key = base58.b58encode(self.verifying_key.to_bytes())
-            self.private_key = base58.b58encode(self.signing_key.to_bytes())
+            self.private_key = (
+                base58.b58encode(self.signing_key.to_bytes())
+                if self.signing_key
+                else None
+            )
         elif self.key_type == KeyType.ECDSA.value:
             self.public_key = base58.b58encode(self.verifying_key.to_string())
-            self.private_key = base58.b58encode(self.signing_key.to_string())
+            self.private_key = (
+                base58.b58encode(self.signing_key.to_string())
+                if self.signing_key
+                else None
+            )
         elif self.key_type == KeyType.RSA.value:
             self.public_key = self.verifying_key.export_key()
-            self.private_key = self.signing_key.export_key(
-                format="PEM", passphrase=None, pkcs=8
+            self.private_key = (
+                self.signing_key.export_key(format="PEM", passphrase=None, pkcs=8)
+                if self.signing_key
+                else None
             )
         else:
             raise NotImplementedError(
@@ -173,6 +183,7 @@ class AbstractDIDKey:
         """
             Generates new key pair for the key.
         """
+        assert self.signing_key is not None, "Signing key must be set"
 
         self.generate_key_pair()
 
@@ -211,9 +222,12 @@ class AbstractDIDKey:
         ------
         NotImplementedError
             If the signature type is not supported.
+        AssertionError
+            If the supplied message is not bytes, or if a private key has not been specified.
         """
 
         assert type(message) is bytes, "Message must be supplied as bytes."
+        assert self.signing_key is not None, "Signing is not set."
 
         if self.key_type == KeyType.ECDSA.value:
             return self.signing_key.sign_digest(hash_f(message).digest())
@@ -309,13 +323,15 @@ class AbstractDIDKey:
         if public_key is not None and private_key is None:
             if self.key_type == KeyType.EdDSA.value:
                 try:
-                    self.verifying_key = ed25519.SigningKey(private_key)
+                    self.signing_key = None
+                    self.verifying_key = ed25519.VerifyingKey(public_key)
                 except ValueError:
                     raise ValueError(
                         "Invalid EdDSA public key. Must be a 32-byte value."
                     )
             elif self.key_type == KeyType.ECDSA.value:
                 try:
+                    self.signing_key = None
                     self.verifying_key = ecdsa.VerifyingKey.from_string(
                         public_key, curve=SECP256k1
                     )
@@ -324,6 +340,7 @@ class AbstractDIDKey:
                         "Invalid ECDSA private key. Must be a 64-byte SECP256k1 curve point."
                     )
             elif self.key_type == KeyType.RSA.value:
+                self.signing_key = None
                 # Raise the default exception in case this fails, as it's informative enough
                 self.verifying_key_key = RSA.import_key(public_key)
             else:

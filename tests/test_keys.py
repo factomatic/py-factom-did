@@ -22,19 +22,14 @@ class TestAbstractDIDKey:
             priority_requirement=1,
         )
 
-    # def test_initialization_with_public_key_only(self, controller):
-    #     with pytest.raises(ValueError) as excinfo:
-    #         AbstractDIDKey(
-    #             alias="test-key",
-    #             key_type=KeyType.EdDSA.value,
-    #             controller=controller,
-    #             priority_requirement=1,
-    #             public_key=b"asdfasdf",
-    #         )
-    #     assert (
-    #         str(excinfo.value)
-    #         == "Public key specified without a corresponding private key."
-    #     )
+    def test_initialization_with_public_key_only(self, controller):
+        AbstractDIDKey(
+            alias="test-key",
+            key_type=KeyType.EdDSA.value,
+            controller=controller,
+            priority_requirement=1,
+            public_key=secrets.token_bytes(32),
+        )
 
     def test_initialization_with_invalid_private_key(self, controller):
         with pytest.raises(ValueError) as excinfo:
