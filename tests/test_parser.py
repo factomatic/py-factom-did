@@ -1,3 +1,4 @@
+import hashlib
 import json
 import secrets
 
@@ -20,14 +21,14 @@ def did():
 def man_key_1(did):
     return ManagementKey(
         alias="man-key-1", priority=0, controller=did, key_type=KeyType.ECDSA.value
-    ).to_entry_dict(did)
+    )
 
 
 @pytest.fixture
 def man_key_2(did):
     return ManagementKey(
         alias="man-key-2", priority=0, controller=did, key_type=KeyType.EdDSA.value
-    ).to_entry_dict(did)
+    )
 
 
 @pytest.fixture
@@ -37,16 +38,14 @@ def did_key_1(did):
         controller=did,
         key_type=KeyType.ECDSA.value,
         purpose=DIDKeyPurpose.AuthenticationKey.value,
-    ).to_entry_dict(did)
+    )
 
 
 @pytest.fixture
 def service_1(did):
     return Service(
-        alias="my-service",
-        service_type="some-service",
-        endpoint="https://myservice.com",
-    ).to_entry_dict(did)
+        alias="service-1", service_type="some-service", endpoint="https://myservice.com"
+    )
 
 
 class TestInvalidDIDManagementEntry:
@@ -109,22 +108,31 @@ class TestInvalidDIDManagementEntry:
             parse_did_chain_entries([entry])
         assert str(excinfo.value) == "Invalid DIDManagement entry content"
 
-    def test_unknown_did_method_version(self, man_key_1):
+    def test_unknown_did_method_version(self, did, man_key_1):
         entry = {
             "extids": [b"DIDManagement", b"1.0.0"],
             "content": json.dumps(
-                {"didMethodVersion": "0.2.1", "managementKey": [man_key_1]}
+                {
+                    "didMethodVersion": "0.2.1",
+                    "managementKey": [man_key_1.to_entry_dict(did)],
+                }
             ).encode("utf-8"),
         }
         with pytest.raises(InvalidDIDChain) as excinfo:
             parse_did_chain_entries([entry])
         assert str(excinfo.value) == "Unknown DID method spec version: 0.2.1"
 
-    def test_duplicate_management_keys(self, man_key_1):
+    def test_duplicate_management_keys(self, did, man_key_1):
         entry = {
             "extids": [b"DIDManagement", b"1.0.0"],
             "content": json.dumps(
-                {"didMethodVersion": "0.2.0", "managementKey": [man_key_1, man_key_1]}
+                {
+                    "didMethodVersion": "0.2.0",
+                    "managementKey": [
+                        man_key_1.to_entry_dict(did),
+                        man_key_1.to_entry_dict(did),
+                    ],
+                }
             ).encode("utf-8"),
         }
         with pytest.raises(InvalidDIDChain) as excinfo:
@@ -134,14 +142,17 @@ class TestInvalidDIDManagementEntry:
             == "Malformed DIDManagement entry: Duplicate management key found"
         )
 
-    def test_duplicate_did_keys(self, man_key_1, did_key_1):
+    def test_duplicate_did_keys(self, did, man_key_1, did_key_1):
         entry = {
             "extids": [b"DIDManagement", b"1.0.0"],
             "content": json.dumps(
                 {
                     "didMethodVersion": "0.2.0",
-                    "managementKey": [man_key_1],
-                    "didKey": [did_key_1, did_key_1],
+                    "managementKey": [man_key_1.to_entry_dict(did)],
+                    "didKey": [
+                        did_key_1.to_entry_dict(did),
+                        did_key_1.to_entry_dict(did),
+                    ],
                 }
             ).encode("utf-8"),
         }
@@ -152,15 +163,17 @@ class TestInvalidDIDManagementEntry:
             == "Malformed DIDManagement entry: Duplicate DID key found"
         )
 
-    def test_duplicate_services(self, man_key_1, service_1):
-        print("service in test_duplicate_services: {}".format(service_1))
+    def test_duplicate_services(self, did, man_key_1, service_1):
         entry = {
             "extids": [b"DIDManagement", b"1.0.0"],
             "content": json.dumps(
                 {
                     "didMethodVersion": "0.2.0",
-                    "managementKey": [man_key_1],
-                    "service": [service_1, service_1],
+                    "managementKey": [man_key_1.to_entry_dict(did)],
+                    "service": [
+                        service_1.to_entry_dict(did),
+                        service_1.to_entry_dict(did),
+                    ],
                 }
             ).encode("utf-8"),
         }
@@ -172,17 +185,80 @@ class TestInvalidDIDManagementEntry:
         )
 
 
-def test_valid_did_management_entry(man_key_1, did_key_1, service_1):
+def test_valid_did_management_entry(did, man_key_1, did_key_1, service_1):
     entry = {
         "extids": [b"DIDManagement", b"1.0.0"],
         "content": json.dumps(
             {
                 "didMethodVersion": "0.2.0",
-                "managementKey": [man_key_1],
-                "didKey": [did_key_1],
-                "service": [service_1],
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_1.to_entry_dict(did)],
+                "service": [service_1.to_entry_dict(did)],
             }
         ).encode("utf-8"),
     }
 
-    parse_did_chain_entries([entry])
+    management_keys, did_keys, services, processed_entries = parse_did_chain_entries(
+        [entry]
+    )
+
+    man_key_1.private_key = None
+    did_key_1.private_key = None
+
+    assert management_keys == {"man-key-1": man_key_1}
+    assert did_keys == {"did-key-1": did_key_1}
+    assert services == {"service-1": service_1}
+    assert processed_entries == 1
+
+
+def test_did_deactivation(did, man_key_1, did_key_1, service_1):
+    man_key_1_dict = man_key_1.to_entry_dict(did)
+    entry_1 = {
+        "extids": [b"DIDManagement", b"1.0.0"],
+        "content": json.dumps(
+            {
+                "didMethodVersion": "0.2.0",
+                "managementKey": [man_key_1_dict],
+                "didKey": [did_key_1.to_entry_dict(did)],
+                "service": [service_1.to_entry_dict(did)],
+            }
+        ).encode("utf-8"),
+    }
+
+    content = ""
+    ext_ids = ["DIDDeactivation", "1.0.0", man_key_1_dict["id"]]
+    data_to_sign = "".join([*ext_ids, content]).replace(" ", "").encode("utf-8")
+    signature = man_key_1.sign(hashlib.sha256(data_to_sign).digest())
+    entry_2 = {
+        "extids": [
+            b"DIDDeactivation",
+            b"1.0.0",
+            man_key_1_dict["id"].encode("utf-8"),
+            signature,
+        ],
+        "content": b"",
+    }
+
+    # Should be ignored
+    ext_ids = ["DIDUpdate", "1.0.0", man_key_1_dict["id"]]
+    content = {"revoke": {"service": [{"id": service_1.alias}]}}
+    data_to_sign = (
+        "".join([*ext_ids, json.dumps(content)]).replace(" ", "").encode("utf-8")
+    )
+    signature = man_key_1.sign(hashlib.sha256(data_to_sign).digest())
+    entry_3 = {
+        "extids": [
+            b"DIDUpdate",
+            b"1.0.0",
+            man_key_1_dict["id"].encode("utf-8"),
+            signature,
+        ]
+    }
+
+    management_keys, did_keys, services, processed_entries = parse_did_chain_entries(
+        [entry_1, entry_2, entry_3]
+    )
+    assert management_keys == {}
+    assert did_keys == {}
+    assert services == {}
+    assert processed_entries == 2

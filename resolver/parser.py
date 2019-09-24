@@ -79,8 +79,7 @@ def parse_did_chain_entries(entries):
     # TODO: Add checks for entry uniqueness to avoid intra-chain replay attacks
     for i, entry in enumerate(entries):
         if not keep_parsing:
-            # TODO: Return DID document, total entries processed, skipped entries
-            return management_keys, did_keys, services
+            return management_keys, did_keys, services, processed_entries
 
         processed_entries += 1
 
@@ -148,10 +147,14 @@ def parse_did_chain_entries(entries):
                     or not ENTRY_EXT_ID_VALIDATORS[schema_version][entry_type](ext_ids)
                 ):
                     continue
-                parsed_content = json.loads(binary_content.decode())
-                ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
-                    parsed_content
-                )
+                decoded_content = binary_content.decode()
+                parsed_content = decoded_content
+                if entry_type == EntryType.Deactivation.value:
+                    ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
+                        parsed_content
+                    )
+                else:
+                    parsed_content = json.loads(decoded_content)
                 keep_parsing, method_version = ENTRY_PROCESSORS[schema_version][
                     entry_type
                 ](
@@ -169,5 +172,4 @@ def parse_did_chain_entries(entries):
         else:
             skipped_entries += 1
 
-    # TODO: Return DID document, total entries processed, skipped entries
-    return management_keys, did_keys, services
+    return management_keys, did_keys, services, processed_entries

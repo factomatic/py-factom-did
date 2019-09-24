@@ -3,6 +3,7 @@ import math
 from packaging import version
 
 from client.constants import DID_METHOD_SPEC_V020
+
 from client.keys import ManagementKey, DIDKey
 from client.service import Service
 from resolver.exceptions import MalformedDIDManagementEntry, UnknownDIDMethodSpecVersion
@@ -160,7 +161,7 @@ def process_did_update_entry_v100(
                 if services[alias].priority_requirement is not None:
                     signing_key_required_priority = min(
                         signing_key_required_priority,
-                        management_keys[alias].priority_requirement,
+                        services[alias].priority_requirement,
                     )
         if "add" in parsed_content:
             for key_data in parsed_content["add"].get("managementKey", []):
@@ -227,7 +228,7 @@ def process_did_deactivation_entry_v100(
 ):
     if method_version == DID_METHOD_SPEC_V020:
         # DIDDeactivation entry must be signed by an active management key of priority 0
-        signing_key = management_keys.get(get_alias(ext_ids[2]))
+        signing_key = management_keys.get(get_alias(ext_ids[2].decode()))
         if (
             (not signing_key)
             or (signing_key.priority != 0)
