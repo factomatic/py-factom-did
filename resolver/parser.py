@@ -108,7 +108,7 @@ def parse_did_chain_entries(entries):
                     did_keys,
                     services,
                 )
-            except (UnicodeDecodeError, JSONDecodeError):
+            except (UnicodeDecodeError, JSONDecodeError) as e:
                 raise InvalidDIDChain("DIDManagement entry content must be valid JSON")
             except KeyError:
                 raise InvalidDIDChain("Unknown schema version or entry type")
@@ -120,6 +120,7 @@ def parse_did_chain_entries(entries):
                 raise InvalidDIDChain(
                     "Malformed DIDManagement entry: {}".format(e.args[0])
                 )
+            # TODO: This can be replaced by an enum value check in the JSON schema
             except UnknownDIDMethodSpecVersion as e:
                 raise InvalidDIDChain(
                     "Unknown DID method spec version: {}".format(e.args[0])

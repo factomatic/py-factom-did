@@ -41,7 +41,7 @@ def exists_management_key_with_priority_zero(
 
 
 def process_did_management_entry_v100(
-    ext_ids,
+    _ext_ids,
     _binary_content,
     parsed_content,
     _method_version,
@@ -60,10 +60,6 @@ def process_did_management_entry_v100(
     if method_version != DID_METHOD_SPEC_V020:
         raise UnknownDIDMethodSpecVersion(method_version)
 
-    if not parsed_content["managementKey"]:
-        raise MalformedDIDManagementEntry(
-            "Entry must contain at least one management key with priority 0"
-        )
     found_key_with_priority_zero = False
     for key_data in parsed_content["managementKey"]:
         alias = get_alias(key_data["id"])
