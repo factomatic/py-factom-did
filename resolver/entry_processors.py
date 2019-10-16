@@ -351,9 +351,9 @@ def process_did_deactivation_entry_v100(
     binary_content,
     _parsed_content,
     method_version,
-    _active_management_keys,
-    _active_did_keys,
-    _active_services,
+    active_management_keys,
+    active_did_keys,
+    active_services,
     skipped_entries,
     _all_keys,
 ):
@@ -374,11 +374,12 @@ def process_did_deactivation_entry_v100(
         Unused
     method_version: str
         The current DID method spec version.
-    _active_management_keys: dict
-        Unused
-    _active_did_keys: dict
-        Unused
-    _active_services: dict
+    active_management_keys: dict
+        The currently active management keys. Will be reset.
+    active_did_keys: dict
+        The currently active DID keys. Will be reset.
+    active_services: dict
+        The currently active services. Will be reset.
         Unused
     skipped_entries: int
         The current number of skipped entries. Will be incremented by one in case the DIDManagement entry is not valid.
@@ -394,7 +395,7 @@ def process_did_deactivation_entry_v100(
     """
     if method_version == DID_METHOD_SPEC_V020:
         # DIDDeactivation entry must be signed by an active management key of priority 0
-        signing_key = _active_management_keys.get(_get_alias(ext_ids[2].decode()))
+        signing_key = active_management_keys.get(_get_alias(ext_ids[2].decode()))
         if (
             (not signing_key)
             or (signing_key.priority != 0)
@@ -402,9 +403,9 @@ def process_did_deactivation_entry_v100(
         ):
             return True, method_version, skipped_entries + 1
 
-        _active_management_keys.clear()
-        _active_did_keys.clear()
-        _active_services.clear()
+        active_management_keys.clear()
+        active_did_keys.clear()
+        active_services.clear()
     else:
         skipped_entries += 1
 
