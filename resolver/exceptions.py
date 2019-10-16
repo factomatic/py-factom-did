@@ -4,7 +4,3 @@ class MalformedDIDManagementEntry(Exception):
 
 class InvalidDIDChain(Exception):
     pass
-
-
-class UnknownDIDMethodSpecVersion(Exception):
-    pass

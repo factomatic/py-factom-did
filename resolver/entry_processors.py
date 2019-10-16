@@ -6,7 +6,7 @@ from client.constants import DID_METHOD_SPEC_V020
 
 from client.keys import ManagementKey, DIDKey
 from client.service import Service
-from resolver.exceptions import MalformedDIDManagementEntry, UnknownDIDMethodSpecVersion
+from resolver.exceptions import MalformedDIDManagementEntry
 
 
 def is_valid_signature(ext_ids, content, signing_key):
@@ -58,8 +58,6 @@ def process_did_management_entry_v100(
     new_services = {}
 
     method_version = parsed_content["didMethodVersion"]
-    if method_version != DID_METHOD_SPEC_V020:
-        raise UnknownDIDMethodSpecVersion(method_version)
 
     found_key_with_priority_zero = False
     for key_data in parsed_content["managementKey"]:
@@ -112,7 +110,6 @@ def process_did_update_entry_v100(
 
     if method_version == DID_METHOD_SPEC_V020:
         signing_key = management_keys.get(get_alias(ext_ids[2].decode()))
-
         if (not signing_key) or (
             not is_valid_signature(ext_ids, binary_content, signing_key)
         ):

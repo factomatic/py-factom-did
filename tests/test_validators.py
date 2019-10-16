@@ -58,6 +58,29 @@ class TestDIDManagementEntryValidation:
         with pytest.raises(ValidationError):
             self.VALIDATOR.validate(missing_did_method_version)
 
+    def test_entry_with_invalid_did_method_version(self):
+        did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
+        entry = {
+            "didMethodVersion": "0.3.0",
+            "managementKey": [
+                ManagementKey(
+                    alias="my-man-key-1",
+                    controller=did,
+                    key_type=KeyType.EdDSA.value,
+                    priority=0,
+                ).to_entry_dict(did),
+                ManagementKey(
+                    alias="my-man-key-2",
+                    controller=did,
+                    key_type=KeyType.RSA.value,
+                    priority=1,
+                ).to_entry_dict(did),
+            ],
+        }
+
+        with pytest.raises(ValidationError):
+            self.VALIDATOR.validate(entry)
+
     def test_valid_entry(self):
         did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
         validate_did_management_ext_ids_v100([b"DIDManagement", b"1.0.0"])
@@ -65,7 +88,7 @@ class TestDIDManagementEntryValidation:
             [b"DIDManagement", b"1.0.0", b"asdfasdfasdf"]
         )
         valid_entry = {
-            "didMethodVersion": "0.1.0",
+            "didMethodVersion": "0.2.0",
             "managementKey": [
                 ManagementKey(
                     alias="my-man-key-1",
