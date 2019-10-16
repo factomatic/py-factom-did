@@ -59,6 +59,27 @@ ENTRY_PROCESSORS = {
 
 
 def parse_did_chain_entries(entries):
+    """
+    Attempts to parse the entries in a DIDManagement chain.
+
+    Parameters
+    ----------
+    entries: list of dict
+        A list of entries in the DIDManagement chain as returned by the Python factom-api library, or an equivalent
+        API/library. Each element of the list is a dictionary, with keys 'content', 'extids' and 'entryhash' and the
+        values are bytes.
+
+    Returns
+    -------
+    tuple
+        A 4-tuple containing the active management keys, the active DID key, the active services and the number of
+        entries skipped while parsing the chain.
+
+    Raises
+    ------
+    InvalidDIDChain
+       If the first entry in the chain is not a valid DIDManagement entry
+    """
     # Dictionaries from aliases to active key or service objects
     active_management_keys = {}
     active_did_keys = {}

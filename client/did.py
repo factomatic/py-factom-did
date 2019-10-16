@@ -304,8 +304,8 @@ class DID:
 
         Raises
         ------
-            RuntimeError
-                If the chain cannot be created
+        RuntimeError
+            If the chain cannot be created
         """
 
         create_chain(self.export_entry_data(), factomd, walletd, ec_address, verbose)
