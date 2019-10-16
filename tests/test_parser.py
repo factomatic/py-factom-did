@@ -35,7 +35,22 @@ def man_key_2(did):
 @pytest.fixture
 def man_key_3(did):
     return ManagementKey(
-        alias="man-key-3", priority=1, controller=did, key_type=KeyType.EdDSA.value
+        alias="man-key-3",
+        priority=1,
+        controller=did,
+        key_type=KeyType.EdDSA.value,
+        priority_requirement=1,
+    )
+
+
+@pytest.fixture
+def man_key_4(did):
+    return ManagementKey(
+        alias="man-key-4",
+        priority=2,
+        controller=did,
+        key_type=KeyType.EdDSA.value,
+        priority_requirement=1,
     )
 
 
@@ -46,6 +61,17 @@ def did_key_1(did):
         controller=did,
         key_type=KeyType.ECDSA.value,
         purpose=DIDKeyPurpose.AuthenticationKey.value,
+    )
+
+
+@pytest.fixture
+def did_key_2(did):
+    return DIDKey(
+        alias="did-key-2",
+        controller=did,
+        key_type=KeyType.EdDSA.value,
+        purpose=DIDKeyPurpose.PublicKey.value,
+        priority_requirement=2,
     )
 
 
@@ -160,7 +186,7 @@ def version_upgrade_entry():
     return _deactivation_entry
 
 
-class TestInvalidDIDManagementEntry:
+class TestDIDManagementEntry:
     def test_invalid_json(self, management_entry):
         entry = management_entry("asdf")
         with pytest.raises(InvalidDIDChain) as excinfo:
@@ -263,30 +289,63 @@ class TestInvalidDIDManagementEntry:
             == "Malformed DIDManagement entry: Entry must contain at least one management key with priority 0"
         )
 
+    def test_duplicate_management_entries(self, did, man_key_1, management_entry):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        entry_2 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        entry_2["extids"].append("asdf")
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2]
+        )
 
-def test_valid_did_management_entry(
-    did, man_key_1, did_key_1, service_1, management_entry
-):
-    entry = management_entry(
-        {
-            "managementKey": [man_key_1.to_entry_dict(did)],
-            "didKey": [did_key_1.to_entry_dict(did)],
-            "service": [service_1.to_entry_dict(did)],
-        }
-    )
+        assert skipped_entries == 1
+        assert len(management_keys) == 1
+        assert man_key_1.alias in management_keys
 
-    management_keys, did_keys, services = parse_did_chain_entries([entry])
+    def test_valid_did_management_entry(
+        self, did, man_key_1, did_key_1, service_1, management_entry
+    ):
+        entry = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_1.to_entry_dict(did)],
+                "service": [service_1.to_entry_dict(did)],
+            }
+        )
 
-    man_key_1.private_key = None
-    did_key_1.private_key = None
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
+            [entry]
+        )
 
-    assert management_keys == {"man-key-1": man_key_1}
-    assert did_keys == {"did-key-1": did_key_1}
-    assert services == {"service-1": service_1}
+        man_key_1.private_key = None
+        did_key_1.private_key = None
+
+        assert management_keys == {"man-key-1": man_key_1}
+        assert did_keys == {"did-key-1": did_key_1}
+        assert services == {"service-1": service_1}
+        assert skipped_entries == 0
 
 
-class TestDIDDeactivation:
-    def test_did_deactivation_with_signature_from_insufficient_priority(
+class TestDIDDeactivationEntry:
+    def test_with_unknown_method_spec_version(
+        self,
+        did,
+        man_key_1,
+        management_entry,
+        version_upgrade_entry,
+        deactivation_entry,
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        entry_2 = version_upgrade_entry(did, man_key_1, "0.4.0")
+        entry_3 = deactivation_entry(did, man_key_1)
+
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3]
+        )
+
+        assert len(management_keys) == 1
+        assert skipped_entries == 1
+
+    def test_with_signature_from_insufficient_priority(
         self, did, man_key_1, man_key_3, management_entry, deactivation_entry
     ):
         man_key_1_dict = man_key_1.to_entry_dict(did)
@@ -295,12 +354,13 @@ class TestDIDDeactivation:
         entry_1 = management_entry({"managementKey": [man_key_1_dict, man_key_3_dict]})
         entry_2 = deactivation_entry(did, man_key_3)
 
-        management_keys, did_keys, services = parse_did_chain_entries(
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
             [entry_1, entry_2]
         )
         assert len(management_keys) == 2
+        assert skipped_entries == 1
 
-    def test_valid_did_deactivation(
+    def test_valid_deactivation(
         self,
         did,
         man_key_1,
@@ -325,15 +385,31 @@ class TestDIDDeactivation:
         content = {"revoke": {"service": [{"id": service_1.alias}]}}
         entry_3 = update_entry(did, man_key_1, content)
 
-        management_keys, did_keys, services = parse_did_chain_entries(
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
             [entry_1, entry_2, entry_3]
         )
         assert management_keys == {}
         assert did_keys == {}
         assert services == {}
+        assert skipped_entries == 1
 
 
-class TestUpdate:
+class TestDIDVersionUpgrade:
+    def test_with_unknown_method_spec_version(
+        self, did, man_key_1, management_entry, version_upgrade_entry
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        entry_2 = version_upgrade_entry(did, man_key_1, "0.4.0")
+        entry_3 = version_upgrade_entry(did, man_key_1, "0.5.0")
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3]
+        )
+
+        assert len(management_keys) == 1
+        assert skipped_entries == 1
+
+
+class TestDIDUpdateEntry:
     def test_update_as_first_entry(self, did, man_key_1, service_1, update_entry):
         content = {"add": {"service": [service_1.to_entry_dict(did)]}}
         entry = update_entry(did, man_key_1, content)
@@ -356,10 +432,11 @@ class TestUpdate:
 
         # Modify the signature to an invalid value
         entry_2["extids"][3] = secrets.token_bytes(64)
-        _, _, services = parse_did_chain_entries([entry_1, entry_2])
+        _, _, services, skipped_entries = parse_did_chain_entries([entry_1, entry_2])
 
         # Make sure the service hasn't been revoked
         assert len(services) == 1
+        assert skipped_entries == 1
 
     def test_update_with_signature_from_key_with_insufficient_priority(
         self, did, man_key_1, man_key_3, service_2, management_entry, update_entry
@@ -376,10 +453,11 @@ class TestUpdate:
         content = {"revoke": {"service": [{"id": service_2.alias}]}}
         entry_2 = update_entry(did, man_key_3, content)
 
-        _, _, services = parse_did_chain_entries([entry_1, entry_2])
+        _, _, services, skipped_entries = parse_did_chain_entries([entry_1, entry_2])
 
         # Make sure the service hasn't been revoked
         assert len(services) == 1
+        assert skipped_entries == 1
 
     def test_update_with_signature_from_did_key(
         self, did, man_key_1, did_key_1, service_1, management_entry, update_entry
@@ -396,12 +474,13 @@ class TestUpdate:
         }
         entry_2 = update_entry(did, did_key_1, content)
 
-        management_keys, did_keys, services = parse_did_chain_entries(
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
             [entry_1, entry_2]
         )
         assert len(management_keys) == 1
         assert len(did_keys) == 1
         assert len(services) == 0
+        assert skipped_entries == 1
 
     def test_update_with_signature_from_revoked_management_key(
         self,
@@ -429,7 +508,7 @@ class TestUpdate:
         content = {"add": {"didKey": [did_key_1.to_entry_dict(did)]}}
         entry_3 = update_entry(did, man_key_2, content)
 
-        management_keys, did_keys, services = parse_did_chain_entries(
+        management_keys, did_keys, services, _ = parse_did_chain_entries(
             [entry_1, entry_2, entry_3]
         )
         assert len(management_keys) == 1
@@ -438,42 +517,139 @@ class TestUpdate:
 
         assert man_key_2.alias not in management_keys
 
-    def test_revocation_of_nonexistent_key(
-        self,
-        did,
-        man_key_1,
-        man_key_2,
-        did_key_1,
-        service_1,
-        management_entry,
-        update_entry,
+    def test_revocation_of_nonexistent_management_key(
+        self, did, man_key_1, man_key_2, management_entry, update_entry
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {"revoke": {"managementKey": [{"id": man_key_2.alias}]}}
+        entry_2 = update_entry(did, man_key_1, content)
+
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2]
+        )
+
+        assert len(management_keys) == 1
+        assert man_key_1.alias in management_keys
+        assert skipped_entries == 1
+
+    def test_revocation_of_nonexistent_did_key(
+        self, did, man_key_1, did_key_1, did_key_2, management_entry, update_entry
     ):
         entry_1 = management_entry(
             {
                 "managementKey": [man_key_1.to_entry_dict(did)],
                 "didKey": [did_key_1.to_entry_dict(did)],
-                "service": [service_1.to_entry_dict(did)],
             }
         )
-        content = {
-            "revoke": {
-                "managementKey": [{"id": man_key_2.alias}],
-                "service": [{"id": service_1.alias}],
-            }
-        }
+        content = {"revoke": {"didKey": [{"id": did_key_2.alias}]}}
         entry_2 = update_entry(did, man_key_1, content)
 
-        management_keys, did_keys, services = parse_did_chain_entries(
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
             [entry_1, entry_2]
         )
 
         assert len(management_keys) == 1
         assert len(did_keys) == 1
-        assert len(services) == 1
+        assert man_key_1.alias in management_keys
+        assert did_key_1.alias in did_keys
+        assert skipped_entries == 1
 
+    def test_revocation_of_nonexistent_service(
+        self, did, man_key_1, service_1, service_2, management_entry, update_entry
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "service": [service_1.to_entry_dict(did)],
+            }
+        )
+        content = {"revoke": {"service": [{"id": service_2.alias}]}}
+        entry_2 = update_entry(did, man_key_1, content)
+
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2]
+        )
+
+        assert len(management_keys) == 1
+        assert len(services) == 1
         assert man_key_1.alias in management_keys
         assert service_1.alias in services
-        assert did_key_1.alias in did_keys
+        assert skipped_entries == 1
+
+    def test_double_addition_of_management_key(
+        self, did, man_key_1, man_key_2, management_entry, update_entry
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {
+            "add": {
+                "managementKey": [
+                    man_key_2.to_entry_dict(did),
+                    man_key_2.to_entry_dict(did),
+                ]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2]
+        )
+        assert len(management_keys) == 1
+        assert man_key_1.alias in management_keys
+        assert skipped_entries == 1
+
+    def test_double_addition_of_did_key(
+        self, did, man_key_1, did_key_1, management_entry, update_entry
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {
+            "add": {
+                "didKey": [did_key_1.to_entry_dict(did), did_key_1.to_entry_dict(did)]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2]
+        )
+        assert len(management_keys) == 1
+        assert len(did_keys) == 0
+        assert man_key_1.alias in management_keys
+        assert skipped_entries == 1
+
+    def test_double_addition_of_service(
+        self, did, man_key_1, service_1, management_entry, update_entry
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {
+            "add": {
+                "service": [service_1.to_entry_dict(did), service_1.to_entry_dict(did)]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, _, services, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2]
+        )
+        assert len(management_keys) == 1
+        assert len(services) == 0
+        assert man_key_1.alias in management_keys
+        assert skipped_entries == 1
+
+    def test_update_removing_all_management_keys_with_priority_zero(
+        self, did, man_key_1, man_key_4, management_entry, update_entry
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_4.to_entry_dict(did),
+                ]
+            }
+        )
+        content = {"revoke": {"managementKey": [{"id": man_key_1.alias}]}}
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2]
+        )
+        assert len(management_keys) == 2
+        assert skipped_entries == 1
 
     def test_update_after_unsuccessful_version_upgrade(
         self,
@@ -496,7 +672,7 @@ class TestUpdate:
         content = {"revoke": {"managementKey": [{"id": man_key_1.alias}]}}
         entry_3 = update_entry(did, man_key_1, content)
 
-        management_keys, _, _ = parse_did_chain_entries([entry_1, entry_2, entry_3])
+        management_keys, _, _, _ = parse_did_chain_entries([entry_1, entry_2, entry_3])
 
         assert len(management_keys) == 1
         assert man_key_1.alias not in management_keys
@@ -522,12 +698,182 @@ class TestUpdate:
         content = {"revoke": {"managementKey": [{"id": man_key_1.alias}]}}
         entry_3 = update_entry(did, man_key_1, content)
 
-        management_keys, _, _ = parse_did_chain_entries([entry_1, entry_2, entry_3])
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3]
+        )
 
         assert len(management_keys) == 2
+        assert skipped_entries == 1
 
-    def test_replay_attack(self):
-        pass
+    def test_replay_attack(
+        self, did, man_key_1, service_1, management_entry, update_entry
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {"add": {"service": [service_1.to_entry_dict(did)]}}
+        entry_2 = update_entry(did, man_key_1, content)
 
-    def test_multiple_valid_and_invalid_updates(self):
-        pass
+        _, _, services, skipped_entries = parse_did_chain_entries([entry_1, entry_2])
+        assert len(services) == 1
+        assert skipped_entries == 0
+
+        content = {"revoke": {"service": [{"id": service_1.alias}]}}
+        entry_3 = update_entry(did, man_key_1, content)
+
+        _, _, services, _ = parse_did_chain_entries([entry_1, entry_2, entry_3])
+        assert len(services) == 0
+        assert skipped_entries == 0
+
+        # The repeated update entry should be ignored
+        entry_4 = entry_2
+        management_keys, _, services, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3, entry_4]
+        )
+
+        assert len(management_keys) == 1
+        # Check that the service wasn't added again
+        assert len(services) == 0
+        assert skipped_entries == 1
+
+    def test_revocation_with_custom_priority_requirement(
+        self, did, man_key_1, man_key_3, man_key_4, management_entry, update_entry
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_3.to_entry_dict(did),
+                    man_key_4.to_entry_dict(did),
+                ]
+            }
+        )
+        content = {"revoke": {"managementKey": [{"id": man_key_4.alias}]}}
+        entry_2 = update_entry(did, man_key_3, content)
+        management_keys, _, _, _ = parse_did_chain_entries([entry_1, entry_2])
+
+        assert len(management_keys) == 2
+        assert man_key_1.alias in management_keys
+        assert man_key_3.alias in management_keys
+
+    def test_update_with_invalid_number_of_ext_ids(
+        self, did, man_key_1, man_key_2, management_entry, update_entry
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_2.to_entry_dict(did),
+                ]
+            }
+        )
+        content = {"revoke": {"managementKey": [{"id": man_key_1.alias}]}}
+        entry_2 = update_entry(did, man_key_1, content)
+        entry_2["extids"] = entry_2["extids"][:-1]
+        management_keys, _, _, _ = parse_did_chain_entries([entry_1, entry_2])
+
+        assert len(management_keys) == 2
+        assert man_key_1.alias in management_keys
+        assert man_key_2.alias in management_keys
+
+    def test_multiple_valid_and_invalid_updates(
+        self,
+        did,
+        man_key_1,
+        man_key_2,
+        man_key_3,
+        man_key_4,
+        did_key_1,
+        did_key_2,
+        service_1,
+        service_2,
+        management_entry,
+        update_entry,
+    ):
+        # Active after this entry:
+        # management_keys: man_key_1
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+
+        # Active after this entry:
+        # management_keys: man_key_1
+        content = {}
+        entry_2 = update_entry(did, man_key_1, content)
+        entry_2["content"] = b"\xbb"
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2]
+        )
+        assert len(management_keys) == 1
+        assert skipped_entries == 1
+
+        # Active after this entry:
+        # management_keys: man_key_1
+        content = {"add": {"managementKey": [man_key_1.to_entry_dict(did)]}}
+        entry_3 = update_entry(did, man_key_1, content)
+        _, _, _, skipped_entries = parse_did_chain_entries([entry_1, entry_2, entry_3])
+        assert skipped_entries == 2
+
+        # Active after this entry:
+        # management_keys: man_key_1, man_key_3
+        content = {"add": {"managementKey": [man_key_3.to_entry_dict(did)]}}
+        entry_4 = update_entry(did, man_key_1, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3, entry_4]
+        )
+        assert skipped_entries == 2
+        assert len(management_keys) == 2
+        assert man_key_1.alias in management_keys
+        assert man_key_3.alias in management_keys
+
+        # Active after this entry:
+        # management_keys: man_key_1, man_key_2, man_key_4
+        # did_keys: did_key_1, did_key_2
+        # services: service_1, service_2
+        content = {
+            "add": {
+                "managementKey": [
+                    man_key_2.to_entry_dict(did),
+                    man_key_4.to_entry_dict(did),
+                ],
+                "didKey": [did_key_1.to_entry_dict(did), did_key_2.to_entry_dict(did)],
+                "service": [service_1.to_entry_dict(did), service_2.to_entry_dict(did)],
+            },
+            "revoke": {"managementKey": [{"id": man_key_3.alias}]},
+        }
+        entry_5 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3, entry_4, entry_5]
+        )
+        assert skipped_entries == 2
+        assert len(management_keys) == 3
+        assert len(did_keys) == 2
+        assert len(services) == 2
+        assert all(
+            [
+                man_key_1.alias in management_keys,
+                man_key_2.alias in management_keys,
+                man_key_4.alias in management_keys,
+            ]
+        )
+        assert all([did_key_1.alias in did_keys, did_key_2.alias in did_keys])
+        assert all([service_1.alias in services, service_2.alias in services])
+
+        # Active after this entry:
+        # management_keys: man_key_1, man_key_2, man_key_4
+        # did_keys: did_key_1
+        # services: service_1, service_2
+        content = {"revoke": {"didKey": [{"id": did_key_2.alias}]}}
+        entry_6 = update_entry(did, man_key_4, content)
+        management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3, entry_4, entry_5, entry_6]
+        )
+        assert skipped_entries == 2
+        assert len(management_keys) == 3
+        assert len(did_keys) == 1
+        assert len(services) == 2
+        assert all(
+            [
+                man_key_1.alias in management_keys,
+                man_key_2.alias in management_keys,
+                man_key_4.alias in management_keys,
+            ]
+        )
+        assert did_key_1.alias in did_keys
+        assert all([service_1.alias in services, service_2.alias in services])

@@ -70,18 +70,24 @@ def parse_did_chain_entries(entries):
     # The current DID method version of the DID chain. This will be set, when parsing the first entry (provided that
     # it is a valid DIDManagement entry)
     method_version = None
-
+    skipped_entries = 0
     keep_parsing = True
 
     for i, entry in enumerate(entries):
         if not keep_parsing:
-            return management_keys, did_keys, services
+            return (
+                management_keys,
+                did_keys,
+                services,
+                skipped_entries + len(entries) - i,
+            )
 
         ext_ids = entry["extids"]
         binary_content = entry["content"]
         entry_hash = entry["entryhash"]
 
         if entry_hash in processed_entry_hashes:
+            skipped_entries += 1
             continue
         processed_entry_hashes.add(entry_hash)
 
@@ -97,9 +103,9 @@ def parse_did_chain_entries(entries):
                 ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
                     parsed_content
                 )
-                keep_parsing, method_version = ENTRY_PROCESSORS[schema_version][
-                    entry_type
-                ](
+                keep_parsing, method_version, skipped_entries = ENTRY_PROCESSORS[
+                    schema_version
+                ][entry_type](
                     ext_ids,
                     binary_content,
                     parsed_content,
@@ -107,6 +113,7 @@ def parse_did_chain_entries(entries):
                     management_keys,
                     did_keys,
                     services,
+                    skipped_entries,
                 )
             except (UnicodeDecodeError, JSONDecodeError):
                 raise InvalidDIDChain("DIDManagement entry content must be valid JSON")
@@ -142,18 +149,18 @@ def parse_did_chain_entries(entries):
                     or entry_type not in ENTRY_SCHEMA_VALIDATORS[schema_version]
                     or not ENTRY_EXT_ID_VALIDATORS[schema_version][entry_type](ext_ids)
                 ):
+                    skipped_entries += 1
                     continue
                 decoded_content = binary_content.decode()
                 parsed_content = decoded_content
-                if entry_type == EntryType.Deactivation.value:
-                    ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
-                        parsed_content
-                    )
-                else:
+                if entry_type != EntryType.Deactivation.value:
                     parsed_content = json.loads(decoded_content)
-                keep_parsing, method_version = ENTRY_PROCESSORS[schema_version][
-                    entry_type
-                ](
+                ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
+                    parsed_content
+                )
+                keep_parsing, method_version, skipped_entries = ENTRY_PROCESSORS[
+                    schema_version
+                ][entry_type](
                     ext_ids,
                     binary_content,
                     parsed_content,
@@ -161,11 +168,13 @@ def parse_did_chain_entries(entries):
                     management_keys,
                     did_keys,
                     services,
+                    skipped_entries,
                 )
             except (UnicodeDecodeError, JSONDecodeError, ValidationError):
+                skipped_entries += 1
                 continue
         # Skip all other entries, as they are not valid
         else:
-            continue
+            skipped_entries += 1
 
-    return management_keys, did_keys, services
+    return management_keys, did_keys, services, skipped_entries

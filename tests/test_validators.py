@@ -36,6 +36,14 @@ class TestDIDManagementEntryValidation:
             validate_did_management_ext_ids_v100([b"DIDManagement", b"1.0.a"])
         assert str(excinfo.value) == "Invalid or missing DIDManagement entry ExtIDs"
 
+        with pytest.raises(MalformedDIDManagementEntry) as excinfo:
+            validate_did_management_ext_ids_v100([b"DIDManagement", b"\xbb"])
+        assert str(excinfo.value) == "Invalid or missing DIDManagement entry ExtIDs"
+
+        with pytest.raises(MalformedDIDManagementEntry) as excinfo:
+            validate_did_management_ext_ids_v100([b"\xbb", b"1.0.0"])
+        assert str(excinfo.value) == "Invalid or missing DIDManagement entry ExtIDs"
+
     def test_entry_with_missing_required_fields(self):
         with pytest.raises(ValidationError):
             self.VALIDATOR.validate({})
@@ -145,6 +153,11 @@ class TestDIDUpdateEntryValidation:
         )
         assert (
             validate_did_update_ext_ids_v100([b"DIdUpdate", b"1.0.0", key_id, b"af01"])
+            is False
+        )
+
+        assert (
+            validate_did_update_ext_ids_v100([b"DIDUpdate", b"1.0.0", b"\xbb", b"af01"])
             is False
         )
 

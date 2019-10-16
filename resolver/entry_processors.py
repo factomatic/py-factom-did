@@ -49,6 +49,7 @@ def process_did_management_entry_v100(
     management_keys,
     did_keys,
     services,
+    skipped_entries,
 ):
     # Store the new management_keys, did_keys and services in separate objects, instead of
     # modifying the original ones directly. This ensures that if an exception occurs during
@@ -88,7 +89,7 @@ def process_did_management_entry_v100(
     did_keys.update(new_did_keys)
     services.update(new_services)
 
-    return True, method_version
+    return True, method_version, skipped_entries
 
 
 def process_did_update_entry_v100(
@@ -99,10 +100,11 @@ def process_did_update_entry_v100(
     management_keys,
     did_keys,
     services,
+    skipped_entries,
 ):
-    revoked_management_keys = set()
-    revoked_did_keys = set()
-    revoked_services = set()
+    management_keys_to_revoke = set()
+    did_keys_to_revoke = set()
+    services_to_revoke = set()
 
     new_management_keys = {}
     new_did_keys = {}
@@ -113,7 +115,7 @@ def process_did_update_entry_v100(
         if (not signing_key) or (
             not is_valid_signature(ext_ids, binary_content, signing_key)
         ):
-            return True, method_version
+            return True, method_version, skipped_entries + 1
 
         signing_key_required_priority = math.inf
 
@@ -122,9 +124,9 @@ def process_did_update_entry_v100(
                 alias = get_alias(key["id"])
                 # If revocation of a non-existent key or multiple revocations of the same key are attempted,
                 # ignore the entire DIDUpdate entry
-                if alias not in management_keys or alias in revoked_management_keys:
-                    return True, method_version
-                revoked_management_keys.add(alias)
+                if alias not in management_keys or alias in management_keys_to_revoke:
+                    return True, method_version, skipped_entries + 1
+                management_keys_to_revoke.add(alias)
                 if management_keys[alias].priority_requirement is not None:
                     signing_key_required_priority = min(
                         signing_key_required_priority,
@@ -139,22 +141,22 @@ def process_did_update_entry_v100(
                 alias = get_alias(key["id"])
                 # If revocation of a non-existent key or multiple revocations of the same key are attempted,
                 # ignore the entire DIDUpdate entry
-                if alias not in did_keys or alias in revoked_did_keys:
-                    return True, method_version
-                revoked_did_keys.add(alias)
+                if alias not in did_keys or alias in did_keys_to_revoke:
+                    return True, method_version, skipped_entries + 1
+                did_keys_to_revoke.add(alias)
                 if did_keys[alias].priority_requirement is not None:
                     signing_key_required_priority = min(
                         signing_key_required_priority,
-                        management_keys[alias].priority_requirement,
+                        did_keys[alias].priority_requirement,
                     )
 
-            for service in parsed_content["revoke"].get("services", []):
+            for service in parsed_content["revoke"].get("service", []):
                 alias = get_alias(service["id"])
                 # If revocation of a non-existent service or multiple revocations of the same service are attempted,
                 # ignore the entire DIDUpdate entry
-                if alias not in services or alias in revoked_services:
-                    return True, method_version
-                revoked_services.add(alias)
+                if alias not in services or alias in services_to_revoke:
+                    return True, method_version, skipped_entries + 1
+                services_to_revoke.add(alias)
                 if services[alias].priority_requirement is not None:
                     signing_key_required_priority = min(
                         signing_key_required_priority,
@@ -164,8 +166,8 @@ def process_did_update_entry_v100(
             for key_data in parsed_content["add"].get("managementKey", []):
                 alias = get_alias(key_data["id"])
                 # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
-                if alias in new_management_keys:
-                    return True, method_version
+                if alias in new_management_keys or alias in management_keys:
+                    return True, method_version, skipped_entries + 1
                 new_management_keys[alias] = ManagementKey.from_entry_dict(key_data)
                 signing_key_required_priority = min(
                     signing_key_required_priority, key_data["priority"]
@@ -173,45 +175,44 @@ def process_did_update_entry_v100(
             for key_data in parsed_content["add"].get("didKey", []):
                 alias = get_alias(key_data["id"])
                 # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
-                if alias in new_did_keys:
-                    return True, method_version
+                if alias in new_did_keys or alias in did_keys:
+                    return True, method_version, skipped_entries + 1
                 new_did_keys[alias] = DIDKey.from_entry_dict(key_data)
             for service_data in parsed_content["add"].get("service", []):
                 alias = get_alias(service_data["id"])
                 # If double-addition of the same service is attempted, ignore the entire DIDUpdate entry
-                if alias in new_services:
-                    return True, method_version
+                if alias in new_services or alias in services:
+                    return True, method_version, skipped_entries + 1
                 new_services[alias] = Service.from_entry_dict(service_data)
 
         # Check that the management key used for the signature is of sufficient priority
         if signing_key.priority > signing_key_required_priority:
             # If not, return without applying the update
-            return True, method_version
+            return True, method_version, skipped_entries + 1
 
         # Make sure that if the update is applied there will be at least one management key with priority 0 left
         if not exists_management_key_with_priority_zero(
-            management_keys, new_management_keys, revoked_management_keys
+            management_keys, new_management_keys, management_keys_to_revoke
         ):
             # If not, return without applying the update
-            return True, method_version
+            return True, method_version, skipped_entries + 1
 
         # Apply the updates
-        for alias in revoked_management_keys:
+        for alias in management_keys_to_revoke:
             del management_keys[alias]
         management_keys.update(new_management_keys)
 
-        for alias in revoked_did_keys:
+        for alias in did_keys_to_revoke:
             del did_keys[alias]
         did_keys.update(new_did_keys)
 
-        for alias in revoked_services:
+        for alias in services_to_revoke:
             del services[alias]
         services.update(new_services)
     else:
-        # Intentionally left blank, to be used for future support of other DID method versions
-        pass
+        skipped_entries += 1
 
-    return True, method_version
+    return True, method_version, skipped_entries
 
 
 def process_did_deactivation_entry_v100(
@@ -222,6 +223,7 @@ def process_did_deactivation_entry_v100(
     management_keys,
     did_keys,
     services,
+    skipped_entries,
 ):
     if method_version == DID_METHOD_SPEC_V020:
         # DIDDeactivation entry must be signed by an active management key of priority 0
@@ -231,16 +233,15 @@ def process_did_deactivation_entry_v100(
             or (signing_key.priority != 0)
             or (not is_valid_signature(ext_ids, binary_content, signing_key))
         ):
-            return True, method_version
+            return True, method_version, skipped_entries + 1
 
         management_keys.clear()
         did_keys.clear()
         services.clear()
     else:
-        # Intentionally left blank, to be used for future support of other DID method versions
-        pass
+        skipped_entries += 1
 
-    return False, method_version
+    return False, method_version, skipped_entries
 
 
 def process_did_method_version_upgrade_entry_v100(
@@ -251,6 +252,7 @@ def process_did_method_version_upgrade_entry_v100(
     management_keys,
     _did_keys,
     _services,
+    skipped_entries,
 ):
     new_method_version = method_version
 
@@ -264,8 +266,9 @@ def process_did_method_version_upgrade_entry_v100(
             and is_valid_signature(ext_ids, binary_content, signing_key)
         ):
             new_method_version = parsed_content["didMethodVersion"]
+        else:
+            skipped_entries += 1
     else:
-        # Intentionally left blank, to be used for future support of other DID method versions
-        pass
+        skipped_entries += 1
 
-    return True, new_method_version
+    return True, new_method_version, skipped_entries
