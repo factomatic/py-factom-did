@@ -150,10 +150,12 @@ class AbstractDIDKey:
         """
         Converts the object to a dictionary suitable for recording on-chain.
 
-        Params
-        ------
+        Parameters
+        ----------
         did: str
             The DID with which this key is associated. Note that this can be different from the key controller.
+        version: str
+            The entry schema version
 
         Returns
         -------

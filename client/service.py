@@ -69,10 +69,12 @@ class Service:
         """
         Converts the object to a dictionary suitable for recording on-chain.
 
-        Params
-        ------
+        Parameters
+        ----------
         did: str
             The DID to which this service belongs.
+        version: str
+            The entry schema version
         """
         if version == ENTRY_SCHEMA_V100:
             d = dict()

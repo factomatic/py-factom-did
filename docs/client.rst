@@ -10,6 +10,5 @@ Submodules
    client.encryptor
    client.enums
    client.keys
-   client.models
    client.service
    client.updater
