@@ -42,14 +42,7 @@ def exists_management_key_with_priority_zero(
 
 
 def process_did_management_entry_v100(
-    _ext_ids,
-    _binary_content,
-    parsed_content,
-    _method_version,
-    management_keys,
-    did_keys,
-    services,
-    skipped_entries,
+    parsed_content, management_keys, did_keys, services, skipped_entries
 ):
     # Store the new management_keys, did_keys and services in separate objects, instead of
     # modifying the original ones directly. This ensures that if an exception occurs during
@@ -101,6 +94,7 @@ def process_did_update_entry_v100(
     did_keys,
     services,
     skipped_entries,
+    all_keys,
 ):
     management_keys_to_revoke = set()
     did_keys_to_revoke = set()
@@ -168,7 +162,10 @@ def process_did_update_entry_v100(
                 # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
                 if alias in new_management_keys or alias in management_keys:
                     return True, method_version, skipped_entries + 1
-                new_management_keys[alias] = ManagementKey.from_entry_dict(key_data)
+                new_management_key = ManagementKey.from_entry_dict(key_data)
+                if new_management_key in all_keys:
+                    return True, method_version, skipped_entries + 1
+                new_management_keys[alias] = new_management_key
                 signing_key_required_priority = min(
                     signing_key_required_priority, key_data["priority"]
                 )
@@ -177,7 +174,10 @@ def process_did_update_entry_v100(
                 # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
                 if alias in new_did_keys or alias in did_keys:
                     return True, method_version, skipped_entries + 1
-                new_did_keys[alias] = DIDKey.from_entry_dict(key_data)
+                new_did_key = DIDKey.from_entry_dict(key_data)
+                if new_did_key in all_keys:
+                    return True, method_version, skipped_entries + 1
+                new_did_keys[alias] = new_did_key
             for service_data in parsed_content["add"].get("service", []):
                 alias = get_alias(service_data["id"])
                 # If double-addition of the same service is attempted, ignore the entire DIDUpdate entry
@@ -224,6 +224,7 @@ def process_did_deactivation_entry_v100(
     did_keys,
     services,
     skipped_entries,
+    _all_keys,
 ):
     if method_version == DID_METHOD_SPEC_V020:
         # DIDDeactivation entry must be signed by an active management key of priority 0
@@ -253,6 +254,7 @@ def process_did_method_version_upgrade_entry_v100(
     _did_keys,
     _services,
     skipped_entries,
+    _all_keys,
 ):
     new_method_version = method_version
 

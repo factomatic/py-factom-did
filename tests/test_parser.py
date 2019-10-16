@@ -877,3 +877,47 @@ class TestDIDUpdateEntry:
         )
         assert did_key_1.alias in did_keys
         assert all([service_1.alias in services, service_2.alias in services])
+
+    def test_readdition_of_old_management_key(
+        self, did, man_key_1, man_key_2, management_entry, update_entry
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_2.to_entry_dict(did),
+                ]
+            }
+        )
+        content = {"revoke": {"managementKey": [{"id": man_key_2.alias}]}}
+        entry_2 = update_entry(did, man_key_2, content)
+        content = {"add": {"managementKey": [man_key_2.to_entry_dict(did)]}}
+        entry_3 = update_entry(did, man_key_1, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3]
+        )
+
+        assert skipped_entries == 1
+        assert len(management_keys) == 1
+        assert man_key_1.alias in management_keys
+
+    def test_readdition_of_old_did_key(
+        self, did, man_key_1, did_key_1, management_entry, update_entry
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_1.to_entry_dict(did)],
+            }
+        )
+        content = {"revoke": {"didKey": [{"id": did_key_1.alias}]}}
+        entry_2 = update_entry(did, man_key_1, content)
+        content = {"add": {"didKey": [did_key_1.to_entry_dict(did)]}}
+        entry_3 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2, entry_3]
+        )
+
+        assert skipped_entries == 1
+        assert len(management_keys) == 1
+        assert len(did_keys) == 0

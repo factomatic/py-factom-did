@@ -59,10 +59,13 @@ ENTRY_PROCESSORS = {
 
 
 def parse_did_chain_entries(entries):
-    # Dictionaries from aliases to key or service objects
-    management_keys = {}
-    did_keys = {}
-    services = {}
+    # Dictionaries from aliases to active key or service objects
+    active_management_keys = {}
+    active_did_keys = {}
+    active_services = {}
+
+    # The sets of all management and DID keys that have ever been active for the given DID chain
+    all_keys = set()
 
     # Set of entry hashes that have already been processed
     processed_entry_hashes = set()
@@ -76,9 +79,9 @@ def parse_did_chain_entries(entries):
     for i, entry in enumerate(entries):
         if not keep_parsing:
             return (
-                management_keys,
-                did_keys,
-                services,
+                active_management_keys,
+                active_did_keys,
+                active_services,
                 skipped_entries + len(entries) - i,
             )
 
@@ -86,6 +89,7 @@ def parse_did_chain_entries(entries):
         binary_content = entry["content"]
         entry_hash = entry["entryhash"]
 
+        # Do not allow intra-chain replay attacks
         if entry_hash in processed_entry_hashes:
             skipped_entries += 1
             continue
@@ -106,14 +110,14 @@ def parse_did_chain_entries(entries):
                 keep_parsing, method_version, skipped_entries = ENTRY_PROCESSORS[
                     schema_version
                 ][entry_type](
-                    ext_ids,
-                    binary_content,
                     parsed_content,
-                    method_version,
-                    management_keys,
-                    did_keys,
-                    services,
+                    active_management_keys,
+                    active_did_keys,
+                    active_services,
                     skipped_entries,
+                )
+                all_keys.update(
+                    active_management_keys.values(), active_did_keys.values()
                 )
             except (UnicodeDecodeError, JSONDecodeError):
                 raise InvalidDIDChain("DIDManagement entry content must be valid JSON")
@@ -165,10 +169,14 @@ def parse_did_chain_entries(entries):
                     binary_content,
                     parsed_content,
                     method_version,
-                    management_keys,
-                    did_keys,
-                    services,
+                    active_management_keys,
+                    active_did_keys,
+                    active_services,
                     skipped_entries,
+                    all_keys,
+                )
+                all_keys.update(
+                    active_management_keys.values(), active_did_keys.values()
                 )
             except (UnicodeDecodeError, JSONDecodeError, ValidationError):
                 skipped_entries += 1
@@ -177,4 +185,4 @@ def parse_did_chain_entries(entries):
         else:
             skipped_entries += 1
 
-    return management_keys, did_keys, services, skipped_entries
+    return active_management_keys, active_did_keys, active_services, skipped_entries
