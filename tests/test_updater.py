@@ -21,18 +21,16 @@ def full_did():
     return (
         DID()
         .management_key("man-key1", 0)
-        .management_key("man-key2", 1, KeyType.ECDSA.value)
+        .management_key("man-key2", 1, KeyType.ECDSA)
         .management_key("man-key3", 1)
-        .management_key("man-key4", 2, KeyType.RSA.value)
-        .did_key(
-            "did-key1", DIDKeyPurpose.AuthenticationKey.value, priority_requirement=2
-        )
+        .management_key("man-key4", 2, KeyType.RSA)
+        .did_key("did-key1", DIDKeyPurpose.AuthenticationKey, priority_requirement=2)
         .did_key(
             "did-key2",
-            [DIDKeyPurpose.AuthenticationKey.value, DIDKeyPurpose.PublicKey.value],
+            [DIDKeyPurpose.AuthenticationKey, DIDKeyPurpose.PublicKey],
             priority_requirement=3,
         )
-        .did_key("did-key3", DIDKeyPurpose.PublicKey.value, priority_requirement=1)
+        .did_key("did-key3", DIDKeyPurpose.PublicKey, priority_requirement=1)
         .service("gmail-service", "email-service", "https://gmail.com", 2)
         .service(
             "banking-credential-service",
@@ -97,13 +95,15 @@ class TestDIDKeys:
     def test_did_key_addition(self, did):
         updated = (
             did.update()
-            .add_did_key("did-key1", DIDKeyPurpose.AuthenticationKey.value)
+            .add_did_key("did-key1", DIDKeyPurpose.AuthenticationKey)
             .get_updated()
         )
         assert len(updated.management_keys) == 1
         assert len(updated.did_keys) == 1
         assert updated.did_keys[0].alias == "did-key1"
-        assert updated.did_keys[0].purpose == ["authentication"]
+        assert list(map(lambda x: x.value, updated.did_keys[0].purpose)) == [
+            "authentication"
+        ]
 
     def test_did_key_rotation(self, full_did):
         old_public_key = full_did.did_keys[0].public_key
@@ -169,11 +169,9 @@ class TestExportUpdateEntryData:
         update_entry = (
             did.update()
             .add_management_key("man-key2", 0)
-            .add_management_key("man-key3", 1, key_type=KeyType.RSA.value)
+            .add_management_key("man-key3", 1, key_type=KeyType.RSA)
             .add_did_key(
-                "did-key1",
-                purpose=DIDKeyPurpose.PublicKey.value,
-                priority_requirement=1,
+                "did-key1", purpose=DIDKeyPurpose.PublicKey, priority_requirement=1
             )
             .add_service(
                 "signature-service",
@@ -259,7 +257,7 @@ class TestExportUpdateEntryData:
         update_entry = (
             full_did.update()
             .add_management_key("man-key5", 0)
-            .add_did_key("auth-key1", DIDKeyPurpose.AuthenticationKey.value)
+            .add_did_key("auth-key1", DIDKeyPurpose.AuthenticationKey)
             .add_service(
                 "encrypted-chat", "chat-service", "https://my-chat-service.com"
             )

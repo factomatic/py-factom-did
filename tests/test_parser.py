@@ -21,14 +21,14 @@ def did():
 @pytest.fixture
 def man_key_1(did):
     return ManagementKey(
-        alias="man-key-1", priority=0, controller=did, key_type=KeyType.ECDSA.value
+        alias="man-key-1", priority=0, controller=did, key_type=KeyType.ECDSA
     )
 
 
 @pytest.fixture
 def man_key_2(did):
     return ManagementKey(
-        alias="man-key-2", priority=0, controller=did, key_type=KeyType.EdDSA.value
+        alias="man-key-2", priority=0, controller=did, key_type=KeyType.EdDSA
     )
 
 
@@ -38,7 +38,7 @@ def man_key_3(did):
         alias="man-key-3",
         priority=1,
         controller=did,
-        key_type=KeyType.EdDSA.value,
+        key_type=KeyType.EdDSA,
         priority_requirement=1,
     )
 
@@ -49,7 +49,7 @@ def man_key_4(did):
         alias="man-key-4",
         priority=2,
         controller=did,
-        key_type=KeyType.EdDSA.value,
+        key_type=KeyType.EdDSA,
         priority_requirement=1,
     )
 
@@ -59,8 +59,8 @@ def did_key_1(did):
     return DIDKey(
         alias="did-key-1",
         controller=did,
-        key_type=KeyType.ECDSA.value,
-        purpose=DIDKeyPurpose.AuthenticationKey.value,
+        key_type=KeyType.ECDSA,
+        purpose=DIDKeyPurpose.AuthenticationKey,
     )
 
 
@@ -69,8 +69,8 @@ def did_key_2(did):
     return DIDKey(
         alias="did-key-2",
         controller=did,
-        key_type=KeyType.EdDSA.value,
-        purpose=DIDKeyPurpose.PublicKey.value,
+        key_type=KeyType.EdDSA,
+        purpose=DIDKeyPurpose.PublicKey,
         priority_requirement=2,
     )
 
