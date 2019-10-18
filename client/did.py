@@ -94,7 +94,7 @@ class DID:
         self,
         alias,
         priority,
-        key_type=KeyType.EdDSA.value,
+        key_type=KeyType.EdDSA,
         controller=None,
         priority_requirement=None,
     ):
@@ -131,7 +131,7 @@ class DID:
         self,
         alias,
         purpose,
-        key_type=KeyType.EdDSA.value,
+        key_type=KeyType.EdDSA,
         controller=None,
         priority_requirement=None,
     ):

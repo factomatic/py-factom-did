@@ -28,27 +28,24 @@ def create_new_did():
     # New management key with specified key type and controller
     management_key_2_alias = "my-second-management-key"
     management_key_2_priority = 2
-    management_key_2_type = KeyType.ECDSA.value
+    management_key_2_type = KeyType.ECDSA
     management_key_2_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
         DID_METHOD_NAME
     )
 
     # New public key with default key type and controller
     did_key_1_alias = "my-did-key-1"
-    did_key_1_purpose = [DIDKeyPurpose.PublicKey.value]
+    did_key_1_purpose = [DIDKeyPurpose.PublicKey]
 
     # New authentication key with specified key type
     did_key_2_alias = "my-did-key-2"
-    did_key_2_purpose = [DIDKeyPurpose.AuthenticationKey.value]
-    did_key_2_type = KeyType.RSA.value
+    did_key_2_purpose = [DIDKeyPurpose.AuthenticationKey]
+    did_key_2_type = KeyType.RSA
 
     # New public and authentication key with specified key type, controller and priority requirement
     did_key_3_alias = "my-did-key-3"
-    did_key_3_purpose = [
-        DIDKeyPurpose.PublicKey.value,
-        DIDKeyPurpose.AuthenticationKey.value,
-    ]
-    did_key_3_type = KeyType.EdDSA.value
+    did_key_3_purpose = [DIDKeyPurpose.PublicKey, DIDKeyPurpose.AuthenticationKey]
+    did_key_3_type = KeyType.EdDSA
     did_key_3_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
         DID_METHOD_NAME
     )
@@ -90,10 +87,9 @@ def record_did_on_chain(did):
 
 def update_existing_did(did):
     did.update().add_did_key(
-        "my-did-key-4", DIDKeyPurpose.AuthenticationKey.value
+        "my-did-key-4", DIDKeyPurpose.AuthenticationKey
     ).add_did_key(
-        "my-did-key-5",
-        [DIDKeyPurpose.AuthenticationKey.value, DIDKeyPurpose.PublicKey.value],
+        "my-did-key-5", [DIDKeyPurpose.AuthenticationKey, DIDKeyPurpose.PublicKey]
     ).add_management_key(
         "my-management-key-42", 1
     ).add_service(

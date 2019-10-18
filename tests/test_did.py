@@ -56,7 +56,7 @@ class TestMinifyRSAPublicKey:
     def test_minify_rsa_public_key(self, did):
         management_key_alias = "my-management-key"
         management_key_priority = 1
-        management_key_type = KeyType.RSA.value
+        management_key_type = KeyType.RSA
 
         did.management_key(
             management_key_alias, management_key_priority, management_key_type
@@ -99,14 +99,14 @@ class TestManagementKeys:
 
         assert management_key_1_alias == generated_management_key_1.alias
         assert management_key_1_priority == generated_management_key_1.priority
-        assert KeyType.EdDSA.value == generated_management_key_1.key_type
+        assert KeyType.EdDSA == generated_management_key_1.key_type
         assert did.id == generated_management_key_1.controller
         assert generated_management_key_1.public_key is not None
         assert generated_management_key_1.private_key is not None
 
         management_key_2_alias = "management-key-2"
         management_key_2_priority = 2
-        management_key_2_type = KeyType.ECDSA.value
+        management_key_2_type = KeyType.ECDSA
         management_key_2_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
         )
@@ -128,7 +128,7 @@ class TestManagementKeys:
 
         management_key_3_alias = "management-key-3"
         management_key_3_priority = 3
-        management_key_3_type = KeyType.RSA.value
+        management_key_3_type = KeyType.RSA
 
         did.management_key(
             management_key_3_alias, management_key_3_priority, management_key_3_type
@@ -190,7 +190,7 @@ class TestManagementKeys:
 
         for alias, controller in test_cases:
             with pytest.raises(ValueError):
-                did.management_key(alias, 1, KeyType.EdDSA.value, controller)
+                did.management_key(alias, 1, KeyType.EdDSA, controller)
 
     def test__repr__method(self, did):
         management_key_alias = "management-key-1"
@@ -206,7 +206,7 @@ class TestManagementKeys:
                 ManagementKey.__name__,
                 management_key_alias,
                 management_key_priority,
-                KeyType.EdDSA.value,
+                KeyType.EdDSA,
                 generated_management_key.controller,
                 None,
                 str(generated_management_key.public_key, "utf-8"),
@@ -218,7 +218,7 @@ class TestManagementKeys:
     def test__repr__method_with_rsa_key(self, did):
         management_key_alias = "management-key-1"
         management_key_priority = 0
-        management_key_type = KeyType.RSA.value
+        management_key_type = KeyType.RSA
 
         did.management_key(
             management_key_alias, management_key_priority, management_key_type
@@ -248,22 +248,19 @@ class TestManagementKeys:
 class TestDidKeys:
     def test_add_did_keys(self, did):
         did_key_1_alias = "did-key-1"
-        did_key_1_purpose = [DIDKeyPurpose.PublicKey.value]
+        did_key_1_purpose = [DIDKeyPurpose.PublicKey]
         did.did_key(did_key_1_alias, did_key_1_purpose)
         generated_did_key_1 = did.did_keys[0]
 
         assert did_key_1_alias == generated_did_key_1.alias
         assert did_key_1_purpose == generated_did_key_1.purpose
-        assert KeyType.EdDSA.value == generated_did_key_1.key_type
+        assert KeyType.EdDSA == generated_did_key_1.key_type
         assert did.id == generated_did_key_1.controller
         assert generated_did_key_1.priority_requirement is None
 
         did_key_2_alias = "did-key-2"
-        did_key_2_purpose = [
-            DIDKeyPurpose.PublicKey.value,
-            DIDKeyPurpose.AuthenticationKey.value,
-        ]
-        did_key_2_type = KeyType.ECDSA.value
+        did_key_2_purpose = [DIDKeyPurpose.PublicKey, DIDKeyPurpose.AuthenticationKey]
+        did_key_2_type = KeyType.ECDSA
         did_key_2_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
         )
@@ -290,11 +287,11 @@ class TestDidKeys:
         test_cases = ["myDidKey", "my-d!d-key", "my_did_key"]
         for alias in test_cases:
             with pytest.raises(ValueError):
-                did.did_key(alias, [DIDKeyPurpose.PublicKey.value])
+                did.did_key(alias, [DIDKeyPurpose.PublicKey])
 
     def test_invalid_purpose_type_throws_exception(self, did):
         did_key_alias = "did-key"
-        did_key_purpose = [DIDKeyPurpose.PublicKey.value, "InvalidPurposeType"]
+        did_key_purpose = [DIDKeyPurpose.PublicKey, "InvalidPurposeType"]
         with pytest.raises(ValueError):
             did.did_key(did_key_alias, did_key_purpose)
 
@@ -302,13 +299,13 @@ class TestDidKeys:
         alias = "my-key-1"
         did.management_key(alias, 1)
         with pytest.raises(ValueError):
-            did.did_key(alias, [DIDKeyPurpose.PublicKey.value])
+            did.did_key(alias, [DIDKeyPurpose.PublicKey])
 
     def test_invalid_key_type_throws_exception(self, did):
         did_key_alias = "management-key"
         did_key_type = "invalid_key_type"
         with pytest.raises(ValueError):
-            did.did_key(did_key_alias, [DIDKeyPurpose.PublicKey.value], did_key_type)
+            did.did_key(did_key_alias, [DIDKeyPurpose.PublicKey], did_key_type)
 
     def test_invalid_controller_throws_exception(self, did):
         test_cases = [
@@ -324,12 +321,7 @@ class TestDidKeys:
 
         for alias, controller in test_cases:
             with pytest.raises(ValueError):
-                did.did_key(
-                    alias,
-                    [DIDKeyPurpose.PublicKey.value],
-                    KeyType.EdDSA.value,
-                    controller,
-                )
+                did.did_key(alias, [DIDKeyPurpose.PublicKey], KeyType.EdDSA, controller)
 
     def test_invalid_priority_requirement_throws_exception(self, did):
         test_cases = [-1, -2]
@@ -338,16 +330,16 @@ class TestDidKeys:
             with pytest.raises(ValueError):
                 did.did_key(
                     did_key_alias,
-                    [DIDKeyPurpose.PublicKey.value],
-                    KeyType.EdDSA.value,
+                    [DIDKeyPurpose.PublicKey],
+                    KeyType.EdDSA,
                     None,
                     priority_requirement,
                 )
 
     def test__repr__method(self, did):
         did_key_alias = "did-key-1"
-        did_key_purpose = [DIDKeyPurpose.PublicKey.value]
-        did_key_type = KeyType.EdDSA.value
+        did_key_purpose = [DIDKeyPurpose.PublicKey]
+        did_key_type = KeyType.EdDSA
         did_key_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
         )
@@ -380,11 +372,8 @@ class TestDidKeys:
 
     def test__repr__method_with_rsa_key(self, did):
         did_key_alias = "did-key-1"
-        did_key_purpose = [
-            DIDKeyPurpose.PublicKey.value,
-            DIDKeyPurpose.AuthenticationKey.value,
-        ]
-        did_key_type = KeyType.RSA.value
+        did_key_purpose = [DIDKeyPurpose.PublicKey, DIDKeyPurpose.AuthenticationKey]
+        did_key_type = KeyType.RSA
 
         did.did_key(did_key_alias, did_key_purpose, did_key_type)
         generated_did_key = did.did_keys[0]
@@ -550,8 +539,8 @@ class TestExportEntryData:
 
     def test_export_entry_data_with_did_key_and_service(self, did):
         did_key_alias = "my-public-key"
-        did_key_purpose = [DIDKeyPurpose.PublicKey.value]
-        did_key_type = KeyType.RSA.value
+        did_key_purpose = [DIDKeyPurpose.PublicKey]
+        did_key_type = KeyType.RSA
         did_key_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
         )
@@ -584,10 +573,10 @@ class TestExportEntryData:
 
         did_key_1 = did_keys[0]
         assert "{}#{}".format(did.id, did_key_alias) == did_key_1["id"]
-        assert did_key_type == did_key_1["type"]
+        assert did_key_type.value == did_key_1["type"]
         assert did_key_controller == did_key_1["controller"]
         assert str(did.did_keys[0].public_key, "utf8") == did_key_1["publicKeyPem"]
-        assert did_key_purpose == did_key_1["purpose"]
+        assert list(map(lambda x: x.value, did_key_purpose)) == did_key_1["purpose"]
         assert did_key_priority_requirement == did_key_1["priorityRequirement"]
 
         service_1 = services[0]
