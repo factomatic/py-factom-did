@@ -83,8 +83,8 @@ class DID:
         """
         Returns
         -------
-        did.did.DID
-            The updated DID object
+        DIDUpdater
+            An object allowing updates to the existing DID
         """
         if not self.management_keys:
             raise RuntimeError("Cannot update DID without management keys.")
@@ -145,7 +145,7 @@ class DID:
         purpose: DIDKeyPurpose or DIDKeyPurpose[]
             Shows what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
         key_type: KeyType, optional
-            Identifies the type of signature to be used when creating the key.
+            Identifies the type of signature that the key pair can be used to generate and verify.
         controller: str, optional
             An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
             the default value is used which is the current DID itself.
@@ -363,5 +363,5 @@ class DID:
     @staticmethod
     def _check_alias_is_unique_and_add_to_used(used_aliases, alias):
         if alias in used_aliases:
-            raise ValueError('Duplicate key alias "{}" detected.'.format(alias))
+            raise ValueError('Duplicate alias "{}" detected.'.format(alias))
         used_aliases.add(alias)

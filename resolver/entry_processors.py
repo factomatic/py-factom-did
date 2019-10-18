@@ -6,7 +6,6 @@ import math
 from packaging import version
 
 from client.constants import DID_METHOD_SPEC_V020
-
 from client.keys import ManagementKey, DIDKey
 from client.service import Service
 from resolver.exceptions import MalformedDIDManagementEntry
@@ -380,7 +379,6 @@ def process_did_deactivation_entry_v100(
         The currently active DID keys. Will be reset.
     active_services: dict
         The currently active services. Will be reset.
-        Unused
     skipped_entries: int
         The current number of skipped entries. Will be incremented by one in case the DIDManagement entry is not valid.
     _all_keys: set
@@ -426,8 +424,8 @@ def process_did_method_version_upgrade_entry_v100(
     """
     Upgrades the DID method version.
 
-    This method only does validation of the logic rules for a DIDDeactivation entry (e.g. that the signature is valid).
-    Thus, it must be called only with a parsed entry, which has already undergone validation checks for proper
+    This method only does validation of the logic rules for a DIDMethodVersionUpgrade entry (e.g. that the signature is
+    valid). Thus, it must be called only with a parsed entry, which has already undergone validation checks for proper
     formatting of its ExtIDs and content.
 
     Parameters
