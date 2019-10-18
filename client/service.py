@@ -56,7 +56,7 @@ class Service:
         )
 
     def __repr__(self):
-        return "<{0}.{1} (alias={2}, service_type={3}, endpoint={4}, priority_requirement={5})>".format(
+        return "<{}.{}(alias={}, service_type={}, endpoint={}, priority_requirement={})>".format(
             self.__module__,
             type(self).__name__,
             self.alias,

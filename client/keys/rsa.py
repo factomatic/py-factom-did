@@ -9,6 +9,8 @@ class RSAKey:
     well as key creation and derivation of a public key from a private key.
     """
 
+    ON_CHAIN_PUB_KEY_NAME = "publicKeyPem"
+
     def __init__(self, public_key=None, private_key=None):
         """
         Creates an RSAKey object.
@@ -31,14 +33,28 @@ class RSAKey:
         AssertionError
             If the public and private keys provided do not correspond to each other
         """
-        if type(public_key) not in {bytes, str}:
+        if public_key is not None and type(public_key) not in {bytes, str}:
             raise ValueError("public_key must be either bytes or string")
-        if type(private_key) not in {bytes, str}:
+        if private_key is not None and type(private_key) not in {bytes, str}:
             raise ValueError("private_key must be either bytes or string")
         # Instantiate the signing and verifying key _objects_ from the provided private and public key _values_
         self._derive_signing_and_verifying_key(public_key, private_key)
-        self.public_key = public_key
-        self.private_key = private_key
+
+    def __repr__(self):
+        return "<{}.{}(public_key={}, private_key=({}))>".format(
+            self.__module__,
+            type(self).__name__,
+            self._minify_public_key(),
+            "hidden" if self.signing_key is not None else "not set",
+        )
+
+    @property
+    def public_key(self):
+        return self.verifying_key.export_key(format="PEM", passphrase=None, pkcs=8)
+
+    @property
+    def private_key(self):
+        return self.signing_key.export_key() if self.signing_key is not None else None
 
     def sign(self, message, hash_f=SHA256.new):
         """
@@ -64,7 +80,7 @@ class RSAKey:
         AssertionError
             If the supplied message is not bytes, or if a private key has not been specified.
         """
-        assert type(message) is bytes, "Message must be supplied as bytes."
+        assert type(message) is bytes, "Message must be bytes."
         assert self.signing_key is not None, "Signing is not set."
 
         return pkcs1_15.new(self.signing_key).sign(hash_f(message))
@@ -87,12 +103,28 @@ class RSAKey:
         bool
             True if the signature is successfully verified, False otherwise.
         """
+        assert type(message) is bytes, "Message must be bytes"
+        assert type(signature) is bytes, "Signature must be bytes"
+
         try:
             pkcs1_15.new(self.verifying_key).verify(hash_f(message), signature)
         except ValueError:
             return False
         else:
             return True
+
+    def get_public_key_on_chain_repr(self):
+        return self.ON_CHAIN_PUB_KEY_NAME, self.public_key.decode()
+
+    def _minify_public_key(self):
+        public_key = self.public_key.decode()
+        start_index = public_key.find("\n") + 1
+        end_index = public_key.rfind("\n")
+
+        return "{0}...{1}".format(
+            public_key[start_index : start_index + 20],
+            public_key[end_index - 8 : end_index],
+        )
 
     def _derive_signing_and_verifying_key(self, public_key, private_key):
         # If neither the public, nor the private key is set, generate the key pair and return

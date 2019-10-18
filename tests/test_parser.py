@@ -7,7 +7,9 @@ import pytest
 
 from client.constants import DID_METHOD_NAME
 from client.enums import DIDKeyPurpose, KeyType
-from client.keys import ManagementKey, DIDKey
+from client.keys.did import DIDKey
+from client.keys.ecdsa import ECDSASecp256k1Key
+from client.keys.management import ManagementKey
 from client.service import Service
 from resolver.exceptions import InvalidDIDChain
 from resolver.parser import parse_did_chain_entries
@@ -22,6 +24,18 @@ def did():
 def man_key_1(did):
     return ManagementKey(
         alias="man-key-1", priority=0, controller=did, key_type=KeyType.ECDSA
+    )
+
+
+@pytest.fixture
+def man_key_1_public_only(did):
+    key = ECDSASecp256k1Key()
+    return ManagementKey(
+        alias="man-key-1",
+        priority=0,
+        controller=did,
+        key_type=KeyType.ECDSA,
+        public_key=key.public_key,
     )
 
 
@@ -61,6 +75,18 @@ def did_key_1(did):
         controller=did,
         key_type=KeyType.ECDSA,
         purpose=DIDKeyPurpose.AuthenticationKey,
+    )
+
+
+@pytest.fixture
+def did_key_1_public_only(did):
+    key = ECDSASecp256k1Key()
+    return DIDKey(
+        alias="did-key-1",
+        controller=did,
+        key_type=KeyType.ECDSA,
+        purpose=DIDKeyPurpose.AuthenticationKey,
+        public_key=key.public_key,
     )
 
 
@@ -302,12 +328,17 @@ class TestDIDManagementEntry:
         assert man_key_1.alias in management_keys
 
     def test_valid_did_management_entry(
-        self, did, man_key_1, did_key_1, service_1, management_entry
+        self,
+        did,
+        man_key_1_public_only,
+        did_key_1_public_only,
+        service_1,
+        management_entry,
     ):
         entry = management_entry(
             {
-                "managementKey": [man_key_1.to_entry_dict(did)],
-                "didKey": [did_key_1.to_entry_dict(did)],
+                "managementKey": [man_key_1_public_only.to_entry_dict(did)],
+                "didKey": [did_key_1_public_only.to_entry_dict(did)],
                 "service": [service_1.to_entry_dict(did)],
             }
         )
@@ -316,11 +347,8 @@ class TestDIDManagementEntry:
             [entry]
         )
 
-        man_key_1.private_key = None
-        did_key_1.private_key = None
-
-        assert management_keys == {"man-key-1": man_key_1}
-        assert did_keys == {"did-key-1": did_key_1}
+        assert management_keys == {"man-key-1": man_key_1_public_only}
+        assert did_keys == {"did-key-1": did_key_1_public_only}
         assert services == {"service-1": service_1}
         assert skipped_entries == 0
 

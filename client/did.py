@@ -8,7 +8,8 @@ from client.blockchain import calculate_chain_id, calculate_entry_size, create_c
 from client.constants import *
 from client.encryptor import encrypt_keys
 from client.enums import KeyType, EntryType, DIDKeyPurpose
-from client.keys import ManagementKey, DIDKey
+from client.keys.did import DIDKey
+from client.keys.management import ManagementKey
 from client.service import Service
 from client.updater import DIDUpdater
 

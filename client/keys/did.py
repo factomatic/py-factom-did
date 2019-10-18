@@ -2,6 +2,7 @@ import base58
 
 from client.constants import ENTRY_SCHEMA_V100
 from client.enums import DIDKeyPurpose, KeyType
+from client.keys.abstract import AbstractDIDKey
 
 
 class DIDKey(AbstractDIDKey):
@@ -69,22 +70,16 @@ class DIDKey(AbstractDIDKey):
         )
 
     def __repr__(self):
-        public_key = str(self.public_key, "utf-8")
-        if self.key_type == KeyType.RSA:
-            public_key = AbstractDIDKey._minify_rsa_public_key(public_key)
-
         return (
-            "<{0}.{1} (alias={2}, purpose={3}, key_type={4},"
-            " controller={5}, priority_requirement={6}, public_key={7}, private_key=({8}))>".format(
+            "<{}.{}(alias={}, purpose={}, key_type={}, controller={}, "
+            "priority_requirement={})>".format(
                 self.__module__,
                 type(self).__name__,
                 self.alias,
                 self.purpose,
-                self.key_type,
+                self.underlying,
                 self.controller,
                 self.priority_requirement,
-                public_key,
-                "hidden" if self.private_key is not None else "not set",
             )
         )
 
@@ -98,17 +93,17 @@ class DIDKey(AbstractDIDKey):
 
     @staticmethod
     def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
-        k = AbstractDIDKey.from_entry_dict(entry_dict, version)
-        return DIDKey(
-            alias=k.alias,
-            purpose=list(map(DIDKeyPurpose.from_str, entry_dict.get("purpose"))),
-            key_type=k.key_type,
-            controller=k.controller,
-            priority_requirement=k.priority_requirement,
-            public_key=base58.b58decode(k.public_key)
-            if k.public_key is not None and k.key_type != KeyType.RSA
-            else k.public_key,
-            private_key=base58.b58decode(k.private_key)
-            if k.private_key is not None and k.key_type != KeyType.RSA
-            else k.private_key,
-        )
+        if version == ENTRY_SCHEMA_V100:
+            return DIDKey(
+                alias=entry_dict["id"].split("#")[-1],
+                purpose=list(map(DIDKeyPurpose.from_str, entry_dict.get("purpose"))),
+                key_type=KeyType.from_str(entry_dict["type"]),
+                controller=entry_dict["controller"],
+                priority_requirement=entry_dict.get("priorityRequirement"),
+                public_key=base58.b58decode(entry_dict["publicKeyBase58"])
+                if "publicKeyBase58" in entry_dict
+                else entry_dict["publicKeyPem"],
+                private_key=None,
+            )
+        else:
+            raise NotImplementedError("Unknown schema version: {}".format(version))

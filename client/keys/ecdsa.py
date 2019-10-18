@@ -1,5 +1,6 @@
 import hashlib
 
+import base58
 import ecdsa
 from ecdsa.curves import SECP256k1
 
@@ -9,6 +10,8 @@ class ECDSASecp256k1Key:
     Representation of an ECDSASecp256k1 key. Instances of this class allow signing of messages and signature
     verification, as well as key creation and derivation of a public key from a private key.
     """
+
+    ON_CHAIN_PUB_KEY_NAME = "publicKeyBase58"
 
     def __init__(self, public_key=None, private_key=None):
         """
@@ -32,14 +35,28 @@ class ECDSASecp256k1Key:
         AssertionError
             If the public and private keys provided do not correspond to each other
         """
-        if type(public_key) is not bytes:
+        if public_key is not None and type(public_key) is not bytes:
             raise ValueError("public_key must be bytes")
-        if type(private_key) is not bytes:
+        if private_key is not None and type(private_key) is not bytes:
             raise ValueError("private_key must be bytes")
         # Instantiate the signing and verifying key _objects_ from the provided private and public key _values_
         self._derive_signing_and_verifying_key(public_key, private_key)
-        self.public_key = public_key
-        self.private_key = private_key
+
+    def __repr__(self):
+        return "<{}.{}(public_key={}, private_key=({}))>".format(
+            self.__module__,
+            type(self).__name__,
+            base58.b58encode(self.verifying_key.to_string()).decode("utf-8"),
+            "hidden" if self.signing_key is not None else "not set",
+        )
+
+    @property
+    def public_key(self):
+        return self.verifying_key.to_string()
+
+    @property
+    def private_key(self):
+        return self.signing_key.to_string() if self.signing_key is not None else None
 
     def sign(self, message, hash_f=hashlib.sha256):
         """
@@ -65,7 +82,7 @@ class ECDSASecp256k1Key:
         AssertionError
             If the supplied message is not bytes, or if a private key has not been specified.
         """
-        assert type(message) is bytes, "Message must be supplied as bytes."
+        assert type(message) is bytes, "Message must be bytes."
         assert self.signing_key is not None, "Signing is not set."
 
         return self.signing_key.sign_digest(hash_f(message).digest())
@@ -90,10 +107,16 @@ class ECDSASecp256k1Key:
         """
         from ecdsa.keys import BadSignatureError
 
+        assert type(message) is bytes, "Message must be bytes"
+        assert type(signature) is bytes, "Signature must be bytes"
+
         try:
             return self.verifying_key.verify_digest(signature, hash_f(message).digest())
         except BadSignatureError:
             return False
+
+    def get_public_key_on_chain_repr(self):
+        return self.ON_CHAIN_PUB_KEY_NAME, base58.b58encode(self.public_key).decode()
 
     def _derive_signing_and_verifying_key(self, public_key, private_key):
         # If neither the public, nor the private key is set, generate the key pair and return

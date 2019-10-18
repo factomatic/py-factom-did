@@ -6,8 +6,8 @@ import math
 from packaging import version
 
 from client.constants import DID_METHOD_SPEC_V020
-
-from client.keys import ManagementKey, DIDKey
+from client.keys.did import DIDKey
+from client.keys.management import ManagementKey
 from client.service import Service
 from resolver.exceptions import MalformedDIDManagementEntry
 

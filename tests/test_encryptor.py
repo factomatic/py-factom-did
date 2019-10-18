@@ -1,6 +1,8 @@
 import os
 import pytest
 
+import base58
+
 from client.did import DID
 from client.encryptor import (
     decrypt_keys_from_str,
@@ -27,7 +29,7 @@ class TestEncryptor:
 
         assert generated_management_key.alias == decrypted_management_key_alias
         assert (
-            str(generated_management_key.private_key, "utf8")
+            base58.b58encode(generated_management_key.private_key).decode()
             == decrypted_management_keys[decrypted_management_key_alias]
         )
 
@@ -64,7 +66,7 @@ class TestEncryptor:
 
         assert generated_management_key.alias == decrypted_management_key_alias
         assert (
-            str(generated_management_key.private_key, "utf8")
+            base58.b58encode(generated_management_key.private_key).decode()
             == decrypted_management_keys[decrypted_management_key_alias]
         )
 
