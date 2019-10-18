@@ -4,7 +4,7 @@ import pytest
 from Crypto.PublicKey import RSA
 
 from client.constants import DID_METHOD_NAME
-from client.enums import SignatureType
+from client.enums import KeyType
 from client.keys import AbstractDIDKey, ManagementKey
 
 
@@ -17,30 +17,25 @@ class TestAbstractDIDKey:
     def test_initialization_with_no_key(self, controller):
         AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.EdDSA.value,
+            key_type=KeyType.EdDSA.value,
             controller=controller,
             priority_requirement=1,
         )
 
     def test_initialization_with_public_key_only(self, controller):
-        with pytest.raises(ValueError) as excinfo:
-            AbstractDIDKey(
-                alias="test-key",
-                signature_type=SignatureType.EdDSA.value,
-                controller=controller,
-                priority_requirement=1,
-                public_key=b"asdfasdf",
-            )
-        assert (
-            str(excinfo.value)
-            == "Public key specified without a corresponding private key."
+        AbstractDIDKey(
+            alias="test-key",
+            key_type=KeyType.EdDSA.value,
+            controller=controller,
+            priority_requirement=1,
+            public_key=secrets.token_bytes(32),
         )
 
     def test_initialization_with_invalid_private_key(self, controller):
         with pytest.raises(ValueError) as excinfo:
             AbstractDIDKey(
                 alias="test-key",
-                signature_type=SignatureType.EdDSA.value,
+                key_type=KeyType.EdDSA.value,
                 controller=controller,
                 priority_requirement=1,
                 private_key=b"012afaf",
@@ -52,7 +47,7 @@ class TestAbstractDIDKey:
         with pytest.raises(ValueError) as excinfo:
             AbstractDIDKey(
                 alias="test-key",
-                signature_type=SignatureType.ECDSA.value,
+                key_type=KeyType.ECDSA.value,
                 controller=controller,
                 priority_requirement=1,
                 private_key=b"012afaf",
@@ -65,7 +60,7 @@ class TestAbstractDIDKey:
         with pytest.raises(ValueError) as excinfo:
             AbstractDIDKey(
                 alias="test-key",
-                signature_type=SignatureType.RSA.value,
+                key_type=KeyType.RSA.value,
                 controller=controller,
                 priority_requirement=1,
                 private_key=b"012afaf",
@@ -75,7 +70,7 @@ class TestAbstractDIDKey:
     def test_initialization_with_valid_private_key(self, controller):
         AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.EdDSA.value,
+            key_type=KeyType.EdDSA.value,
             controller=controller,
             priority_requirement=1,
             private_key=secrets.token_bytes(32),
@@ -83,7 +78,7 @@ class TestAbstractDIDKey:
 
         AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.ECDSA.value,
+            key_type=KeyType.ECDSA.value,
             controller=controller,
             priority_requirement=1,
             private_key=secrets.token_bytes(32),
@@ -91,7 +86,7 @@ class TestAbstractDIDKey:
 
         AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.RSA.value,
+            key_type=KeyType.RSA.value,
             controller=controller,
             priority_requirement=1,
             private_key=RSA.generate(2048).export_key("PEM"),
@@ -99,7 +94,7 @@ class TestAbstractDIDKey:
 
         AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.RSA.value,
+            key_type=KeyType.RSA.value,
             controller=controller,
             priority_requirement=1,
             private_key=RSA.generate(2048).export_key("PEM", pkcs=8),
@@ -107,7 +102,7 @@ class TestAbstractDIDKey:
 
         AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.RSA.value,
+            key_type=KeyType.RSA.value,
             controller=controller,
             priority_requirement=1,
             private_key=RSA.generate(2048).export_key("DER"),
@@ -118,7 +113,7 @@ class TestAbstractDIDKey:
         with pytest.raises(AssertionError) as excinfo:
             AbstractDIDKey(
                 alias="test-key",
-                signature_type=SignatureType.EdDSA.value,
+                key_type=KeyType.EdDSA.value,
                 controller=controller,
                 priority_requirement=1,
                 private_key=secrets.token_bytes(32),
@@ -132,7 +127,7 @@ class TestAbstractDIDKey:
         with pytest.raises(AssertionError) as excinfo:
             AbstractDIDKey(
                 alias="test-key",
-                signature_type=SignatureType.ECDSA.value,
+                key_type=KeyType.ECDSA.value,
                 controller=controller,
                 priority_requirement=1,
                 private_key=secrets.token_bytes(32),
@@ -146,7 +141,7 @@ class TestAbstractDIDKey:
         with pytest.raises(AssertionError) as excinfo:
             AbstractDIDKey(
                 alias="test-key",
-                signature_type=SignatureType.RSA.value,
+                key_type=KeyType.RSA.value,
                 controller=controller,
                 priority_requirement=1,
                 private_key=RSA.generate(2048).export_key("PEM", pkcs=8),
@@ -161,21 +156,21 @@ class TestAbstractDIDKey:
         private_key = secrets.token_bytes(32)
         key1 = AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.EdDSA.value,
+            key_type=KeyType.EdDSA.value,
             controller=controller,
             priority_requirement=1,
             private_key=private_key,
         )
         key2 = AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.EdDSA.value,
+            key_type=KeyType.EdDSA.value,
             controller=controller,
             priority_requirement=1,
             private_key=private_key,
         )
         key3 = ManagementKey(
             alias="test-key",
-            signature_type=SignatureType.EdDSA.value,
+            key_type=KeyType.EdDSA.value,
             controller=controller,
             priority_requirement=1,
             priority=0,
@@ -183,7 +178,7 @@ class TestAbstractDIDKey:
         )
         key4 = AbstractDIDKey(
             alias="test-key-2",
-            signature_type=SignatureType.EdDSA.value,
+            key_type=KeyType.EdDSA.value,
             controller=controller,
             priority_requirement=1,
             private_key=private_key,
@@ -195,19 +190,19 @@ class TestAbstractDIDKey:
     def test_signing_and_verification(self, controller):
         ecdsa_key = AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.ECDSA.value,
+            key_type=KeyType.ECDSA.value,
             controller=controller,
             priority_requirement=1,
         )
         eddsa_key = AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.EdDSA.value,
+            key_type=KeyType.EdDSA.value,
             controller=controller,
             priority_requirement=1,
         )
         rsa_key = AbstractDIDKey(
             alias="test-key",
-            signature_type=SignatureType.RSA.value,
+            key_type=KeyType.RSA.value,
             controller=controller,
             priority_requirement=1,
         )

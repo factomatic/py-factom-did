@@ -2,12 +2,8 @@ import json
 import pytest
 import re
 
-from client.constants import (
-    ENTRY_SCHEMA_VERSION,
-    DID_METHOD_SPEC_VERSION,
-    DID_METHOD_NAME,
-)
-from client.did import DID, SignatureType, DIDKeyPurpose
+from client.constants import ENTRY_SCHEMA_V100, DID_METHOD_SPEC_V020, DID_METHOD_NAME
+from client.did import DID, KeyType, DIDKeyPurpose
 from client.enums import EntryType
 from client.keys import AbstractDIDKey, DIDKey, ManagementKey
 from client.service import Service
@@ -60,10 +56,10 @@ class TestMinifyRSAPublicKey:
     def test_minify_rsa_public_key(self, did):
         management_key_alias = "my-management-key"
         management_key_priority = 1
-        management_key_signature_type = SignatureType.RSA.value
+        management_key_type = KeyType.RSA.value
 
         did.management_key(
-            management_key_alias, management_key_priority, management_key_signature_type
+            management_key_alias, management_key_priority, management_key_type
         )
         rsa_public_key = str(did.management_keys[0].public_key, "utf-8")
         minified_public_key = AbstractDIDKey._minify_rsa_public_key(rsa_public_key)
@@ -103,14 +99,14 @@ class TestManagementKeys:
 
         assert management_key_1_alias == generated_management_key_1.alias
         assert management_key_1_priority == generated_management_key_1.priority
-        assert SignatureType.EdDSA.value == generated_management_key_1.signature_type
+        assert KeyType.EdDSA.value == generated_management_key_1.key_type
         assert did.id == generated_management_key_1.controller
         assert generated_management_key_1.public_key is not None
         assert generated_management_key_1.private_key is not None
 
         management_key_2_alias = "management-key-2"
         management_key_2_priority = 2
-        management_key_2_signature_type = SignatureType.ECDSA.value
+        management_key_2_type = KeyType.ECDSA.value
         management_key_2_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
         )
@@ -118,36 +114,30 @@ class TestManagementKeys:
         did.management_key(
             management_key_2_alias,
             management_key_2_priority,
-            management_key_2_signature_type,
+            management_key_2_type,
             management_key_2_controller,
         )
         generated_management_key_2 = did.management_keys[1]
 
         assert management_key_2_alias == generated_management_key_2.alias
         assert management_key_2_priority == generated_management_key_2.priority
-        assert (
-            management_key_2_signature_type == generated_management_key_2.signature_type
-        )
+        assert management_key_2_type == generated_management_key_2.key_type
         assert management_key_2_controller == generated_management_key_2.controller
         assert generated_management_key_2.public_key is not None
         assert generated_management_key_2.private_key is not None
 
         management_key_3_alias = "management-key-3"
         management_key_3_priority = 3
-        management_key_3_signature_type = SignatureType.RSA.value
+        management_key_3_type = KeyType.RSA.value
 
         did.management_key(
-            management_key_3_alias,
-            management_key_3_priority,
-            management_key_3_signature_type,
+            management_key_3_alias, management_key_3_priority, management_key_3_type
         )
         generated_management_key_3 = did.management_keys[2]
 
         assert management_key_3_alias == generated_management_key_3.alias
         assert management_key_3_priority == generated_management_key_3.priority
-        assert (
-            management_key_3_signature_type == generated_management_key_3.signature_type
-        )
+        assert management_key_3_type == generated_management_key_3.key_type
         assert did.id == generated_management_key_3.controller
         assert generated_management_key_3.public_key is not None
         assert generated_management_key_3.private_key is not None
@@ -172,11 +162,11 @@ class TestManagementKeys:
         with pytest.raises(ValueError):
             did.management_key(management_key_alias, 1)
 
-    def test_invalid_signature_type_throws_exception(self, did):
+    def test_invalid_key_type_throws_exception(self, did):
         management_key_alias = "management-key"
-        management_key_signature_type = "invalid_signature_type"
+        management_key_type = "invalid_key_type"
         with pytest.raises(ValueError):
-            did.management_key(management_key_alias, 1, management_key_signature_type)
+            did.management_key(management_key_alias, 1, management_key_type)
 
     def test_invalid_controller_throws_exception(self, did):
         test_cases = [
@@ -200,7 +190,7 @@ class TestManagementKeys:
 
         for alias, controller in test_cases:
             with pytest.raises(ValueError):
-                did.management_key(alias, 1, SignatureType.EdDSA.value, controller)
+                did.management_key(alias, 1, KeyType.EdDSA.value, controller)
 
     def test__repr__method(self, did):
         management_key_alias = "management-key-1"
@@ -210,13 +200,13 @@ class TestManagementKeys:
         generated_management_key = did.management_keys[0]
 
         expected__repr__method_output = (
-            "<{0}.{1} (alias={2}, priority={3}, signature_type={4},"
+            "<{0}.{1} (alias={2}, priority={3}, key_type={4},"
             " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
                 ManagementKey.__module__,
                 ManagementKey.__name__,
                 management_key_alias,
                 management_key_priority,
-                SignatureType.EdDSA.value,
+                KeyType.EdDSA.value,
                 generated_management_key.controller,
                 None,
                 str(generated_management_key.public_key, "utf-8"),
@@ -228,10 +218,10 @@ class TestManagementKeys:
     def test__repr__method_with_rsa_key(self, did):
         management_key_alias = "management-key-1"
         management_key_priority = 0
-        management_key_signature_type = SignatureType.RSA.value
+        management_key_type = KeyType.RSA.value
 
         did.management_key(
-            management_key_alias, management_key_priority, management_key_signature_type
+            management_key_alias, management_key_priority, management_key_type
         )
         generated_management_key = did.management_keys[0]
 
@@ -239,13 +229,13 @@ class TestManagementKeys:
             str(generated_management_key.public_key, "utf-8")
         )
         expected__repr__method_output = (
-            "<{0}.{1} (alias={2}, priority={3}, signature_type={4},"
+            "<{0}.{1} (alias={2}, priority={3}, key_type={4},"
             " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
                 ManagementKey.__module__,
                 ManagementKey.__name__,
                 management_key_alias,
                 management_key_priority,
-                management_key_signature_type,
+                management_key_type,
                 generated_management_key.controller,
                 None,
                 min_public_key,
@@ -264,7 +254,7 @@ class TestDidKeys:
 
         assert did_key_1_alias == generated_did_key_1.alias
         assert did_key_1_purpose == generated_did_key_1.purpose
-        assert SignatureType.EdDSA.value == generated_did_key_1.signature_type
+        assert KeyType.EdDSA.value == generated_did_key_1.key_type
         assert did.id == generated_did_key_1.controller
         assert generated_did_key_1.priority_requirement is None
 
@@ -273,7 +263,7 @@ class TestDidKeys:
             DIDKeyPurpose.PublicKey.value,
             DIDKeyPurpose.AuthenticationKey.value,
         ]
-        did_key_2_signature_type = SignatureType.ECDSA.value
+        did_key_2_type = KeyType.ECDSA.value
         did_key_2_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
         )
@@ -281,7 +271,7 @@ class TestDidKeys:
         did.did_key(
             did_key_2_alias,
             did_key_2_purpose,
-            did_key_2_signature_type,
+            did_key_2_type,
             did_key_2_controller,
             did_key_2_priority_requirement,
         )
@@ -289,7 +279,7 @@ class TestDidKeys:
 
         assert did_key_2_alias == generated_did_key_2.alias
         assert did_key_2_purpose == generated_did_key_2.purpose
-        assert did_key_2_signature_type == generated_did_key_2.signature_type
+        assert did_key_2_type == generated_did_key_2.key_type
         assert did_key_2_controller == generated_did_key_2.controller
         assert (
             did_key_2_priority_requirement == generated_did_key_2.priority_requirement
@@ -314,13 +304,11 @@ class TestDidKeys:
         with pytest.raises(ValueError):
             did.did_key(alias, [DIDKeyPurpose.PublicKey.value])
 
-    def test_invalid_signature_type_throws_exception(self, did):
+    def test_invalid_key_type_throws_exception(self, did):
         did_key_alias = "management-key"
-        did_key_signature_type = "invalid_signature_type"
+        did_key_type = "invalid_key_type"
         with pytest.raises(ValueError):
-            did.did_key(
-                did_key_alias, [DIDKeyPurpose.PublicKey.value], did_key_signature_type
-            )
+            did.did_key(did_key_alias, [DIDKeyPurpose.PublicKey.value], did_key_type)
 
     def test_invalid_controller_throws_exception(self, did):
         test_cases = [
@@ -339,7 +327,7 @@ class TestDidKeys:
                 did.did_key(
                     alias,
                     [DIDKeyPurpose.PublicKey.value],
-                    SignatureType.EdDSA.value,
+                    KeyType.EdDSA.value,
                     controller,
                 )
 
@@ -351,7 +339,7 @@ class TestDidKeys:
                 did.did_key(
                     did_key_alias,
                     [DIDKeyPurpose.PublicKey.value],
-                    SignatureType.EdDSA.value,
+                    KeyType.EdDSA.value,
                     None,
                     priority_requirement,
                 )
@@ -359,7 +347,7 @@ class TestDidKeys:
     def test__repr__method(self, did):
         did_key_alias = "did-key-1"
         did_key_purpose = [DIDKeyPurpose.PublicKey.value]
-        did_key_signature_type = SignatureType.EdDSA.value
+        did_key_type = KeyType.EdDSA.value
         did_key_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
         )
@@ -368,20 +356,20 @@ class TestDidKeys:
         did.did_key(
             did_key_alias,
             did_key_purpose,
-            did_key_signature_type,
+            did_key_type,
             did_key_controller,
             did_key_priority_requirement,
         )
         generated_did_key = did.did_keys[0]
 
         expected__repr__method_output = (
-            "<{0}.{1} (alias={2}, purpose={3}, signature_type={4},"
+            "<{0}.{1} (alias={2}, purpose={3}, key_type={4},"
             " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
                 DIDKey.__module__,
                 DIDKey.__name__,
                 did_key_alias,
                 did_key_purpose,
-                did_key_signature_type,
+                did_key_type,
                 did_key_controller,
                 did_key_priority_requirement,
                 str(generated_did_key.public_key, "utf-8"),
@@ -396,22 +384,22 @@ class TestDidKeys:
             DIDKeyPurpose.PublicKey.value,
             DIDKeyPurpose.AuthenticationKey.value,
         ]
-        did_key_signature_type = SignatureType.RSA.value
+        did_key_type = KeyType.RSA.value
 
-        did.did_key(did_key_alias, did_key_purpose, did_key_signature_type)
+        did.did_key(did_key_alias, did_key_purpose, did_key_type)
         generated_did_key = did.did_keys[0]
 
         min_public_key = AbstractDIDKey._minify_rsa_public_key(
             str(generated_did_key.public_key, "utf-8")
         )
         expected__repr__method_output = (
-            "<{0}.{1} (alias={2}, purpose={3}, signature_type={4},"
+            "<{0}.{1} (alias={2}, purpose={3}, key_type={4},"
             " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
                 DIDKey.__module__,
                 DIDKey.__name__,
                 did_key_alias,
                 did_key_purpose,
-                did_key_signature_type,
+                did_key_type,
                 generated_did_key.controller,
                 None,
                 min_public_key,
@@ -531,7 +519,7 @@ class TestExportEntryData:
 
         ext_ids = entry_data["ext_ids"]
         assert EntryType.Create.value == ext_ids[0].decode()
-        assert ENTRY_SCHEMA_VERSION == ext_ids[1].decode()
+        assert ENTRY_SCHEMA_V100 == ext_ids[1].decode()
         assert did.nonce == ext_ids[2]
 
     def test_export_entry_data_with_management_key(self, did):
@@ -541,7 +529,7 @@ class TestExportEntryData:
         entry_data = did.export_entry_data()
 
         content = json.loads(entry_data["content"])
-        assert DID_METHOD_SPEC_VERSION == content["didMethodVersion"]
+        assert DID_METHOD_SPEC_V020 == content["didMethodVersion"]
 
         management_keys = content["managementKey"]
         assert 1 == len(management_keys)
@@ -552,10 +540,7 @@ class TestExportEntryData:
 
         management_key_1 = management_keys[0]
         assert "{}#{}".format(did.id, key_alias) == management_key_1["id"]
-        assert (
-            "{}VerificationKey".format(SignatureType.EdDSA.value)
-            == management_key_1["type"]
-        )
+        assert KeyType.EdDSA.value == management_key_1["type"]
         assert did.id == management_key_1["controller"]
         assert (
             str(did.management_keys[0].public_key, "utf8")
@@ -566,7 +551,7 @@ class TestExportEntryData:
     def test_export_entry_data_with_did_key_and_service(self, did):
         did_key_alias = "my-public-key"
         did_key_purpose = [DIDKeyPurpose.PublicKey.value]
-        did_key_signature_type = SignatureType.RSA.value
+        did_key_type = KeyType.RSA.value
         did_key_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
             DID_METHOD_NAME
         )
@@ -580,7 +565,7 @@ class TestExportEntryData:
         did.did_key(
             did_key_alias,
             did_key_purpose,
-            did_key_signature_type,
+            did_key_type,
             did_key_controller,
             did_key_priority_requirement,
         )
@@ -599,7 +584,7 @@ class TestExportEntryData:
 
         did_key_1 = did_keys[0]
         assert "{}#{}".format(did.id, did_key_alias) == did_key_1["id"]
-        assert "{}VerificationKey".format(did_key_signature_type) == did_key_1["type"]
+        assert did_key_type == did_key_1["type"]
         assert did_key_controller == did_key_1["controller"]
         assert str(did.did_keys[0].public_key, "utf8") == did_key_1["publicKeyPem"]
         assert did_key_purpose == did_key_1["purpose"]

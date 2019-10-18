@@ -1,8 +1,9 @@
 import json
 
+from client.constants import ENTRY_SCHEMA_V100
 import pytest
 
-from client.did import DID, DIDKeyPurpose, SignatureType
+from client.did import DID, DIDKeyPurpose, KeyType
 
 
 @pytest.fixture
@@ -20,9 +21,9 @@ def full_did():
     return (
         DID()
         .management_key("man-key1", 0)
-        .management_key("man-key2", 1, SignatureType.ECDSA.value)
+        .management_key("man-key2", 1, KeyType.ECDSA.value)
         .management_key("man-key3", 1)
-        .management_key("man-key4", 2, SignatureType.RSA.value)
+        .management_key("man-key4", 2, KeyType.RSA.value)
         .did_key(
             "did-key1", DIDKeyPurpose.AuthenticationKey.value, priority_requirement=2
         )
@@ -168,7 +169,7 @@ class TestExportUpdateEntryData:
         update_entry = (
             did.update()
             .add_management_key("man-key2", 0)
-            .add_management_key("man-key3", 1, signature_type=SignatureType.RSA.value)
+            .add_management_key("man-key3", 1, key_type=KeyType.RSA.value)
             .add_did_key(
                 "did-key1",
                 purpose=DIDKeyPurpose.PublicKey.value,
@@ -186,7 +187,7 @@ class TestExportUpdateEntryData:
         content = json.loads(update_entry["content"])
 
         assert ext_ids[0] == "DIDUpdate".encode("utf-8")
-        assert ext_ids[1] == "1.0.0".encode("utf-8")
+        assert ext_ids[1] == ENTRY_SCHEMA_V100.encode("utf-8")
         assert ext_ids[2] == "{}#{}".format(did.id, "man-key1").encode("utf-8")
         assert len(ext_ids) == 4
         assert "revoke" not in content
@@ -241,7 +242,7 @@ class TestExportUpdateEntryData:
         content = json.loads(update_entry["content"])
 
         assert ext_ids[0] == "DIDUpdate".encode("utf-8")
-        assert ext_ids[1] == "1.0.0".encode("utf-8")
+        assert ext_ids[1] == ENTRY_SCHEMA_V100.encode("utf-8")
         assert ext_ids[2] == "{}#{}".format(full_did.id, "man-key1").encode("utf-8")
         assert len(ext_ids) == 4
         assert "add" not in content
@@ -273,7 +274,7 @@ class TestExportUpdateEntryData:
         content = json.loads(update_entry["content"])
 
         assert ext_ids[0] == "DIDUpdate".encode("utf-8")
-        assert ext_ids[1] == "1.0.0".encode("utf-8")
+        assert ext_ids[1] == ENTRY_SCHEMA_V100.encode("utf-8")
         assert ext_ids[2] == "{}#{}".format(full_did.id, "man-key1").encode("utf-8")
         assert len(ext_ids) == 4
         assert "add" in content

@@ -5,8 +5,8 @@ import math
 import operator as op
 
 from client.blockchain import calculate_entry_size, record_entry
-from client.constants import ENTRY_SCHEMA_VERSION, ENTRY_SIZE_LIMIT
-from client.did import SignatureType
+from client.constants import ENTRY_SCHEMA_V100, ENTRY_SIZE_LIMIT
+from client.did import KeyType
 from client.enums import EntryType
 
 
@@ -18,7 +18,7 @@ class DIDUpdater:
 
     Attributes
     ==========
-    did: did.did.DID
+    did: client.did.DID
         The DID object to update
     """
 
@@ -35,7 +35,7 @@ class DIDUpdater:
         self,
         alias,
         priority,
-        signature_type=SignatureType.EdDSA.value,
+        key_type=KeyType.EdDSA.value,
         controller=None,
         priority_requirement=None,
     ):
@@ -46,12 +46,12 @@ class DIDUpdater:
         ----------
         alias: str
         priority: int
-        signature_type: SignatureType, optional
+        key_type: KeyType, optional
         controller: str, optional
         priority_requirement: int, optional
         """
         self.did.management_key(
-            alias, priority, signature_type, controller, priority_requirement
+            alias, priority, key_type, controller, priority_requirement
         )
         return self
 
@@ -59,7 +59,7 @@ class DIDUpdater:
         self,
         alias,
         purpose,
-        signature_type=SignatureType.EdDSA.value,
+        key_type=KeyType.EdDSA.value,
         controller=None,
         priority_requirement=None,
     ):
@@ -70,14 +70,12 @@ class DIDUpdater:
         ----------
         alias: str
         purpose: did.enums.DIDKeyPurpose
-        signature_type: SignatureType, optional
+        key_type: KeyType, optional
         controller: str, optional
         priority_requirement: int, optional
         """
 
-        self.did.did_key(
-            alias, purpose, signature_type, controller, priority_requirement
-        )
+        self.did.did_key(alias, purpose, key_type, controller, priority_requirement)
         return self
 
     def add_service(self, alias, service_type, endpoint, priority_requirement=None):
@@ -174,6 +172,8 @@ class DIDUpdater:
 
         Returns
         -------
+        dict
+            A dictionary with ExtIDs and content for the entry
 
         Raises
         ------
@@ -251,22 +251,22 @@ class DIDUpdater:
         if add_dict:
             entry_content_dict["add"] = add_dict
 
-        entry_content = json.dumps(entry_content_dict)
+        entry_content = json.dumps(entry_content_dict).replace(" ", "")
         data_to_sign = "".join(
             [
                 EntryType.Update.value,
-                ENTRY_SCHEMA_VERSION,
+                ENTRY_SCHEMA_V100,
                 signing_key.full_id(self.did.id),
                 entry_content,
             ]
-        ).replace(" ", "")
+        )
         signature = signing_key.sign(
             hashlib.sha256(data_to_sign.encode("utf-8")).digest()
         )
 
         ext_ids = [
             EntryType.Update.value.encode("utf-8"),
-            ENTRY_SCHEMA_VERSION.encode("utf-8"),
+            ENTRY_SCHEMA_V100.encode("utf-8"),
             signing_key.full_id(self.did.id).encode("utf-8"),
             signature,
         ]
@@ -284,6 +284,23 @@ class DIDUpdater:
     def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
         """
         Attempts to record the DIDUpdate entry on-chain.
+
+        Parameters
+        ----------
+        factomd: obj
+            Factomd instance, instantiated from the Python factom-api package.
+        walletd: obj
+            Factom walletd instance, instantiated from the Python factom-api package.
+        ec_address: str
+            EC address used to pay for the chain & entry creation.
+        verbose: bool, optional
+            If true, display the contents of the entry that will be recorded
+            on-chain.
+
+        Raises
+        ------
+        RuntimeError
+            If the entry cannot be recorded
         """
         record_entry(
             self.did.get_chain(),

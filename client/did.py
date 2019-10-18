@@ -7,12 +7,12 @@ import re
 from client.blockchain import calculate_chain_id, calculate_entry_size, create_chain
 from client.constants import *
 from client.encryptor import encrypt_keys
-from client.enums import SignatureType, EntryType, DIDKeyPurpose
+from client.enums import KeyType, EntryType, DIDKeyPurpose
 from client.keys import ManagementKey, DIDKey
 from client.service import Service
 from client.updater import DIDUpdater
 
-__all__ = ["DID", "SignatureType", "DIDKeyPurpose"]
+__all__ = ["DID", "KeyType", "DIDKeyPurpose"]
 
 
 class DID:
@@ -83,8 +83,8 @@ class DID:
         """
         Returns
         -------
-        did.did.DID
-            The updated DID object
+        DIDUpdater
+            An object allowing updates to the existing DID
         """
         if not self.management_keys:
             raise RuntimeError("Cannot update DID without management keys.")
@@ -94,7 +94,7 @@ class DID:
         self,
         alias,
         priority,
-        signature_type=SignatureType.EdDSA.value,
+        key_type=KeyType.EdDSA.value,
         controller=None,
         priority_requirement=None,
     ):
@@ -108,7 +108,7 @@ class DID:
         priority: int
             A non-negative integer showing the hierarchical level of the key. Keys with lower priority
             override keys with higher priority.
-        signature_type: SignatureType, optional
+        key_type: KeyType, optional
             Identifies the type of signature that the key pair can be used to generate and verify.
         controller: str, optional
             An entity that controls the key. It must be a valid DID. If the argument is not passed in,
@@ -120,9 +120,7 @@ class DID:
         if not controller:
             controller = self.id
 
-        key = ManagementKey(
-            alias, priority, signature_type, controller, priority_requirement
-        )
+        key = ManagementKey(alias, priority, key_type, controller, priority_requirement)
         self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
         self.management_keys.append(key)
@@ -133,7 +131,7 @@ class DID:
         self,
         alias,
         purpose,
-        signature_type=SignatureType.EdDSA.value,
+        key_type=KeyType.EdDSA.value,
         controller=None,
         priority_requirement=None,
     ):
@@ -146,8 +144,8 @@ class DID:
             A human-readable nickname for the key. It should be unique across the keys defined in the DID document.
         purpose: DIDKeyPurpose or DIDKeyPurpose[]
             Shows what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
-        signature_type: SignatureType, optional
-            Identifies the type of signature to be used when creating the key.
+        key_type: KeyType, optional
+            Identifies the type of signature that the key pair can be used to generate and verify.
         controller: str, optional
             An entity that will be making the signatures. It must be a valid DID. If the argument is not passed in,
             the default value is used which is the current DID itself.
@@ -158,7 +156,7 @@ class DID:
         if not controller:
             controller = self.id
 
-        key = DIDKey(alias, purpose, signature_type, controller, priority_requirement)
+        key = DIDKey(alias, purpose, key_type, controller, priority_requirement)
         self._check_alias_is_unique_and_add_to_used(self.used_key_aliases, alias)
 
         self.did_keys.append(key)
@@ -221,7 +219,7 @@ class DID:
 
         ext_ids = [
             EntryType.Create.value.encode("utf-8"),
-            ENTRY_SCHEMA_VERSION.encode("utf-8"),
+            ENTRY_SCHEMA_V100.encode("utf-8"),
             self.nonce,
         ]
         entry_content = json.dumps(self._get_did_document()).encode("utf-8")
@@ -306,8 +304,8 @@ class DID:
 
         Raises
         ------
-            RuntimeError
-                If the chain cannot be created
+        RuntimeError
+            If the chain cannot be created
         """
 
         create_chain(self.export_entry_data(), factomd, walletd, ec_address, verbose)
@@ -331,7 +329,7 @@ class DID:
         )
 
         did_document = {
-            "didMethodVersion": DID_METHOD_SPEC_VERSION,
+            "didMethodVersion": DID_METHOD_SPEC_V020,
             "managementKey": management_keys,
         }
 
@@ -357,7 +355,7 @@ class DID:
 
         self.nonce = os.urandom(32)
         chain_id = calculate_chain_id(
-            [EntryType.Create.value, ENTRY_SCHEMA_VERSION, self.nonce]
+            [EntryType.Create.value, ENTRY_SCHEMA_V100, self.nonce]
         )
         did_id = "{}:{}".format(DID_METHOD_NAME, chain_id)
         return did_id
@@ -365,5 +363,5 @@ class DID:
     @staticmethod
     def _check_alias_is_unique_and_add_to_used(used_aliases, alias):
         if alias in used_aliases:
-            raise ValueError('Duplicate key alias "{}" detected.'.format(alias))
+            raise ValueError('Duplicate alias "{}" detected.'.format(alias))
         used_aliases.add(alias)

@@ -10,8 +10,8 @@
     "controller": {"type": "string"},
     "publicKeyBase58": {"type": "string"},
     "publicKeyPem": {"type": "string"},
-    "priority": {"type": "string"},
-    "priorityRequirement": {"type": "string"},
+    "priority": {"type": "integer", "minimum": 0},
+    "priorityRequirement": {"type": "integer", "minimum": 0},
     "bip44": {"type": "string"}
   },
   "additionalProperties": false,

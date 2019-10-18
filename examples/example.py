@@ -5,7 +5,7 @@ import time
 from factom import Factomd, FactomWalletd
 
 from client.constants import DID_METHOD_NAME
-from client.did import DID, SignatureType, DIDKeyPurpose
+from client.did import DID, KeyType, DIDKeyPurpose
 from client.encryptor import (
     decrypt_keys_from_str,
     decrypt_keys_from_json_str,
@@ -21,34 +21,34 @@ ec_address = os.environ.get("EC_ADDR")
 
 
 def create_new_did():
-    # New management key with default signature type and controller
+    # New management key with default key type and controller
     management_key_1_alias = "my-first-management-key"
     management_key_1_priority = 0
 
-    # New management key with specified signature type and controller
+    # New management key with specified key type and controller
     management_key_2_alias = "my-second-management-key"
     management_key_2_priority = 2
-    management_key_2_signature_type = SignatureType.ECDSA.value
+    management_key_2_type = KeyType.ECDSA.value
     management_key_2_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
         DID_METHOD_NAME
     )
 
-    # New public key with default signature type and controller
+    # New public key with default key type and controller
     did_key_1_alias = "my-did-key-1"
     did_key_1_purpose = [DIDKeyPurpose.PublicKey.value]
 
-    # New authentication key with specified signature type
+    # New authentication key with specified key type
     did_key_2_alias = "my-did-key-2"
     did_key_2_purpose = [DIDKeyPurpose.AuthenticationKey.value]
-    did_key_2_signature_type = SignatureType.RSA.value
+    did_key_2_type = KeyType.RSA.value
 
-    # New public and authentication key with specified signature type, controller and priority requirement
+    # New public and authentication key with specified key type, controller and priority requirement
     did_key_3_alias = "my-did-key-3"
     did_key_3_purpose = [
         DIDKeyPurpose.PublicKey.value,
         DIDKeyPurpose.AuthenticationKey.value,
     ]
-    did_key_3_signature_type = SignatureType.EdDSA.value
+    did_key_3_type = KeyType.EdDSA.value
     did_key_3_controller = "{}:d3936b2f0bdd45fe71d7156e835434b7970afd78868076f56654d05f838b8005".format(
         DID_METHOD_NAME
     )
@@ -65,15 +65,15 @@ def create_new_did():
         .management_key(
             management_key_2_alias,
             management_key_2_priority,
-            management_key_2_signature_type,
+            management_key_2_type,
             management_key_2_controller,
         )
         .did_key(did_key_1_alias, did_key_1_purpose)
-        .did_key(did_key_2_alias, did_key_2_purpose, did_key_2_signature_type)
+        .did_key(did_key_2_alias, did_key_2_purpose, did_key_2_type)
         .did_key(
             did_key_3_alias,
             did_key_3_purpose,
-            did_key_3_signature_type,
+            did_key_3_type,
             did_key_3_controller,
             did_key_3_priority_requirement,
         )

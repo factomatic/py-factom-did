@@ -1,12 +1,12 @@
 from enum import Enum
 
-__all__ = ["SignatureType", "EntryType", "DIDKeyPurpose"]
+__all__ = ["KeyType", "EntryType", "DIDKeyPurpose"]
 
 
-class SignatureType(Enum):
-    EdDSA = "Ed25519"
-    ECDSA = "ECDSASecp256k1"
-    RSA = "RSA"
+class KeyType(Enum):
+    EdDSA = "Ed25519VerificationKey"
+    ECDSA = "ECDSASecp256k1VerificationKey"
+    RSA = "RSAVerificationKey"
 
 
 class EntryType(Enum):

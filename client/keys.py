@@ -9,8 +9,8 @@ import ecdsa
 from ecdsa.curves import SECP256k1
 import ed25519
 
-from client.constants import DID_METHOD_NAME
-from client.enums import DIDKeyPurpose, SignatureType
+from client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
+from client.enums import DIDKeyPurpose, KeyType
 
 __all__ = ["AbstractDIDKey", "ManagementKey", "DIDKey"]
 
@@ -23,7 +23,7 @@ class AbstractDIDKey:
     ----------
     alias: str
         A human-readable nickname for the key.
-    signature_type: SignatureType
+    key_type: KeyType
         Identifies the type of signature that the key pair can be used to generate and verify.
     controller: str
         An entity that controls the key.
@@ -38,7 +38,7 @@ class AbstractDIDKey:
     def __init__(
         self,
         alias,
-        signature_type,
+        key_type,
         controller,
         priority_requirement,
         public_key=None,
@@ -46,55 +46,79 @@ class AbstractDIDKey:
     ):
 
         self._validate_key_input_params(
-            alias,
-            signature_type,
-            controller,
-            priority_requirement,
-            public_key,
-            private_key,
+            alias, key_type, controller, priority_requirement
         )
 
         self.alias = alias
-        self.signature_type = signature_type
+        self.key_type = key_type
         self.controller = controller
         self.priority_requirement = priority_requirement
 
         self._derive_signing_and_verifying_key(public_key, private_key)
 
-        if self.signature_type == SignatureType.EdDSA.value:
+        if self.key_type == KeyType.EdDSA.value:
             self.public_key = base58.b58encode(self.verifying_key.to_bytes())
-            self.private_key = base58.b58encode(self.signing_key.to_bytes())
-        elif self.signature_type == SignatureType.ECDSA.value:
+            self.private_key = (
+                base58.b58encode(self.signing_key.to_bytes())
+                if self.signing_key
+                else None
+            )
+        elif self.key_type == KeyType.ECDSA.value:
             self.public_key = base58.b58encode(self.verifying_key.to_string())
-            self.private_key = base58.b58encode(self.signing_key.to_string())
-        elif self.signature_type == SignatureType.RSA.value:
+            self.private_key = (
+                base58.b58encode(self.signing_key.to_string())
+                if self.signing_key
+                else None
+            )
+        elif self.key_type == KeyType.RSA.value:
             self.public_key = self.verifying_key.export_key()
-            self.private_key = self.signing_key.export_key(
-                format="PEM", passphrase=None, pkcs=8
+            self.private_key = (
+                self.signing_key.export_key(format="PEM", passphrase=None, pkcs=8)
+                if self.signing_key
+                else None
             )
         else:
             raise NotImplementedError(
-                "Unsupported signature type: {}".format(self.signature_type)
+                "Unsupported signature type: {}".format(self.key_type)
             )
 
     def __eq__(self, other):
         if self.__class__ is other.__class__:
             return (
                 self.alias,
-                self.signature_type,
+                self.key_type,
                 self.controller,
                 self.priority_requirement,
                 self.public_key,
                 self.private_key,
             ) == (
                 other.alias,
-                other.signature_type,
+                other.key_type,
                 other.controller,
                 other.priority_requirement,
                 other.public_key,
                 other.private_key,
             )
         return NotImplemented
+
+    def __repr__(self):
+        public_key = str(self.public_key, "utf-8")
+        if self.key_type == KeyType.RSA.value:
+            public_key = AbstractDIDKey._minify_rsa_public_key(public_key)
+
+        return (
+            "<{0}.{1} (alias={2}, key_type={3},"
+            " controller={4}, priority_requirement={5}, public_key={6}, private_key=({7}))>".format(
+                self.__module__,
+                type(self).__name__,
+                self.alias,
+                self.key_type,
+                self.controller,
+                self.priority_requirement,
+                public_key,
+                "hidden" if self.private_key is not None else "not set",
+            )
+        )
 
     def generate_key_pair(self):
         """
@@ -111,25 +135,27 @@ class AbstractDIDKey:
             If an supported signature type is used.
         """
 
-        if self.signature_type == SignatureType.EdDSA.value:
+        if self.key_type == KeyType.EdDSA.value:
             self._generate_ed_dsa_key_pair()
-        elif self.signature_type == SignatureType.ECDSA.value:
+        elif self.key_type == KeyType.ECDSA.value:
             self._generate_ec_dsa_key_pair()
-        elif self.signature_type == SignatureType.RSA.value:
+        elif self.key_type == KeyType.RSA.value:
             self._generate_rsa_key_pair()
         else:
             raise NotImplementedError(
-                "Unsupported signature type: {}".format(self.signature_type)
+                "Unsupported signature type: {}".format(self.key_type)
             )
 
-    def to_entry_dict(self, did):
+    def to_entry_dict(self, did, version=ENTRY_SCHEMA_V100):
         """
         Converts the object to a dictionary suitable for recording on-chain.
 
-        Params
-        ------
+        Parameters
+        ----------
         did: str
             The DID with which this key is associated. Note that this can be different from the key controller.
+        version: str
+            The entry schema version
 
         Returns
         -------
@@ -139,36 +165,55 @@ class AbstractDIDKey:
             then this field is called `publicKeyPem`, otherwise it is called `publicKeyBase58`.
 
         """
-        d = dict()
+        if version == ENTRY_SCHEMA_V100:
+            d = dict()
 
-        d["id"] = self.full_id(did)
-        d["type"] = "{}VerificationKey".format(self.signature_type)
-        d["controller"] = self.controller
+            d["id"] = self.full_id(did)
+            d["type"] = self.key_type
+            d["controller"] = self.controller
 
-        if self.signature_type == SignatureType.RSA.value:
-            d["publicKeyPem"] = str(self.public_key, "utf-8")
+            if self.key_type == KeyType.RSA.value:
+                d["publicKeyPem"] = str(self.public_key, "utf-8")
+            else:
+                d["publicKeyBase58"] = str(self.public_key, "utf-8")
+
+            if self.priority_requirement is not None:
+                d["priorityRequirement"] = self.priority_requirement
+
+            return d
         else:
-            d["publicKeyBase58"] = str(self.public_key, "utf-8")
+            raise NotImplementedError("Unknown schema version: {}".format(version))
 
-        if self.priority_requirement is not None:
-            d["priorityRequirement"] = self.priority_requirement
-
-        return d
+    @staticmethod
+    def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
+        if version == ENTRY_SCHEMA_V100:
+            return AbstractDIDKey(
+                alias=entry_dict.get("id", "").split("#")[-1],
+                key_type=entry_dict.get("type"),
+                controller=entry_dict.get("controller"),
+                priority_requirement=entry_dict.get("priorityRequirement"),
+                public_key=base58.b58decode(entry_dict["publicKeyBase58"])
+                if "publicKeyBase58" in entry_dict
+                else entry_dict.get("publicKeyPem"),
+            )
+        else:
+            raise NotImplementedError("Unknown schema version: {}".format(version))
 
     def rotate(self):
         """
             Generates new key pair for the key.
         """
+        assert self.signing_key is not None, "Signing key must be set"
 
         self.generate_key_pair()
 
-        if self.signature_type == SignatureType.EdDSA.value:
+        if self.key_type == KeyType.EdDSA.value:
             self.public_key = base58.b58encode(self.verifying_key.to_bytes())
             self.private_key = base58.b58encode(self.signing_key.to_bytes())
-        elif self.signature_type == SignatureType.ECDSA.value:
+        elif self.key_type == KeyType.ECDSA.value:
             self.public_key = base58.b58encode(self.verifying_key.to_string())
             self.private_key = base58.b58encode(self.signing_key.to_string())
-        elif self.signature_type == SignatureType.RSA.value:
+        elif self.key_type == KeyType.RSA.value:
             self.public_key = self.verifying_key.export_key()
             self.private_key = self.signing_key.export_key(
                 format="PEM", passphrase=None, pkcs=8
@@ -197,19 +242,22 @@ class AbstractDIDKey:
         ------
         NotImplementedError
             If the signature type is not supported.
+        AssertionError
+            If the supplied message is not bytes, or if a private key has not been specified.
         """
 
         assert type(message) is bytes, "Message must be supplied as bytes."
+        assert self.signing_key is not None, "Signing is not set."
 
-        if self.signature_type == SignatureType.ECDSA.value:
+        if self.key_type == KeyType.ECDSA.value:
             return self.signing_key.sign_digest(hash_f(message).digest())
-        elif self.signature_type == SignatureType.EdDSA.value:
+        elif self.key_type == KeyType.EdDSA.value:
             return self.signing_key.sign(hash_f(message).digest())
-        elif self.signature_type == SignatureType.RSA.value:
+        elif self.key_type == KeyType.RSA.value:
             return pkcs1_15.new(self.signing_key).sign(SHA256.new(message))
         else:
             raise NotImplementedError(
-                "Unsupported signature type: {}".format(self.signature_type)
+                "Unsupported signature type: {}".format(self.key_type)
             )
 
     def verify(self, message, signature, hash_f=hashlib.sha256):
@@ -241,21 +289,21 @@ class AbstractDIDKey:
         assert type(message) is bytes, "Message must be supplied as bytes."
         assert type(signature) is bytes, "Signature must be supplied as bytes."
 
-        if self.signature_type == SignatureType.ECDSA.value:
+        if self.key_type == KeyType.ECDSA.value:
             try:
                 return self.verifying_key.verify_digest(
                     signature, hash_f(message).digest()
                 )
             except ECDSABadSignatureError:
                 return False
-        elif self.signature_type == SignatureType.EdDSA.value:
+        elif self.key_type == KeyType.EdDSA.value:
             try:
                 self.verifying_key.verify(signature, hash_f(message).digest())
             except Ed25519BadSignatureError:
                 return False
             else:
                 return True
-        elif self.signature_type == SignatureType.RSA.value:
+        elif self.key_type == KeyType.RSA.value:
             try:
                 pkcs1_15.new(self.verifying_key).verify(SHA256.new(message), signature)
             except ValueError:
@@ -264,7 +312,7 @@ class AbstractDIDKey:
                 return True
         else:
             raise NotImplementedError(
-                "Unsupported signature type: {}".format(self.signature_type)
+                "Unsupported signature type: {}".format(self.key_type)
             )
 
     def full_id(self, did):
@@ -292,43 +340,72 @@ class AbstractDIDKey:
             self.generate_key_pair()
             return
 
-        # At this point, private_key is not None, due to the check above and the one in
-        # _validate_key_input_params, so we can proceed with the derivation of the
-        # signing key object based on the signature type
-        if self.signature_type == SignatureType.EdDSA.value:
-            try:
-                self.signing_key = ed25519.SigningKey(private_key)
-                self.verifying_key = self.signing_key.get_verifying_key()
-            except ValueError:
-                raise ValueError("Invalid EdDSA private key. Must be a 32-byte seed.")
-        elif self.signature_type == SignatureType.ECDSA.value:
-            try:
-                self.signing_key = ecdsa.SigningKey.from_string(
-                    private_key, curve=SECP256k1
+        if public_key is not None and private_key is None:
+            if self.key_type == KeyType.EdDSA.value:
+                try:
+                    self.signing_key = None
+                    self.verifying_key = ed25519.VerifyingKey(public_key)
+                except ValueError:
+                    raise ValueError(
+                        "Invalid EdDSA public key. Must be a 32-byte value."
+                    )
+            elif self.key_type == KeyType.ECDSA.value:
+                try:
+                    self.signing_key = None
+                    self.verifying_key = ecdsa.VerifyingKey.from_string(
+                        public_key, curve=SECP256k1
+                    )
+                except (AssertionError, ValueError):
+                    raise ValueError(
+                        "Invalid ECDSA private key. Must be a 64-byte SECP256k1 curve point."
+                    )
+            elif self.key_type == KeyType.RSA.value:
+                self.signing_key = None
+                # Raise the default exception in case this fails, as it's informative enough
+                self.verifying_key_key = RSA.import_key(public_key)
+            else:
+                raise NotImplementedError(
+                    "Unsupported signature type: {}".format(self.key_type)
                 )
-                self.verifying_key = self.signing_key.get_verifying_key()
-            except (AssertionError, ValueError):
-                raise ValueError(
-                    "Invalid ECDSA private key. Must be a 32-byte secret exponent."
+            return
+
+        if private_key is not None:
+            if self.key_type == KeyType.EdDSA.value:
+                try:
+                    self.signing_key = ed25519.SigningKey(private_key)
+                    self.verifying_key = self.signing_key.get_verifying_key()
+                except ValueError:
+                    raise ValueError(
+                        "Invalid EdDSA private key. Must be a 32-byte seed."
+                    )
+            elif self.key_type == KeyType.ECDSA.value:
+                try:
+                    self.signing_key = ecdsa.SigningKey.from_string(
+                        private_key, curve=SECP256k1
+                    )
+                    self.verifying_key = self.signing_key.get_verifying_key()
+                except (AssertionError, ValueError):
+                    raise ValueError(
+                        "Invalid ECDSA private key. Must be a 32-byte secret exponent."
+                    )
+            elif self.key_type == KeyType.RSA.value:
+                # Raise the default exception in case this fails, as it's informative enough
+                self.signing_key = RSA.import_key(private_key)
+                self.verifying_key = self.signing_key.publickey()
+            else:
+                raise NotImplementedError(
+                    "Unsupported signature type: {}".format(self.key_type)
                 )
-        elif self.signature_type == SignatureType.RSA.value:
-            # Raise the default exception in case this fails, as it's informative enough
-            self.signing_key = RSA.import_key(private_key)
-            self.verifying_key = self.signing_key.publickey()
-        else:
-            raise NotImplementedError(
-                "Unsupported signature type: {}".format(self.signature_type)
-            )
 
         # If a public key is provided in conjunction with the private key, validate that
         # the public key matches the generated verification key, otherwise raise an
         # exception
-        if public_key is not None:
+        if public_key is not None and private_key is not None:
             non_matching_public_key_msg = (
                 "The provided public key does not match the one derived "
                 "from the provided private key"
             )
-            if self.signature_type == SignatureType.EdDSA.value:
+            if self.key_type == KeyType.EdDSA.value:
                 if type(public_key) is bytes:
                     assert (
                         self.verifying_key.to_bytes() == public_key
@@ -337,7 +414,7 @@ class AbstractDIDKey:
                     assert (
                         self.verifying_key.to_bytes().decode() == public_key
                     ), non_matching_public_key_msg
-            elif self.signature_type == SignatureType.ECDSA.value:
+            elif self.key_type == KeyType.ECDSA.value:
                 if type(public_key) is bytes:
                     assert (
                         self.verifying_key.to_string() == public_key
@@ -364,24 +441,17 @@ class AbstractDIDKey:
         )
 
     @staticmethod
-    def _validate_key_input_params(
-        alias, signature_type, controller, priority_requirement, public_key, private_key
-    ):
-        if public_key is not None and private_key is None:
-            raise ValueError(
-                "Public key specified without a corresponding private key."
-            )
-
+    def _validate_key_input_params(alias, key_type, controller, priority_requirement):
         if not re.match("^[a-z0-9-]{1,32}$", alias):
             raise ValueError(
                 "Alias must not be more than 32 characters long and must contain only lower-case "
                 "letters, digits and hyphens."
             )
 
-        if signature_type not in (
-            SignatureType.ECDSA.value,
-            SignatureType.EdDSA.value,
-            SignatureType.RSA.value,
+        if key_type not in (
+            KeyType.ECDSA.value,
+            KeyType.EdDSA.value,
+            KeyType.RSA.value,
         ):
             raise ValueError("Type must be a valid signature type.")
 
@@ -399,10 +469,10 @@ class ManagementKey(AbstractDIDKey):
     Attributes
     ----------
     alias: str
-    priority: int or str
+    priority: int
         A non-negative integer showing the hierarchical level of the key. Keys with lower priority override keys with
         higher priority.
-    signature_type: SignatureType
+    key_type: KeyType
     controller: str
     priority_requirement: int, optional
     public_key: str, optional
@@ -413,22 +483,17 @@ class ManagementKey(AbstractDIDKey):
         self,
         alias,
         priority,
-        signature_type,
+        key_type,
         controller,
         priority_requirement=None,
         public_key=None,
         private_key=None,
     ):
         super().__init__(
-            alias,
-            signature_type,
-            controller,
-            priority_requirement,
-            public_key,
-            private_key,
+            alias, key_type, controller, priority_requirement, public_key, private_key
         )
 
-        if int(priority) < 0:
+        if priority < 0:
             raise ValueError("Priority must be a non-negative integer.")
 
         self.priority = priority
@@ -443,7 +508,7 @@ class ManagementKey(AbstractDIDKey):
             (
                 self.alias,
                 self.priority,
-                self.signature_type,
+                self.key_type,
                 self.controller,
                 self.priority_requirement,
                 self.public_key,
@@ -453,27 +518,48 @@ class ManagementKey(AbstractDIDKey):
 
     def __repr__(self):
         public_key = str(self.public_key, "utf-8")
-        if self.signature_type == SignatureType.RSA.value:
+        if self.key_type == KeyType.RSA.value:
             public_key = AbstractDIDKey._minify_rsa_public_key(public_key)
 
         return (
-            "<{0}.{1} (alias={2}, priority={3}, signature_type={4},"
-            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+            "<{0}.{1} (alias={2}, priority={3}, key_type={4},"
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=({8}))>".format(
                 self.__module__,
                 type(self).__name__,
                 self.alias,
                 self.priority,
-                self.signature_type,
+                self.key_type,
                 self.controller,
                 self.priority_requirement,
                 public_key,
+                "hidden" if self.private_key is not None else "not set",
             )
         )
 
-    def to_entry_dict(self, did):
-        d = super().to_entry_dict(did)
-        d["priority"] = self.priority
-        return d
+    def to_entry_dict(self, did, version=ENTRY_SCHEMA_V100):
+        if version == ENTRY_SCHEMA_V100:
+            d = super().to_entry_dict(did)
+            d["priority"] = self.priority
+            return d
+        else:
+            raise NotImplementedError("Unknown schema version: {}".format(version))
+
+    @staticmethod
+    def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
+        k = AbstractDIDKey.from_entry_dict(entry_dict, version)
+        return ManagementKey(
+            alias=k.alias,
+            priority=entry_dict.get("priority"),
+            key_type=k.key_type,
+            controller=k.controller,
+            priority_requirement=k.priority_requirement,
+            public_key=base58.b58decode(k.public_key)
+            if k.public_key is not None and k.key_type != KeyType.RSA.value
+            else k.public_key,
+            private_key=base58.b58decode(k.private_key)
+            if k.private_key is not None and k.private_key is not KeyType.RSA.value
+            else k.private_key,
+        )
 
 
 class DIDKey(AbstractDIDKey):
@@ -485,7 +571,7 @@ class DIDKey(AbstractDIDKey):
     alias: str
     purpose: DIDKeyPurpose or DIDKeyPurpose[]
         Shows what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
-    signature_type: SignatureType
+    key_type: KeyType
     controller: str
     priority_requirement: int, optional
     public_key: str, optional
@@ -496,19 +582,14 @@ class DIDKey(AbstractDIDKey):
         self,
         alias,
         purpose,
-        signature_type,
+        key_type,
         controller,
         priority_requirement=None,
         public_key=None,
         private_key=None,
     ):
         super().__init__(
-            alias,
-            signature_type,
-            controller,
-            priority_requirement,
-            public_key,
-            private_key,
+            alias, key_type, controller, priority_requirement, public_key, private_key
         )
 
         if type(purpose) is list:
@@ -537,7 +618,7 @@ class DIDKey(AbstractDIDKey):
             (
                 self.alias,
                 "".join(self.purpose),
-                self.signature_type,
+                self.key_type,
                 self.controller,
                 self.priority_requirement,
                 self.public_key,
@@ -547,24 +628,45 @@ class DIDKey(AbstractDIDKey):
 
     def __repr__(self):
         public_key = str(self.public_key, "utf-8")
-        if self.signature_type == SignatureType.RSA.value:
+        if self.key_type == KeyType.RSA.value:
             public_key = AbstractDIDKey._minify_rsa_public_key(public_key)
 
         return (
-            "<{0}.{1} (alias={2}, purpose={3}, signature_type={4},"
-            " controller={5}, priority_requirement={6}, public_key={7}, private_key=(hidden))>".format(
+            "<{0}.{1} (alias={2}, purpose={3}, key_type={4},"
+            " controller={5}, priority_requirement={6}, public_key={7}, private_key=({8}))>".format(
                 self.__module__,
                 type(self).__name__,
                 self.alias,
                 self.purpose,
-                self.signature_type,
+                self.key_type,
                 self.controller,
                 self.priority_requirement,
                 public_key,
+                "hidden" if self.private_key is not None else "not set",
             )
         )
 
-    def to_entry_dict(self, did):
-        d = super().to_entry_dict(did)
-        d["purpose"] = self.purpose
-        return d
+    def to_entry_dict(self, did, version=ENTRY_SCHEMA_V100):
+        if version == ENTRY_SCHEMA_V100:
+            d = super().to_entry_dict(did)
+            d["purpose"] = self.purpose
+            return d
+        else:
+            raise NotImplementedError("Unknown schema version: {}".format(version))
+
+    @staticmethod
+    def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
+        k = AbstractDIDKey.from_entry_dict(entry_dict, version)
+        return DIDKey(
+            alias=k.alias,
+            purpose=entry_dict.get("purpose"),
+            key_type=k.key_type,
+            controller=k.controller,
+            priority_requirement=k.priority_requirement,
+            public_key=base58.b58decode(k.public_key)
+            if k.public_key is not None and k.key_type != KeyType.RSA.value
+            else k.public_key,
+            private_key=base58.b58decode(k.private_key)
+            if k.private_key is not None and k.private_key is not KeyType.RSA.value
+            else k.private_key,
+        )
