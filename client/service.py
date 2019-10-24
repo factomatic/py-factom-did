@@ -75,6 +75,11 @@ class Service:
             The DID to which this service belongs.
         version: str
             The entry schema version
+
+        Raises
+        ------
+        NotImplementedError
+            If the entry schema version is not supported
         """
         if version == ENTRY_SCHEMA_V100:
             d = dict()

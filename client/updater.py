@@ -18,7 +18,7 @@ class DIDUpdater:
 
     Attributes
     ==========
-    did: did.did.DID
+    did: client.did.DID
         The DID object to update
     """
 
@@ -172,6 +172,8 @@ class DIDUpdater:
 
         Returns
         -------
+        dict
+            A dictionary with ExtIDs and content for the entry
 
         Raises
         ------
@@ -282,6 +284,23 @@ class DIDUpdater:
     def record_on_chain(self, factomd, walletd, ec_address, verbose=False):
         """
         Attempts to record the DIDUpdate entry on-chain.
+
+        Parameters
+        ----------
+        factomd: obj
+            Factomd instance, instantiated from the Python factom-api package.
+        walletd: obj
+            Factom walletd instance, instantiated from the Python factom-api package.
+        ec_address: str
+            EC address used to pay for the chain & entry creation.
+        verbose: bool, optional
+            If true, display the contents of the entry that will be recorded
+            on-chain.
+
+        Raises
+        ------
+        RuntimeError
+            If the entry cannot be recorded
         """
         record_entry(
             self.did.get_chain(),
