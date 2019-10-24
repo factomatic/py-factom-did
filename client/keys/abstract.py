@@ -145,6 +145,25 @@ class AbstractDIDKey:
 
     @staticmethod
     def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
+        """
+        Creates an AbstractDIDKey object from an on-chain entry
+
+        Parameters
+        ----------
+        entry_dict: dict
+            The on-chain entry, represented as a Python dictionary
+        version: str
+            The entry schema version
+
+        Returns
+        -------
+        AbstractDIDKey
+
+        Raises
+        ------
+        NotImplementedError
+            If the supplied version is not supported
+        """
         if version == ENTRY_SCHEMA_V100:
             return AbstractDIDKey(
                 alias=entry_dict.get("id", "").split("#")[-1],
