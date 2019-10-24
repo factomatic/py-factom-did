@@ -301,3 +301,7 @@ class TestExportUpdateEntryData:
         assert added["service"][0]["id"] == "{}#encrypted-chat".format(full_did.id)
         assert added["service"][0]["type"] == "chat-service"
         assert added["service"][0]["serviceEndpoint"] == "https://my-chat-service.com"
+
+    def test_revocation_of_all_mngt_keys_with_priority_zero(self, full_did):
+        with pytest.raises(ValueError):
+            full_did.update().revoke_management_key("man-key1").export_entry_data()

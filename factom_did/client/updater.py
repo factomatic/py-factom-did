@@ -186,6 +186,13 @@ class DIDUpdater:
         )
         new_management_keys, new_did_keys, new_services = self._get_new()
 
+        if not self.exists_management_key_with_priority_zero(
+            self.orig_management_keys, new_management_keys, revoked_management_keys
+        ):
+            raise ValueError(
+                "DIDUpdate entry would leave no management keys of priority zero"
+            )
+
         # Entries in the "revoke" section of a DIDUpdate entry
         revoke_dict = defaultdict(list)
 
@@ -310,6 +317,32 @@ class DIDUpdater:
             ec_address,
             verbose,
         )
+
+    @staticmethod
+    def exists_management_key_with_priority_zero(
+        active_management_keys, new_management_keys, management_keys_to_revoke
+    ):
+        """
+        Checks if a management key of priority zero would be present if the management keys will be updated according
+        to the given parameters.
+
+        Parameters
+        ----------
+        active_management_keys: set
+            The currently active management keys
+        new_management_keys: set
+            The management keys to be added
+        management_keys_to_revoke: set
+            The management keys to be revoked
+
+        Returns
+        -------
+        bool
+        """
+        active_management_keys = active_management_keys.copy()
+        active_management_keys.update(new_management_keys)
+        remaining_keys = active_management_keys.difference(management_keys_to_revoke)
+        return min(map(lambda key: key.priority, remaining_keys)) == 0
 
     def _get_revoked(self):
         revoked_management_keys = self.orig_management_keys.difference(
