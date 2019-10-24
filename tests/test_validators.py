@@ -6,7 +6,8 @@ import pytest
 
 from client.constants import DID_METHOD_NAME
 from client.enums import DIDKeyPurpose, KeyType
-from client.keys import DIDKey, ManagementKey
+from client.keys.did import DIDKey
+from client.keys.management import ManagementKey
 from client.service import Service
 from resolver.exceptions import MalformedDIDManagementEntry
 from resolver.schema import get_schema_validator

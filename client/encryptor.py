@@ -1,9 +1,11 @@
 from base64 import urlsafe_b64decode
+import json
+import os
+
+import base58
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256, HMAC
 from Crypto.Protocol.KDF import PBKDF2
-import json
-import os
 
 __all__ = [
     "encrypt_keys",
@@ -33,10 +35,12 @@ def encrypt_keys(management_keys, did_keys, password):
     """
 
     management_keys_dict = {
-        k.alias: str(k.private_key, "utf8") for k in management_keys
+        k.alias: base58.b58encode(k.private_key).decode() for k in management_keys
     }
 
-    did_keys_dict = {k.alias: str(k.private_key, "utf8") for k in did_keys}
+    did_keys_dict = {
+        k.alias: base58.b58encode(k.private_key).decode() for k in did_keys
+    }
 
     keys_data = {"managementKeys": management_keys_dict, "didKeys": did_keys_dict}
 

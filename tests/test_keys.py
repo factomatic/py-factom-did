@@ -1,11 +1,14 @@
+import hashlib
 import secrets
 
 import pytest
 from Crypto.PublicKey import RSA
+from Crypto.Hash import SHA256
 
 from client.constants import DID_METHOD_NAME
 from client.enums import KeyType
-from client.keys import AbstractDIDKey, ManagementKey
+from client.keys.abstract import AbstractDIDKey
+from client.keys.management import ManagementKey
 
 
 @pytest.fixture
@@ -41,7 +44,7 @@ class TestAbstractDIDKey:
                 private_key=b"012afaf",
             )
         assert (
-            str(excinfo.value) == "Invalid EdDSA private key. Must be a 32-byte seed."
+            str(excinfo.value) == "Invalid Ed25519 private key. Must be a 32-byte seed."
         )
 
         with pytest.raises(ValueError) as excinfo:
@@ -207,18 +210,19 @@ class TestAbstractDIDKey:
             priority_requirement=1,
         )
         keys = [ecdsa_key, eddsa_key, rsa_key]
+        hash_fs = [hashlib.sha256, hashlib.sha256, SHA256.new]
         invalid_message = "hello-DIDs"
         message = b"hello-DIDs"
 
-        for key in keys:
+        for key, hash_f in zip(keys, hash_fs):
             with pytest.raises(AssertionError):
-                key.sign(invalid_message)
+                key.sign(invalid_message, hash_f)
 
-            sig = key.sign(message)
-            assert key.verify(message, sig)
-            assert not key.verify(b"hello", sig)
+            sig = key.sign(message, hash_f)
+            assert key.verify(message, sig, hash_f)
+            assert not key.verify(b"hello", sig, hash_f)
 
             with pytest.raises(AssertionError):
-                key.verify(message.hex(), sig)
+                key.verify(message.hex(), sig, hash_f)
             with pytest.raises(AssertionError):
-                key.verify(message, sig.hex())
+                key.verify(message, sig.hex(), hash_f)
