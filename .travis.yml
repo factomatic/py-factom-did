@@ -9,6 +9,6 @@ install:
 - pip install pipenv
 - pipenv install -d --pre
 script:
-- pytest --cov=./client/ --cov=./resolver
+- pytest --cov=./factom_did/client/ --cov=./factom_did/resolver
 after_success:
 - coveralls
