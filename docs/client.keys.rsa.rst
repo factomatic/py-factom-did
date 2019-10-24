@@ -1,7 +1,7 @@
 client.keys.rsa module
 ======================
 
-.. automodule:: client.keys.rsa
+.. automodule:: factom_did.client.keys.rsa
     :members:
     :undoc-members:
     :show-inheritance:

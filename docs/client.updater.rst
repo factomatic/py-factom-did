@@ -1,7 +1,7 @@
 client.updater module
 =====================
 
-.. automodule:: client.updater
+.. automodule:: factom_did.client.updater
     :members:
     :undoc-members:
     :show-inheritance:

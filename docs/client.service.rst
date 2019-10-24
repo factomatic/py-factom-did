@@ -1,7 +1,7 @@
 client.service module
 =====================
 
-.. automodule:: client.service
+.. automodule:: factom_did.client.service
     :members:
     :undoc-members:
     :show-inheritance:
