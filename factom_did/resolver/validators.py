@@ -2,9 +2,9 @@ import re
 
 from jsonschema.exceptions import ValidationError
 
-from client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
-from client.enums import EntryType
-from resolver.exceptions import MalformedDIDManagementEntry
+from factom_did.client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
+from factom_did.client.enums import EntryType
+from factom_did.resolver.exceptions import MalformedDIDManagementEntry
 
 
 class EmptyEntryContentValidator:

@@ -2,11 +2,11 @@ import re
 
 import base58
 
-from client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
-from client.enums import KeyType
-from client.keys.ecdsa import ECDSASecp256k1Key
-from client.keys.eddsa import Ed25519Key
-from client.keys.rsa import RSAKey
+from factom_did.client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
+from factom_did.client.enums import KeyType
+from factom_did.client.keys.ecdsa import ECDSASecp256k1Key
+from factom_did.client.keys.eddsa import Ed25519Key
+from factom_did.client.keys.rsa import RSAKey
 
 
 class AbstractDIDKey:

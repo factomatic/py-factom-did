@@ -4,10 +4,10 @@ import json
 import math
 import operator as op
 
-from client.blockchain import calculate_entry_size, record_entry
-from client.constants import ENTRY_SCHEMA_V100, ENTRY_SIZE_LIMIT
-from client.did import KeyType
-from client.enums import EntryType
+from factom_did.client.blockchain import calculate_entry_size, record_entry
+from factom_did.client.constants import ENTRY_SCHEMA_V100, ENTRY_SIZE_LIMIT
+from factom_did.client.did import KeyType
+from factom_did.client.enums import EntryType
 
 
 class DIDUpdater:

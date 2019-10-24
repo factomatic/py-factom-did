@@ -5,11 +5,11 @@ import hashlib
 import math
 from packaging import version
 
-from client.constants import DID_METHOD_SPEC_V020
-from client.keys.did import DIDKey
-from client.keys.management import ManagementKey
-from client.service import Service
-from resolver.exceptions import MalformedDIDManagementEntry
+from factom_did.client.constants import DID_METHOD_SPEC_V020
+from factom_did.client.keys.did import DIDKey
+from factom_did.client.keys.management import ManagementKey
+from factom_did.client.service import Service
+from factom_did.resolver.exceptions import MalformedDIDManagementEntry
 
 
 def _is_valid_signature(ext_ids, content, signing_key):

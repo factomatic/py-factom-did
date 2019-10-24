@@ -1,6 +1,6 @@
 from os.path import abspath, dirname, join
 
-from client.constants import ENTRY_SCHEMA_V100
+from factom_did.client.constants import ENTRY_SCHEMA_V100
 
 import jsonref
 from jsonschema.validators import validator_for
@@ -9,7 +9,7 @@ from jsonschema.validators import validator_for
 def _load_json_schema(filename, version=ENTRY_SCHEMA_V100):
     """Loads the given schema file"""
 
-    relative_path = join("resolver", "schemas", version, filename)
+    relative_path = join("factom_did", "resolver", "schemas", version, filename)
     absolute_path = abspath(relative_path)
 
     base_path = dirname(absolute_path)

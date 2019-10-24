@@ -4,14 +4,18 @@ import os
 import re
 
 
-from client.blockchain import calculate_chain_id, calculate_entry_size, create_chain
-from client.constants import *
-from client.encryptor import encrypt_keys
-from client.enums import KeyType, EntryType, DIDKeyPurpose
-from client.keys.did import DIDKey
-from client.keys.management import ManagementKey
-from client.service import Service
-from client.updater import DIDUpdater
+from factom_did.client.blockchain import (
+    calculate_chain_id,
+    calculate_entry_size,
+    create_chain,
+)
+from factom_did.client.constants import *
+from factom_did.client.encryptor import encrypt_keys
+from factom_did.client.enums import DIDKeyPurpose, EntryType, KeyType
+from factom_did.client.keys.did import DIDKey
+from factom_did.client.keys.management import ManagementKey
+from factom_did.client.service import Service
+from factom_did.client.updater import DIDUpdater
 
 __all__ = ["DID", "KeyType", "DIDKeyPurpose"]
 
