@@ -5,10 +5,10 @@ import pytest
 from Crypto.PublicKey import RSA
 from Crypto.Hash import SHA256
 
-from client.constants import DID_METHOD_NAME
-from client.enums import KeyType
-from client.keys.abstract import AbstractDIDKey
-from client.keys.management import ManagementKey
+from factom_did.client.constants import DID_METHOD_NAME
+from factom_did.client.enums import KeyType
+from factom_did.client.keys.abstract import AbstractDIDKey
+from factom_did.client.keys.management import ManagementKey
 
 
 @pytest.fixture

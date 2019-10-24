@@ -1,6 +1,6 @@
 import re
 
-from client.constants import ENTRY_SCHEMA_V100
+from factom_did.client.constants import ENTRY_SCHEMA_V100
 
 __all__ = ["Service"]
 

@@ -1,5 +1,5 @@
-client package
-==============
+factom_did.client package
+=========================
 
 Submodules
 ----------

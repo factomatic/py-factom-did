@@ -1,7 +1,7 @@
 client.enums module
 ===================
 
-.. automodule:: client.enums
+.. automodule:: factom_did.client.enums
     :members:
     :undoc-members:
     :show-inheritance:

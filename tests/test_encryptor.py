@@ -3,8 +3,8 @@ import pytest
 
 import base58
 
-from client.did import DID
-from client.encryptor import (
+from factom_did.client.did import DID
+from factom_did.client.encryptor import (
     decrypt_keys_from_str,
     decrypt_keys_from_json_str,
     decrypt_keys_from_json_file,

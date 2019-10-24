@@ -5,14 +5,14 @@ import secrets
 
 import pytest
 
-from client.constants import DID_METHOD_NAME
-from client.enums import DIDKeyPurpose, KeyType
-from client.keys.did import DIDKey
-from client.keys.ecdsa import ECDSASecp256k1Key
-from client.keys.management import ManagementKey
-from client.service import Service
-from resolver.exceptions import InvalidDIDChain
-from resolver.parser import parse_did_chain_entries
+from factom_did.client.constants import DID_METHOD_NAME
+from factom_did.client.enums import DIDKeyPurpose, KeyType
+from factom_did.client.keys.did import DIDKey
+from factom_did.client.keys.ecdsa import ECDSASecp256k1Key
+from factom_did.client.keys.management import ManagementKey
+from factom_did.client.service import Service
+from factom_did.resolver.exceptions import InvalidDIDChain
+from factom_did.resolver.parser import parse_did_chain_entries
 
 
 @pytest.fixture

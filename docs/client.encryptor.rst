@@ -1,7 +1,7 @@
 client.encryptor module
 =======================
 
-.. automodule:: client.encryptor
+.. automodule:: factom_did.client.encryptor
     :members:
     :undoc-members:
     :show-inheritance:

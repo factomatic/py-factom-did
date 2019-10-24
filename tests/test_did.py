@@ -4,14 +4,17 @@ import re
 
 import base58
 
-from client.constants import ENTRY_SCHEMA_V100, DID_METHOD_SPEC_V020, DID_METHOD_NAME
-from client.did import DID, KeyType, DIDKeyPurpose
-from client.enums import EntryType
-from client.keys.abstract import AbstractDIDKey
-from client.keys.did import DIDKey
-from client.keys.management import ManagementKey
-from client.keys.rsa import RSAKey
-from client.service import Service
+from factom_did.client.constants import (
+    ENTRY_SCHEMA_V100,
+    DID_METHOD_SPEC_V020,
+    DID_METHOD_NAME,
+)
+from factom_did.client.did import DID, DIDKeyPurpose, KeyType
+from factom_did.client.enums import EntryType
+from factom_did.client.keys.did import DIDKey
+from factom_did.client.keys.management import ManagementKey
+from factom_did.client.keys.rsa import RSAKey
+from factom_did.client.service import Service
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 client.keys.eddsa module
 ========================
 
-.. automodule:: client.keys.eddsa
+.. automodule:: factom_did.client.keys.eddsa
     :members:
     :undoc-members:
     :show-inheritance:

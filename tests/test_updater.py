@@ -1,9 +1,9 @@
 import json
 
-from client.constants import ENTRY_SCHEMA_V100
+from factom_did.client.constants import ENTRY_SCHEMA_V100
 import pytest
 
-from client.did import DID, DIDKeyPurpose, KeyType
+from factom_did.client.did import DID, DIDKeyPurpose, KeyType
 
 
 @pytest.fixture

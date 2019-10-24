@@ -1,7 +1,7 @@
 client.did module
 =================
 
-.. automodule:: client.did
+.. automodule:: factom_did.client.did
     :members:
     :exclude-members: KeyType, DIDKeyPurpose
     :undoc-members:

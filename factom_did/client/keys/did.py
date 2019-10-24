@@ -1,20 +1,19 @@
 import base58
 
-from client.constants import ENTRY_SCHEMA_V100
-from client.enums import KeyType
-from client.keys.abstract import AbstractDIDKey
+from factom_did.client.constants import ENTRY_SCHEMA_V100
+from factom_did.client.enums import DIDKeyPurpose, KeyType
+from factom_did.client.keys.abstract import AbstractDIDKey
 
 
-class ManagementKey(AbstractDIDKey):
+class DIDKey(AbstractDIDKey):
     """
-    A key used to sign updates for an existing DID.
+    Application-level key, which can be used for authentication, signing requests, encryption, decryption, etc.
 
     Attributes
     ----------
     alias: str
-    priority: int
-        A non-negative integer showing the hierarchical level of the key. Keys with lower priority override keys with
-        higher priority.
+    purpose: DIDKeyPurpose or DIDKeyPurpose[]
+        Shows what purpose(s) the key serves. (PublicKey, AuthenticationKey or both)
     key_type: KeyType
     controller: str
     priority_requirement: int, optional
@@ -25,7 +24,7 @@ class ManagementKey(AbstractDIDKey):
     def __init__(
         self,
         alias,
-        priority,
+        purpose,
         key_type,
         controller,
         priority_requirement=None,
@@ -36,21 +35,32 @@ class ManagementKey(AbstractDIDKey):
             alias, key_type, controller, priority_requirement, public_key, private_key
         )
 
-        if priority < 0:
-            raise ValueError("Priority must be a non-negative integer.")
+        if type(purpose) is list:
+            purpose_l = purpose
+        else:
+            purpose_l = [purpose]
 
-        self.priority = priority
+        for purpose_type in purpose_l:
+            if purpose_type not in {
+                DIDKeyPurpose.PublicKey,
+                DIDKeyPurpose.AuthenticationKey,
+            }:
+                raise ValueError(
+                    "Purpose must contain only valid DIDKeyPurpose values."
+                )
+
+        self.purpose = purpose_l
 
     def __eq__(self, other):
         if self.__class__ is other.__class__:
-            return super().__eq__(other) and self.priority == other.priority
+            return super().__eq__(other) and self.purpose == other.purpose
         return NotImplemented
 
     def __hash__(self):
         return hash(
             (
                 self.alias,
-                self.priority,
+                "".join(map(lambda x: x.value, self.purpose)),
                 self.key_type,
                 self.controller,
                 self.priority_requirement,
@@ -61,12 +71,12 @@ class ManagementKey(AbstractDIDKey):
 
     def __repr__(self):
         return (
-            "<{}.{}(alias={}, priority={}, key_type={}, controller={}, "
+            "<{}.{}(alias={}, purpose={}, key_type={}, controller={}, "
             "priority_requirement={})>".format(
                 self.__module__,
                 type(self).__name__,
                 self.alias,
-                self.priority,
+                self.purpose,
                 self.underlying,
                 self.controller,
                 self.priority_requirement,
@@ -76,7 +86,7 @@ class ManagementKey(AbstractDIDKey):
     def to_entry_dict(self, did, version=ENTRY_SCHEMA_V100):
         if version == ENTRY_SCHEMA_V100:
             d = super().to_entry_dict(did)
-            d["priority"] = self.priority
+            d["purpose"] = list(map(lambda x: x.value, self.purpose))
             return d
         else:
             raise NotImplementedError("Unknown schema version: {}".format(version))
@@ -84,9 +94,9 @@ class ManagementKey(AbstractDIDKey):
     @staticmethod
     def from_entry_dict(entry_dict, version=ENTRY_SCHEMA_V100):
         if version == ENTRY_SCHEMA_V100:
-            return ManagementKey(
+            return DIDKey(
                 alias=entry_dict["id"].split("#")[-1],
-                priority=entry_dict["priority"],
+                purpose=list(map(DIDKeyPurpose.from_str, entry_dict.get("purpose"))),
                 key_type=KeyType.from_str(entry_dict["type"]),
                 controller=entry_dict["controller"],
                 priority_requirement=entry_dict.get("priorityRequirement"),

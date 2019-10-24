@@ -4,14 +4,14 @@ import secrets
 from jsonschema.exceptions import ValidationError
 import pytest
 
-from client.constants import DID_METHOD_NAME
-from client.enums import DIDKeyPurpose, KeyType
-from client.keys.did import DIDKey
-from client.keys.management import ManagementKey
-from client.service import Service
-from resolver.exceptions import MalformedDIDManagementEntry
-from resolver.schema import get_schema_validator
-from resolver.validators import (
+from factom_did.client.constants import DID_METHOD_NAME
+from factom_did.client.enums import DIDKeyPurpose, KeyType
+from factom_did.client.keys.did import DIDKey
+from factom_did.client.keys.management import ManagementKey
+from factom_did.client.service import Service
+from factom_did.resolver.exceptions import MalformedDIDManagementEntry
+from factom_did.resolver.schema import get_schema_validator
+from factom_did.resolver.validators import (
     validate_did_deactivation_ext_ids_v100,
     validate_did_management_ext_ids_v100,
     validate_did_method_version_upgrade_ext_ids_v100,

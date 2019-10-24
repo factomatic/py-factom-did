@@ -3,17 +3,17 @@ from json import JSONDecodeError
 
 from jsonschema.exceptions import ValidationError
 
-from client.constants import ENTRY_SCHEMA_V100
-from client.enums import EntryType
-from resolver.entry_processors import (
+from factom_did.client.constants import ENTRY_SCHEMA_V100
+from factom_did.client.enums import EntryType
+from factom_did.resolver.entry_processors import (
     process_did_deactivation_entry_v100,
     process_did_management_entry_v100,
     process_did_method_version_upgrade_entry_v100,
     process_did_update_entry_v100,
 )
-from resolver.exceptions import InvalidDIDChain, MalformedDIDManagementEntry
-from resolver.schema import get_schema_validator
-from resolver.validators import (
+from factom_did.resolver.exceptions import InvalidDIDChain, MalformedDIDManagementEntry
+from factom_did.resolver.schema import get_schema_validator
+from factom_did.resolver.validators import (
     validate_did_deactivation_ext_ids_v100,
     validate_did_management_ext_ids_v100,
     validate_did_method_version_upgrade_ext_ids_v100,
