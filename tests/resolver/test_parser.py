@@ -21,6 +21,11 @@ def did():
 
 
 @pytest.fixture
+def did_2():
+    return "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
+
+
+@pytest.fixture
 def full_did():
     return "{}:{}:{}".format(
         DID_METHOD_NAME, Network.Mainnet.value, secrets.token_hex(32)
@@ -72,6 +77,13 @@ def man_key_4(did):
         controller=did,
         key_type=KeyType.EdDSA,
         priority_requirement=1,
+    )
+
+
+@pytest.fixture
+def man_key_5(did_2):
+    return ManagementKey(
+        alias="man-key-5", priority=0, controller=did_2, key_type=KeyType.ECDSA
     )
 
 
@@ -333,6 +345,21 @@ class TestDIDManagementEntry:
         assert skipped_entries == 1
         assert len(management_keys) == 1
         assert man_key_1.alias in management_keys
+
+    def test_management_keys_with_key_ids_for_different_chain(
+        self, did, did_2, man_key_1, man_key_5, management_entry
+    ):
+        entry = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_5.to_entry_dict(did_2),
+                ]
+            }
+        )
+
+        with pytest.raises(InvalidDIDChain):
+            parse_did_chain_entries([entry])
 
     def test_valid_did_management_entry(
         self,
