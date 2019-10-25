@@ -58,6 +58,8 @@ def create_new_did():
 
     new_did = (
         DID()
+        # Can be mainnet/testnet or omitted entirely, in which case no network specifier will be added to the DID
+        .testnet()
         .management_key(management_key_1_alias, management_key_1_priority)
         .management_key(
             management_key_2_alias,
