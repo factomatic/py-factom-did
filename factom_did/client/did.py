@@ -1,8 +1,6 @@
 from base64 import urlsafe_b64encode
 import json
 import os
-import re
-
 
 from factom_did.client.blockchain import (
     calculate_chain_id,
@@ -16,6 +14,7 @@ from factom_did.client.keys.did import DIDKey
 from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
 from factom_did.client.updater import DIDUpdater
+from factom_did.client.validators import validate_did
 
 __all__ = ["DID", "KeyType", "DIDKeyPurpose"]
 
@@ -338,18 +337,6 @@ class DID:
 
         create_chain(self.export_entry_data(), factomd, walletd, ec_address, verbose)
 
-    @staticmethod
-    def is_valid_did(did):
-        return (
-            re.match(
-                "^{}:({}:|{}:)?[a-f0-9]{{64}}$".format(
-                    DID_METHOD_NAME, Network.Mainnet.value, Network.Testnet.value
-                ),
-                did,
-            )
-            is not None
-        )
-
     def _get_did_document(self):
         """
         Builds a DID Document.
@@ -395,6 +382,15 @@ class DID:
         )
         did_id = "{}:{}".format(DID_METHOD_NAME, chain_id)
         return did_id
+
+    @staticmethod
+    def is_valid_did(did):
+        try:
+            validate_did(did)
+        except ValueError:
+            return False
+        else:
+            return True
 
     @staticmethod
     def _check_alias_is_unique_and_add_to_used(used_aliases, alias):
