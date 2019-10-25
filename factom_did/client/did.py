@@ -11,7 +11,7 @@ from factom_did.client.blockchain import (
 )
 from factom_did.client.constants import *
 from factom_did.client.encryptor import encrypt_keys
-from factom_did.client.enums import DIDKeyPurpose, EntryType, KeyType
+from factom_did.client.enums import DIDKeyPurpose, EntryType, KeyType, Network
 from factom_did.client.keys.did import DIDKey
 from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
@@ -41,12 +41,13 @@ class DID:
     """
 
     def __init__(self, did=None, management_keys=None, did_keys=None, services=None):
-        self.id = (
+        self._id = (
             self._generate_did() if did is None or not self.is_valid_did(did) else did
         )
         self.management_keys = [] if management_keys is None else management_keys
         self.did_keys = [] if did_keys is None else did_keys
         self.services = [] if services is None else services
+        self.network = DID._get_network_from_id(self._id)
 
         self.used_key_aliases = set()
         self.used_service_aliases = set()
@@ -65,13 +66,21 @@ class DID:
             )
 
     def __repr__(self):
-        return "<{0}.{1} (management_keys={2}, did_keys={3}, services={4})>".format(
+        return "<{}.{} (management_keys={}, did_keys={}, services={})>".format(
             self.__module__,
             type(self).__name__,
             len(self.management_keys),
             len(self.did_keys),
             len(self.services),
         )
+
+    @property
+    def id(self):
+        # Add the network identifier to the id, if a network has been specified
+        if self.network == Network.Unspecified:
+            return self._id
+        else:
+            return ":".join([DID_METHOD_NAME, self.network.value, self.get_chain()])
 
     def get_chain(self):
         """
@@ -82,7 +91,7 @@ class DID:
         """
         # Since we do a validation of the DID in the constructor (or add it automatically, if it's not provided),
         # we have a guarantee that it will be well-formed, hence no need for exception checking here
-        return self.id.split(":")[2]
+        return self.id.split(":")[-1]
 
     def update(self):
         """
@@ -94,6 +103,18 @@ class DID:
         if not self.management_keys:
             raise RuntimeError("Cannot update DID without management keys.")
         return DIDUpdater(self)
+
+    def mainnet(self):
+        """
+        Sets the DID network to mainnet.
+        """
+        self.network = Network.Mainnet
+
+    def testnet(self):
+        """
+        Sets the DID network to testnet.
+        """
+        self.network = Network.Testnet
 
     def management_key(
         self,
@@ -317,7 +338,15 @@ class DID:
 
     @staticmethod
     def is_valid_did(did):
-        return re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), did) is not None
+        return (
+            re.match(
+                "^{}:(:?[{}|{}]:)?[a-f0-9]{{64}}$".format(
+                    DID_METHOD_NAME, Network.Mainnet.value, Network.Testnet.value
+                ),
+                did,
+            )
+            is not None
+        )
 
     def _get_did_document(self):
         """
@@ -370,3 +399,23 @@ class DID:
         if alias in used_aliases:
             raise ValueError('Duplicate alias "{}" detected.'.format(alias))
         used_aliases.add(alias)
+
+    @staticmethod
+    def _get_network_from_id(did):
+        """
+        Returns the Factom network for this DID (either mainnet or testnet)
+
+        Parameters
+        ----------
+        did: str
+
+        Returns
+        -------
+        str
+        """
+        parts = did.split(":")
+        if len(parts) == 4:
+            # DID is of the format did:factom:[mainnet|testnet]:[32 bytes]
+            return Network.from_str(parts[2])
+        else:
+            return Network.Unspecified

@@ -1,6 +1,6 @@
 from enum import Enum
 
-__all__ = ["KeyType", "EntryType", "DIDKeyPurpose"]
+__all__ = ["KeyType", "EntryType", "DIDKeyPurpose", "Network"]
 
 
 class KeyType(Enum):
@@ -39,3 +39,20 @@ class DIDKeyPurpose(Enum):
             return DIDKeyPurpose.AuthenticationKey
         else:
             raise NotImplementedError("Unknown DIDKeyPurpose value: {}".format(string))
+
+
+class Network(Enum):
+    Mainnet = "mainnet"
+    Testnet = "testnet"
+    Unspecified = ""
+
+    @staticmethod
+    def from_str(string):
+        if string == "mainnet":
+            return Network.Mainnet
+        elif string == "testnet":
+            return Network.Testnet
+        elif string == "":
+            return Network.Unspecified
+        else:
+            raise NotImplementedError("Unknown Network value: {}".format(string))
