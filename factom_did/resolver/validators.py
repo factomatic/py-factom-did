@@ -1,3 +1,5 @@
+import hashlib
+
 from jsonschema.exceptions import ValidationError
 
 from factom_did.client.constants import ENTRY_SCHEMA_V100
@@ -101,6 +103,52 @@ def validate_did_deactivation_ext_ids_v100(ext_ids):
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_key_identifier(ext_ids)
     )
+
+
+def validate_signature(ext_ids, content, signing_key):
+    """
+    Checks if the signature contained in the last element of ext_ids is valid.
+
+    The signature is for a DIDUpdate, DIDMethodVersionUpgrade or DIDDeactivation entry and covers the content of the
+    entry + the first 3 ext_ids. For more details on the signatures of these entries, refer to
+    https://github.com/bi-foundation/FIS/blob/feature/DID/FIS/DID.md
+
+    Parameters
+    ----------
+    ext_ids: list of bytes
+    content: bytes
+    signing_key: ManagementKey
+
+    Returns
+    -------
+    bool
+    """
+    signed_data = bytearray()
+    for i in range(3):
+        signed_data.extend(ext_ids[i])
+    signed_data.extend(content)
+    return signing_key.verify(hashlib.sha256(signed_data).digest(), ext_ids[3])
+
+
+def validate_management_key_id(key_id, chain_id):
+    """
+    Checks if the chain in the key_id matches the value supplied in chain_id.
+
+    Parameters
+    ----------
+    key_id: str
+        The well-formed full key identifier
+    chain_id: str
+        The chain ID
+
+    Returns
+    -------
+    bool
+    """
+    # Due to prior validation of the entries, the key_id passed to this function is guaranteed to be a well-formed
+    # full key identifier
+    key_id_chain = key_id.split(":")[-1].split("#")[0]
+    return key_id_chain == chain_id
 
 
 def _validate_ext_ids_length(ext_ids, min_length):

@@ -1,7 +1,6 @@
 """Helper functions for parser.py which are used to update the currently active management and DID keys,
 and services."""
 
-import hashlib
 import math
 from packaging import version
 
@@ -10,31 +9,10 @@ from factom_did.client.keys.did import DIDKey
 from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
 from factom_did.resolver.exceptions import MalformedDIDManagementEntry
-
-
-def _is_valid_signature(ext_ids, content, signing_key):
-    """
-    Checks if the signature contained in the last element of ext_ids is valid.
-
-    The signature is for a DIDUpdate, DIDMethodVersionUpgrade or DIDDeactivation entry and covers the content of the
-    entry + the first 3 ext_ids. For more details on the signatures of these entries, refer to
-    https://github.com/bi-foundation/FIS/blob/feature/DID/FIS/DID.md
-
-    Parameters
-    ----------
-    ext_ids: list of bytes
-    content: bytes
-    signing_key: ManagementKey
-
-    Returns
-    -------
-    bool
-    """
-    signed_data = bytearray()
-    for i in range(3):
-        signed_data.extend(ext_ids[i])
-    signed_data.extend(content)
-    return signing_key.verify(hashlib.sha256(signed_data).digest(), ext_ids[3])
+from factom_did.resolver.validators import (
+    validate_management_key_id,
+    validate_signature,
+)
 
 
 def _is_method_version_upgrade(current_version, new_version):
@@ -102,7 +80,7 @@ def exists_management_key_with_priority_zero(
 
 
 def process_did_management_entry_v100(
-    parsed_content, management_keys, did_keys, services, skipped_entries
+    chain_id, parsed_content, management_keys, did_keys, services, skipped_entries
 ):
     """
     Extracts the management keys, DID keys and services from a DIDManagement entry.
@@ -113,6 +91,8 @@ def process_did_management_entry_v100(
 
     Parameters
     ----------
+    chain_id: str
+        The DIDManagement chain ID.
     parsed_content: dict
         The parsed DIDManagement entry.
     management_keys: dict
@@ -147,6 +127,12 @@ def process_did_management_entry_v100(
 
     found_key_with_priority_zero = False
     for key_data in parsed_content["managementKey"]:
+        if not validate_management_key_id(key_data["id"], chain_id):
+            raise MalformedDIDManagementEntry(
+                "Invalid key identifier '{}' for chain ID '{}'".format(
+                    key_data["id"], chain_id
+                )
+            )
         alias = _get_alias(key_data["id"])
         if alias in new_management_keys:
             raise MalformedDIDManagementEntry("Duplicate management key found")
@@ -178,6 +164,7 @@ def process_did_management_entry_v100(
 
 
 def process_did_update_entry_v100(
+    chain_id,
     ext_ids,
     binary_content,
     parsed_content,
@@ -197,6 +184,8 @@ def process_did_update_entry_v100(
 
     Parameters
     ----------
+    chain_id: str
+        The DIDManagement chain ID.
     ext_ids: list
         The ExtIDs of the entry, as bytes.
     binary_content: bytes
@@ -234,7 +223,7 @@ def process_did_update_entry_v100(
     if method_version == DID_METHOD_SPEC_V020:
         signing_key = active_management_keys.get(_get_alias(ext_ids[2].decode()))
         if (not signing_key) or (
-            not _is_valid_signature(ext_ids, binary_content, signing_key)
+            not validate_signature(ext_ids, binary_content, signing_key)
         ):
             return True, method_version, skipped_entries + 1
 
@@ -347,6 +336,7 @@ def process_did_update_entry_v100(
 
 
 def process_did_deactivation_entry_v100(
+    chain_id,
     ext_ids,
     binary_content,
     _parsed_content,
@@ -366,6 +356,8 @@ def process_did_deactivation_entry_v100(
 
     Parameters
     ----------
+    chain_id: str
+        The DIDManagement chain ID.
     ext_ids: list
         The ExtIDs of the entry, as bytes.
     binary_content: bytes
@@ -398,7 +390,7 @@ def process_did_deactivation_entry_v100(
         if (
             (not signing_key)
             or (signing_key.priority != 0)
-            or (not _is_valid_signature(ext_ids, binary_content, signing_key))
+            or (not validate_signature(ext_ids, binary_content, signing_key))
         ):
             return True, method_version, skipped_entries + 1
 
@@ -412,6 +404,7 @@ def process_did_deactivation_entry_v100(
 
 
 def process_did_method_version_upgrade_entry_v100(
+    chain_id,
     ext_ids,
     binary_content,
     parsed_content,
@@ -431,6 +424,8 @@ def process_did_method_version_upgrade_entry_v100(
 
     Parameters
     ----------
+    chain_id: str
+        The DIDManagement chain ID.
     ext_ids: list
         The ExtIDs of the entry, as bytes.
     binary_content: bytes
@@ -466,7 +461,7 @@ def process_did_method_version_upgrade_entry_v100(
             and _is_method_version_upgrade(
                 method_version, parsed_content["didMethodVersion"]
             )
-            and _is_valid_signature(ext_ids, binary_content, signing_key)
+            and validate_signature(ext_ids, binary_content, signing_key)
         ):
             new_method_version = parsed_content["didMethodVersion"]
         else:

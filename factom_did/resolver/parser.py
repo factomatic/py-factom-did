@@ -58,7 +58,7 @@ ENTRY_PROCESSORS = {
 }
 
 
-def parse_did_chain_entries(entries):
+def parse_did_chain_entries(entries, chain_id):
     """
     Attempts to parse the entries in a DIDManagement chain.
 
@@ -68,6 +68,8 @@ def parse_did_chain_entries(entries):
         A list of entries in the DIDManagement chain as returned by the Python factom-api library, or an equivalent
         API/library. Each element of the list is a dictionary, with keys 'content', 'extids' and 'entryhash' and the
         values are bytes.
+    chain_id: str
+        The DIDManagement chain ID.
 
     Returns
     -------
@@ -131,6 +133,7 @@ def parse_did_chain_entries(entries):
                 keep_parsing, method_version, skipped_entries = ENTRY_PROCESSORS[
                     schema_version
                 ][entry_type](
+                    chain_id,
                     parsed_content,
                     active_management_keys,
                     active_did_keys,
@@ -186,6 +189,7 @@ def parse_did_chain_entries(entries):
                 keep_parsing, method_version, skipped_entries = ENTRY_PROCESSORS[
                     schema_version
                 ][entry_type](
+                    chain_id,
                     ext_ids,
                     binary_content,
                     parsed_content,
