@@ -91,7 +91,7 @@ class DID:
         """
         # Since we do a validation of the DID in the constructor (or add it automatically, if it's not provided),
         # we have a guarantee that it will be well-formed, hence no need for exception checking here
-        return self.id.split(":")[-1]
+        return self._id.split(":")[-1]
 
     def update(self):
         """
@@ -109,12 +109,14 @@ class DID:
         Sets the DID network to mainnet.
         """
         self.network = Network.Mainnet
+        return self
 
     def testnet(self):
         """
         Sets the DID network to testnet.
         """
         self.network = Network.Testnet
+        return self
 
     def management_key(
         self,
@@ -340,7 +342,7 @@ class DID:
     def is_valid_did(did):
         return (
             re.match(
-                "^{}:(:?[{}|{}]:)?[a-f0-9]{{64}}$".format(
+                "^{}:({}:|{}:)?[a-f0-9]{{64}}$".format(
                     DID_METHOD_NAME, Network.Mainnet.value, Network.Testnet.value
                 ),
                 did,

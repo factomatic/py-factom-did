@@ -10,7 +10,7 @@ from factom_did.client.constants import (
     DID_METHOD_NAME,
 )
 from factom_did.client.did import DID, DIDKeyPurpose, KeyType
-from factom_did.client.enums import EntryType
+from factom_did.client.enums import EntryType, Network
 from factom_did.client.keys.did import DIDKey
 from factom_did.client.keys.management import ManagementKey
 from factom_did.client.keys.rsa import RSAKey
@@ -31,6 +31,30 @@ class TestDidValidator:
                 "did:factom:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
             )
             is True
+        )
+        assert (
+            DID.is_valid_did(
+                "did:factom:mainnet:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            )
+            is True
+        )
+        assert (
+            DID.is_valid_did(
+                "did:factom:Mainnet:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            )
+            is False
+        )
+        assert (
+            DID.is_valid_did(
+                "did:factom:testnet:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            )
+            is True
+        )
+        assert (
+            DID.is_valid_did(
+                "did:factom:Testnet:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            )
+            is False
         )
         assert (
             DID.is_valid_did(
@@ -59,6 +83,14 @@ class TestGetChain:
             == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
         )
 
+        did = DID(
+            did="did:factom:mainnet:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        )
+        assert (
+            did.get_chain()
+            == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        )
+
 
 class TestMinifyRSAPublicKey:
     def test_minify_rsa_public_key(self):
@@ -77,6 +109,7 @@ class TestEmptyDid:
         assert [] == did.services
         assert set() == did.used_key_aliases
         assert set() == did.used_service_aliases
+        assert Network.Unspecified == did.network
 
     def test__repr__method(self, did):
         expected__repr__method_output = "<{0}.{1} (management_keys={2}, did_keys={3}, services={4})>".format(
@@ -539,16 +572,15 @@ class TestExportEntryData:
         service_type = "PhotoStreamService"
         service_endpoint = "https://myphoto.com"
         service_priority_requirement = 2
-        did.management_key("my-management-key-1", 0)
-        did.management_key("my-management-key-2", 2)
-        did.did_key(
+        did.mainnet().management_key("my-management-key-1", 0).management_key(
+            "my-management-key-2", 2
+        ).did_key(
             did_key_alias,
             did_key_purpose,
             did_key_type,
             did_key_controller,
             did_key_priority_requirement,
-        )
-        did.service(
+        ).service(
             service_alias, service_type, service_endpoint, service_priority_requirement
         )
         entry_data = did.export_entry_data()
