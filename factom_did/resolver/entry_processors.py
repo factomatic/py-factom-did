@@ -278,6 +278,8 @@ def process_did_update_entry_v100(
                     )
         if "add" in parsed_content:
             for key_data in parsed_content["add"].get("managementKey", []):
+                if not validate_management_key_id(key_data["id"], chain_id):
+                    return True, method_version, skipped_entries + 1
                 alias = _get_alias(key_data["id"])
                 # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
                 if alias in new_management_keys or alias in active_management_keys:
