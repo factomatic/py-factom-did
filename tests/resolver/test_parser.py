@@ -1070,3 +1070,16 @@ class TestDIDUpdateEntry:
         assert skipped_entries == 1
         assert len(management_keys) == 1
         assert len(did_keys) == 0
+
+    def test_with_adding_management_key_from_another_chain(
+        self, did, did_2, man_key_1, man_key_5, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {"add": {"managementKey": [man_key_5.to_entry_dict(did_2)]}}
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert skipped_entries == 1
+        assert len(management_keys) == 1
