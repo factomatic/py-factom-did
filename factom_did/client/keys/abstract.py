@@ -1,12 +1,16 @@
-import re
-
 import base58
 
-from factom_did.client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
-from factom_did.client.enums import KeyType, Network
+from factom_did.client.constants import ENTRY_SCHEMA_V100
+from factom_did.client.enums import KeyType
 from factom_did.client.keys.ecdsa import ECDSASecp256k1Key
 from factom_did.client.keys.eddsa import Ed25519Key
 from factom_did.client.keys.rsa import RSAKey
+from factom_did.client.validators import (
+    validate_alias,
+    validate_did,
+    validate_key_type,
+    validate_priority_requirement,
+)
 
 
 class AbstractDIDKey:
@@ -195,22 +199,7 @@ class AbstractDIDKey:
 
     @staticmethod
     def _validate_key_input_params(alias, key_type, controller, priority_requirement):
-        if not re.match("^[a-z0-9-]{1,32}$", alias):
-            raise ValueError(
-                "Alias must not be more than 32 characters long and must contain only lower-case "
-                "letters, digits and hyphens."
-            )
-
-        if key_type not in (KeyType.ECDSA, KeyType.EdDSA, KeyType.RSA):
-            raise ValueError("Type must be a valid signature type.")
-
-        if not re.match(
-            "^{}:({}:|{}:)?[a-f0-9]{{64}}$".format(
-                DID_METHOD_NAME, Network.Mainnet.value, Network.Testnet.value
-            ),
-            controller,
-        ):
-            raise ValueError("Controller must be a valid DID.")
-
-        if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError("Priority requirement must be a non-negative integer.")
+        validate_alias(alias)
+        validate_key_type(key_type)
+        validate_did(controller)
+        validate_priority_requirement(priority_requirement)

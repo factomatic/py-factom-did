@@ -1,6 +1,9 @@
-import re
-
 from factom_did.client.constants import ENTRY_SCHEMA_V100
+from factom_did.client.validators import (
+    validate_alias,
+    validate_priority_requirement,
+    validate_service_endpoint,
+)
 
 __all__ = ["Service"]
 
@@ -119,22 +122,10 @@ class Service:
     def _validate_service_input_params(
         alias, service_type, endpoint, priority_requirement
     ):
-        if not re.match("^[a-z0-9-]{1,32}$", alias):
-            raise ValueError(
-                "Alias must not be more than 32 characters long and must contain only lower-case "
-                "letters, digits and hyphens."
-            )
+        validate_alias(alias)
 
         if not service_type:
             raise ValueError("Type is required.")
 
-        if not re.match(
-            r"^(http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-\/]))?$",
-            endpoint,
-        ):
-            raise ValueError(
-                "Endpoint must be a valid URL address starting with http:// or https://."
-            )
-
-        if priority_requirement is not None and priority_requirement < 0:
-            raise ValueError("Priority requirement must be a non-negative integer.")
+        validate_service_endpoint(endpoint)
+        validate_priority_requirement(priority_requirement)

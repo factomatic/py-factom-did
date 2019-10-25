@@ -1,9 +1,8 @@
-import re
-
 from jsonschema.exceptions import ValidationError
 
-from factom_did.client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
-from factom_did.client.enums import EntryType, Network
+from factom_did.client.constants import ENTRY_SCHEMA_V100
+from factom_did.client.enums import EntryType
+from factom_did.client.validators import validate_full_key_identifier
 from factom_did.resolver.exceptions import MalformedDIDManagementEntry
 
 
@@ -124,14 +123,8 @@ def _validate_schema_version(ext_ids, version):
 
 def _validate_key_identifier(ext_ids):
     try:
-        return (
-            re.match(
-                "^{}:({}:|{}:)?[0-9a-f]{{64}}#[a-zA-Z0-9-]+$".format(
-                    DID_METHOD_NAME, Network.Mainnet.value, Network.Testnet.value
-                ),
-                ext_ids[2].decode(),
-            )
-            is not None
-        )
-    except UnicodeDecodeError:
+        validate_full_key_identifier(ext_ids[2].decode())
+    except (UnicodeDecodeError, ValueError):
         return False
+    else:
+        return True
