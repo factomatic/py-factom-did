@@ -3,7 +3,7 @@ import re
 import base58
 
 from factom_did.client.constants import DID_METHOD_NAME, ENTRY_SCHEMA_V100
-from factom_did.client.enums import KeyType
+from factom_did.client.enums import KeyType, Network
 from factom_did.client.keys.ecdsa import ECDSASecp256k1Key
 from factom_did.client.keys.eddsa import Ed25519Key
 from factom_did.client.keys.rsa import RSAKey
@@ -204,7 +204,12 @@ class AbstractDIDKey:
         if key_type not in (KeyType.ECDSA, KeyType.EdDSA, KeyType.RSA):
             raise ValueError("Type must be a valid signature type.")
 
-        if not re.match("^{}:[a-f0-9]{{64}}$".format(DID_METHOD_NAME), controller):
+        if not re.match(
+            "^{}:({}:|{}:)?[a-f0-9]{{64}}$".format(
+                DID_METHOD_NAME, Network.Mainnet.value, Network.Testnet.value
+            ),
+            controller,
+        ):
             raise ValueError("Controller must be a valid DID.")
 
         if priority_requirement is not None and priority_requirement < 0:

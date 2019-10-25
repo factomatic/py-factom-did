@@ -6,7 +6,7 @@ import secrets
 import pytest
 
 from factom_did.client.constants import DID_METHOD_NAME
-from factom_did.client.enums import DIDKeyPurpose, KeyType
+from factom_did.client.enums import DIDKeyPurpose, KeyType, Network
 from factom_did.client.keys.did import DIDKey
 from factom_did.client.keys.ecdsa import ECDSASecp256k1Key
 from factom_did.client.keys.management import ManagementKey
@@ -18,6 +18,13 @@ from factom_did.resolver.parser import parse_did_chain_entries
 @pytest.fixture
 def did():
     return "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
+
+
+@pytest.fixture
+def full_did():
+    return "{}:{}:{}".format(
+        DID_METHOD_NAME, Network.Mainnet.value, secrets.token_hex(32)
+    )
 
 
 @pytest.fixture
@@ -260,12 +267,12 @@ class TestDIDManagementEntry:
             parse_did_chain_entries([entry])
         assert str(excinfo.value) == "Invalid DIDManagement entry content"
 
-    def test_duplicate_management_keys(self, did, man_key_1, management_entry):
+    def test_duplicate_management_keys(self, full_did, man_key_1, management_entry):
         entry = management_entry(
             {
                 "managementKey": [
-                    man_key_1.to_entry_dict(did),
-                    man_key_1.to_entry_dict(did),
+                    man_key_1.to_entry_dict(full_did),
+                    man_key_1.to_entry_dict(full_did),
                 ]
             }
         )
@@ -390,7 +397,7 @@ class TestDIDDeactivationEntry:
 
     def test_valid_deactivation(
         self,
-        did,
+        full_did,
         man_key_1,
         did_key_1,
         service_1,
@@ -398,20 +405,20 @@ class TestDIDDeactivationEntry:
         management_entry,
         update_entry,
     ):
-        man_key_1_dict = man_key_1.to_entry_dict(did)
+        man_key_1_dict = man_key_1.to_entry_dict(full_did)
         entry_1 = management_entry(
             {
                 "managementKey": [man_key_1_dict],
-                "didKey": [did_key_1.to_entry_dict(did)],
-                "service": [service_1.to_entry_dict(did)],
+                "didKey": [did_key_1.to_entry_dict(full_did)],
+                "service": [service_1.to_entry_dict(full_did)],
             }
         )
 
-        entry_2 = deactivation_entry(did, man_key_1)
+        entry_2 = deactivation_entry(full_did, man_key_1)
 
         # Should be ignored
         content = {"revoke": {"service": [{"id": service_1.alias}]}}
-        entry_3 = update_entry(did, man_key_1, content)
+        entry_3 = update_entry(full_did, man_key_1, content)
 
         management_keys, did_keys, services, skipped_entries = parse_did_chain_entries(
             [entry_1, entry_2, entry_3]
@@ -763,19 +770,19 @@ class TestDIDUpdateEntry:
         assert skipped_entries == 1
 
     def test_revocation_with_custom_priority_requirement(
-        self, did, man_key_1, man_key_3, man_key_4, management_entry, update_entry
+        self, full_did, man_key_1, man_key_3, man_key_4, management_entry, update_entry
     ):
         entry_1 = management_entry(
             {
                 "managementKey": [
-                    man_key_1.to_entry_dict(did),
-                    man_key_3.to_entry_dict(did),
-                    man_key_4.to_entry_dict(did),
+                    man_key_1.to_entry_dict(full_did),
+                    man_key_3.to_entry_dict(full_did),
+                    man_key_4.to_entry_dict(full_did),
                 ]
             }
         )
         content = {"revoke": {"managementKey": [{"id": man_key_4.alias}]}}
-        entry_2 = update_entry(did, man_key_3, content)
+        entry_2 = update_entry(full_did, man_key_3, content)
         management_keys, _, _, _ = parse_did_chain_entries([entry_1, entry_2])
 
         assert len(management_keys) == 2
