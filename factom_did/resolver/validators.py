@@ -130,7 +130,7 @@ def validate_signature(ext_ids, content, signing_key):
     return signing_key.verify(hashlib.sha256(signed_data).digest(), ext_ids[3])
 
 
-def validate_management_key_id(key_id, chain_id):
+def validate_management_key_id_against_chain_id(key_id, chain_id):
     """
     Checks if the chain in the key_id matches the value supplied in chain_id.
 

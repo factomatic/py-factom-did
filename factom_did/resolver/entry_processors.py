@@ -10,7 +10,7 @@ from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
 from factom_did.resolver.exceptions import MalformedDIDManagementEntry
 from factom_did.resolver.validators import (
-    validate_management_key_id,
+    validate_management_key_id_against_chain_id,
     validate_signature,
 )
 
@@ -127,7 +127,7 @@ def process_did_management_entry_v100(
 
     found_key_with_priority_zero = False
     for key_data in parsed_content["managementKey"]:
-        if not validate_management_key_id(key_data["id"], chain_id):
+        if not validate_management_key_id_against_chain_id(key_data["id"], chain_id):
             raise MalformedDIDManagementEntry(
                 "Invalid key identifier '{}' for chain ID '{}'".format(
                     key_data["id"], chain_id
@@ -278,7 +278,9 @@ def process_did_update_entry_v100(
                     )
         if "add" in parsed_content:
             for key_data in parsed_content["add"].get("managementKey", []):
-                if not validate_management_key_id(key_data["id"], chain_id):
+                if not validate_management_key_id_against_chain_id(
+                    key_data["id"], chain_id
+                ):
                     return True, method_version, skipped_entries + 1
                 alias = _get_alias(key_data["id"])
                 # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
