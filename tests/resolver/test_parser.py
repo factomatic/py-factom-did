@@ -390,6 +390,53 @@ class TestDIDManagementEntry:
             "Malformed DIDManagement entry: Invalid key identifier"
         )
 
+    def test_with_invalid_key_identifiers(
+        self, did, man_key_1, management_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    {
+                        "id": "did:fatcom:{}#man-key-1".format(chain_id),
+                        "type": "ECDSASecp256k1VerificationKey",
+                        "priority": 0,
+                        "controller": did,
+                        "publicKeyBase58": man_key_1.underlying.get_public_key_on_chain_repr()[
+                            1
+                        ],
+                    }
+                ]
+            }
+        )
+        with pytest.raises(InvalidDIDChain):
+            parse_did_chain_entries([entry_1], chain_id)
+
+    def test_with_partial_key_identifiers(
+        self, did, man_key_1, management_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    {
+                        "id": "man-key-1",
+                        "type": "ECDSASecp256k1VerificationKey",
+                        "priority": 0,
+                        "controller": did,
+                        "publicKeyBase58": man_key_1.underlying.get_public_key_on_chain_repr()[
+                            1
+                        ],
+                    }
+                ]
+            }
+        )
+
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1], chain_id
+        )
+
+        assert len(management_keys) == 0
+        assert skipped_entries == 1
+
     def test_valid_did_management_entry(
         self,
         did,

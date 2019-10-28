@@ -145,8 +145,6 @@ def validate_management_key_id_against_chain_id(key_id, chain_id):
     -------
     bool
     """
-    # Due to prior validation of the entries, the key_id passed to this function is guaranteed to be a well-formed
-    # full key identifier
     key_id_chain = key_id.split(":")[-1].split("#")[0]
     return key_id_chain == chain_id
 
