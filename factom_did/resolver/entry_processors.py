@@ -5,6 +5,7 @@ import math
 from packaging import version
 
 from factom_did.client.constants import DID_METHOD_SPEC_V020
+from factom_did.client.enums import Network
 from factom_did.client.keys.did import DIDKey
 from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
@@ -80,7 +81,13 @@ def exists_management_key_with_priority_zero(
 
 
 def process_did_management_entry_v100(
-    chain_id, parsed_content, management_keys, did_keys, services, skipped_entries
+    chain_id,
+    parsed_content,
+    management_keys,
+    did_keys,
+    services,
+    skipped_entries,
+    network,
 ):
     """
     Extracts the management keys, DID keys and services from a DIDManagement entry.
@@ -103,6 +110,8 @@ def process_did_management_entry_v100(
         Will be updated to contain the services found in the entry.
     skipped_entries: int
         Will be incremented by one in case the DIDManagement entry is not valid.
+    network: Network
+        The Factom network on which the DID is recorded
 
     Returns
     -------
@@ -174,6 +183,7 @@ def process_did_update_entry_v100(
     active_services,
     skipped_entries,
     all_keys,
+    network,
 ):
     """
     Updates the management keys, DID keys and services based on the contents of the entry.
@@ -204,6 +214,8 @@ def process_did_update_entry_v100(
         The current number of skipped entries. Will be incremented by one in case the DIDManagement entry is not valid.
     all_keys: set
         The set of all management and DID keys that have been active at some point for the current DIDManagement chain.
+    network: Network
+        The Factom network on which the DID is recorded
 
     Returns
     -------
@@ -350,6 +362,7 @@ def process_did_deactivation_entry_v100(
     active_services,
     skipped_entries,
     _all_keys,
+    network,
 ):
     """
     Deactivates the DID by resetting the currently active management and DID keys, and services.
@@ -380,6 +393,8 @@ def process_did_deactivation_entry_v100(
         The current number of skipped entries. Will be incremented by one in case the DIDManagement entry is not valid.
     _all_keys: set
         Unused
+    network: Network
+        The Factom network on which the DID is recorded
 
     Returns
     -------
@@ -389,8 +404,14 @@ def process_did_deactivation_entry_v100(
         of skipped entries in the DIDManagement chain.
     """
     if method_version == DID_METHOD_SPEC_V020:
-        # DIDDeactivation entry must be signed by an active management key of priority 0
-        signing_key = active_management_keys.get(_get_alias(ext_ids[2].decode()))
+        # DIDDeactivation entry must be signed by an active management key of priority 0, referenced using a full
+        # key identifier matching the current chain ID
+        key_id = ext_ids[2].decode()
+        if not validate_management_key_id_against_chain_id(key_id, chain_id):
+            raise MalformedDIDManagementEntry(
+                "Invalid key identifier '{}' for chain ID '{}'".format(key_id, chain_id)
+            )
+        signing_key = active_management_keys.get(_get_alias(key_id))
         if (
             (not signing_key)
             or (signing_key.priority != 0)
@@ -418,6 +439,7 @@ def process_did_method_version_upgrade_entry_v100(
     _active_services,
     skipped_entries,
     _all_keys,
+    network,
 ):
     """
     Upgrades the DID method version.
@@ -448,6 +470,8 @@ def process_did_method_version_upgrade_entry_v100(
         The current number of skipped entries. Will be incremented by one in case the DIDManagement entry is not valid.
     _all_keys: set
         Unused
+    network: Network
+        The Factom network on which the DID is recorded
 
     Returns
     -------
@@ -459,7 +483,12 @@ def process_did_method_version_upgrade_entry_v100(
     new_method_version = method_version
 
     if method_version == DID_METHOD_SPEC_V020:
-        signing_key = active_management_keys.get(_get_alias(ext_ids[2].decode()))
+        key_id = ext_ids[2].decode()
+        if not validate_management_key_id_against_chain_id(key_id, chain_id):
+            raise MalformedDIDManagementEntry(
+                "Invalid key identifier '{}' for chain ID '{}'".format(key_id, chain_id)
+            )
+        signing_key = active_management_keys.get(_get_alias(key_id))
         if (
             signing_key
             and _is_method_version_upgrade(

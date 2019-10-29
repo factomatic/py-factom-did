@@ -67,9 +67,11 @@ def parse_did_chain_entries(entries, chain_id, network=Network.Mainnet):
     entries: list of dict
         A list of entries in the DIDManagement chain as returned by the Python factom-api library, or an equivalent
         API/library. Each element of the list is a dictionary, with keys 'content', 'extids' and 'entryhash' and the
-        values are bytes.
+        values are bytes
     chain_id: str
-        The DIDManagement chain ID.
+        The DIDManagement chain ID
+    network: Network
+        The Factom network on which the DID is recorded
 
     Returns
     -------
@@ -127,7 +129,6 @@ def parse_did_chain_entries(entries, chain_id, network=Network.Mainnet):
                 parsed_content = json.loads(binary_content.decode())
                 schema_version = ext_ids[1].decode()
                 ENTRY_EXT_ID_VALIDATORS[schema_version][entry_type](ext_ids)
-                print(parsed_content)
                 ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
                     parsed_content
                 )
@@ -140,6 +141,7 @@ def parse_did_chain_entries(entries, chain_id, network=Network.Mainnet):
                     active_did_keys,
                     active_services,
                     skipped_entries,
+                    network,
                 )
                 all_keys.update(
                     active_management_keys.values(), active_did_keys.values()
@@ -200,6 +202,7 @@ def parse_did_chain_entries(entries, chain_id, network=Network.Mainnet):
                     active_services,
                     skipped_entries,
                     all_keys,
+                    network,
                 )
                 all_keys.update(
                     active_management_keys.values(), active_did_keys.values()
