@@ -4,7 +4,7 @@ from json import JSONDecodeError
 from jsonschema.exceptions import ValidationError
 
 from factom_did.client.constants import ENTRY_SCHEMA_V100
-from factom_did.client.enums import EntryType
+from factom_did.client.enums import EntryType, Network
 from factom_did.resolver.entry_processors import (
     process_did_deactivation_entry_v100,
     process_did_management_entry_v100,
@@ -58,7 +58,7 @@ ENTRY_PROCESSORS = {
 }
 
 
-def parse_did_chain_entries(entries, chain_id):
+def parse_did_chain_entries(entries, chain_id, network=Network.Mainnet):
     """
     Attempts to parse the entries in a DIDManagement chain.
 
@@ -127,6 +127,7 @@ def parse_did_chain_entries(entries, chain_id):
                 parsed_content = json.loads(binary_content.decode())
                 schema_version = ext_ids[1].decode()
                 ENTRY_EXT_ID_VALIDATORS[schema_version][entry_type](ext_ids)
+                print(parsed_content)
                 ENTRY_SCHEMA_VALIDATORS[schema_version][entry_type].validate(
                     parsed_content
                 )

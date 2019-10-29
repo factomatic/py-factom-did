@@ -57,7 +57,7 @@ def validate_did_update_ext_ids_v100(ext_ids):
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.Update)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
-        and _validate_key_identifier(ext_ids)
+        and _validate_full_key_identifier(ext_ids)
     )
 
 
@@ -79,7 +79,7 @@ def validate_did_method_version_upgrade_ext_ids_v100(ext_ids):
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.VersionUpgrade)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
-        and _validate_key_identifier(ext_ids)
+        and _validate_full_key_identifier(ext_ids)
     )
 
 
@@ -101,7 +101,7 @@ def validate_did_deactivation_ext_ids_v100(ext_ids):
         _validate_ext_ids_length(ext_ids, 4)
         and _validate_entry_type(ext_ids, EntryType.Deactivation)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
-        and _validate_key_identifier(ext_ids)
+        and _validate_full_key_identifier(ext_ids)
     )
 
 
@@ -137,7 +137,7 @@ def validate_management_key_id_against_chain_id(key_id, chain_id):
     Parameters
     ----------
     key_id: str
-        The well-formed full key identifier
+        The well-formed partial or full key identifier
     chain_id: str
         The chain ID
 
@@ -145,8 +145,13 @@ def validate_management_key_id_against_chain_id(key_id, chain_id):
     -------
     bool
     """
-    key_id_chain = key_id.split(":")[-1].split("#")[0]
-    return key_id_chain == chain_id
+    # If the identifier is a full key id, extract the chain and compare it to the provided value
+    if ":" in key_id:
+        key_id_chain = key_id.split(":")[-1].split("#")[0]
+        return key_id_chain == chain_id
+    # Otherwise, just return True
+    else:
+        return True
 
 
 def _validate_ext_ids_length(ext_ids, min_length):
@@ -167,7 +172,7 @@ def _validate_schema_version(ext_ids, version):
         return False
 
 
-def _validate_key_identifier(ext_ids):
+def _validate_full_key_identifier(ext_ids):
     try:
         validate_full_key_identifier(ext_ids[2].decode())
     except (UnicodeDecodeError, ValueError):

@@ -3,11 +3,17 @@
   "title": "Management key schema",
   "type": "object",
   "properties": {
-    "id": {"type": "string"},
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]{1,32}$|^#[a-z0-9-]{1,32}$|^did:factom:(mainnet:|testnet:)?[0-9a-f]{64}#[a-z0-9-]{1,32}$"
+    },
     "type": {
       "enum": ["Ed25519VerificationKey", "ECDSASecp256k1VerificationKey", "RSAVerificationKey"]
     },
-    "controller": {"type": "string"},
+    "controller": {
+      "type": "string",
+      "pattern": "^did:factom:(mainnet:|testnet:)?[0-9a-f]{64}$"
+    },
     "publicKeyBase58": {"type": "string"},
     "publicKeyPem": {"type": "string"},
     "priority": {"type": "integer", "minimum": 0},

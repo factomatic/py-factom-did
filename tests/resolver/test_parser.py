@@ -390,7 +390,7 @@ class TestDIDManagementEntry:
             "Malformed DIDManagement entry: Invalid key identifier"
         )
 
-    def test_with_invalid_key_identifiers(
+    def test_with_invalid_key_identifier(
         self, did, man_key_1, management_entry, chain_id
     ):
         entry_1 = management_entry(
@@ -411,7 +411,7 @@ class TestDIDManagementEntry:
         with pytest.raises(InvalidDIDChain):
             parse_did_chain_entries([entry_1], chain_id)
 
-    def test_with_partial_key_identifiers(
+    def test_with_partial_key_identifier(
         self, did, man_key_1, management_entry, chain_id
     ):
         entry_1 = management_entry(
@@ -434,8 +434,8 @@ class TestDIDManagementEntry:
             [entry_1], chain_id
         )
 
-        assert len(management_keys) == 0
-        assert skipped_entries == 1
+        assert len(management_keys) == 1
+        assert skipped_entries == 0
 
     def test_valid_did_management_entry(
         self,
