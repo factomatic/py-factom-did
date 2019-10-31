@@ -336,6 +336,18 @@ def process_did_update_entry_v100(
             # If not, return without applying the update
             return True, method_version, skipped_entries + 1
 
+        # If a management key is adding a new management key at the same priority level, it should also be revoking
+        # itself. The exception is priority level 0, where multiple keys can be added without a revocation. Furthermore,
+        # for all priority levels except 0, a management key at the same level is only allowed to add one new management
+        # key at the same level. If this rule is violated, the entire DIDUpdate entry is discarded. In addition, if
+        # there is no explicit self-revocation of the management key, the resolver will automagically revoke the signing
+        # management key.
+        skip_entry = _apply_self_revocation_rules(
+            signing_key, new_management_keys, management_keys_to_revoke
+        )
+        if skip_entry:
+            return True, method_version, skipped_entries + 1
+
         # Apply the updates
         for alias in management_keys_to_revoke:
             del active_management_keys[alias]
@@ -656,3 +668,25 @@ def _process_service_additions(entry_content, new_services, active_services, net
         new_services[alias] = Service.from_entry_dict(service_data)
 
     return False
+
+
+def _apply_self_revocation_rules(
+    signing_key, new_management_keys, management_keys_to_revoke
+):
+    # A signing key of priority 0 can do whatever the fuck it wants
+    if signing_key.priority == 0:
+        return False
+
+    num_same_priority_keys = len(
+        list(filter(lambda k: k.priority == signing_key.priority, new_management_keys))
+    )
+
+    if num_same_priority_keys == 0:
+        return False
+    if num_same_priority_keys > 1:
+        return True
+
+    # num_same_priority_keys is 1
+    if signing_key.alias not in management_keys_to_revoke:
+        management_keys_to_revoke.add(signing_key.alias)
+        return False
