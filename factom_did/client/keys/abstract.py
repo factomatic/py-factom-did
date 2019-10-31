@@ -190,10 +190,16 @@ class AbstractDIDKey:
 
     def full_id(self, did):
         """
+        Constructs the full ID of the key.
+
+        Parameters
+        ----------
+        did: str
+
         Returns
         -------
         str
-            The full id for the key, constituting of the DID_METHOD_NAME, the DID and the key alias.
+            The full id for the key, constituting of the DID_METHOD_NAME, the network, the chain ID and the key alias.
         """
         return "{}#{}".format(did, self.alias)
 

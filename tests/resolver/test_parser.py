@@ -21,6 +21,16 @@ def did():
 
 
 @pytest.fixture
+def did_mainnet(did):
+    return "{}:mainnet:{}".format(DID_METHOD_NAME, did.split(":")[-1])
+
+
+@pytest.fixture
+def did_testnet(did):
+    return "{}:testnet:{}".format(DID_METHOD_NAME, did.split(":")[-1])
+
+
+@pytest.fixture
 def did_2():
     return "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
 
@@ -438,6 +448,45 @@ class TestDIDManagementEntry:
 
         assert len(management_keys) == 1
         assert skipped_entries == 0
+
+    def test_with_mainnet_management_key_on_testnet(
+        self, did_mainnet, man_key_1, management_entry, chain_id
+    ):
+        entry = management_entry(
+            {"managementKey": [man_key_1.to_entry_dict(did_mainnet)]}
+        )
+
+        with pytest.raises(InvalidDIDChain) as excinfo:
+            parse_did_chain_entries([entry], chain_id, Network.Testnet)
+        assert str(excinfo.value).find("for network ID 'testnet'") != -1
+
+    def test_with_mainnet_did_key_on_testnet(
+        self, did_mainnet, did_testnet, man_key_1, did_key_1, management_entry, chain_id
+    ):
+        entry = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did_testnet)],
+                "didKey": [did_key_1.to_entry_dict(did_mainnet)],
+            }
+        )
+
+        with pytest.raises(InvalidDIDChain) as excinfo:
+            parse_did_chain_entries([entry], chain_id, Network.Testnet)
+        assert str(excinfo.value).find("for network ID 'testnet'") != -1
+
+    def test_with_mainnet_service_on_testnet(
+        self, did_mainnet, did_testnet, man_key_1, service_1, management_entry, chain_id
+    ):
+        entry = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did_testnet)],
+                "service": [service_1.to_entry_dict(did_mainnet)],
+            }
+        )
+
+        with pytest.raises(InvalidDIDChain) as excinfo:
+            parse_did_chain_entries([entry], chain_id, Network.Testnet)
+        assert str(excinfo.value).find("for network ID 'testnet'") != -1
 
     def test_valid_did_management_entry(
         self,
@@ -1262,3 +1311,70 @@ class TestDIDUpdateEntry:
         assert len(management_keys) == 1
         assert len(did_keys) == 0
         assert skipped_entries == 1
+
+    def test_with_adding_testnet_key_to_a_mainnet_did(
+        self,
+        did_mainnet,
+        did_testnet,
+        man_key_1,
+        did_key_1,
+        management_entry,
+        update_entry,
+        chain_id,
+    ):
+        entry_1 = management_entry(
+            {"managementKey": [man_key_1.to_entry_dict(did_mainnet)]}
+        )
+        content = {"add": {"didKey": [did_key_1.to_entry_dict(did_testnet)]}}
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 0
+        assert skipped_entries == 1
+
+    def test_with_adding_mainnet_key_to_a_mainnet_did(
+        self,
+        did_mainnet,
+        man_key_1,
+        did_key_1,
+        management_entry,
+        update_entry,
+        chain_id,
+    ):
+        entry_1 = management_entry(
+            {"managementKey": [man_key_1.to_entry_dict(did_mainnet)]}
+        )
+        content = {"add": {"didKey": [did_key_1.to_entry_dict(did_mainnet)]}}
+        entry_2 = update_entry(did_mainnet, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 1
+        assert skipped_entries == 0
+
+    def test_with_adding_testnet_key_to_a_testnet_did(
+        self,
+        did_testnet,
+        man_key_1,
+        did_key_1,
+        management_entry,
+        update_entry,
+        chain_id,
+    ):
+        entry_1 = management_entry(
+            {"managementKey": [man_key_1.to_entry_dict(did_testnet)]}
+        )
+        content = {"add": {"didKey": [did_key_1.to_entry_dict(did_testnet)]}}
+        entry_2 = update_entry(did_testnet, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id, Network.Testnet
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 1
+        assert skipped_entries == 0
