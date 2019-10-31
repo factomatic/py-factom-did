@@ -135,35 +135,41 @@ class TestDIDUpdateEntryValidation:
     VALIDATOR = get_schema_validator("did_update_entry.json")
 
     def test_insufficient_extids(self):
+        chain_id = secrets.token_hex(32)
         assert (
             validate_did_update_ext_ids_v100(
                 [
                     b"DIDUpdate",
                     b"1.0.0",
-                    "{}:{}#my-key".format(
-                        DID_METHOD_NAME, secrets.token_hex(32)
-                    ).encode("utf-8"),
-                ]
+                    "{}:{}#my-key".format(DID_METHOD_NAME, chain_id).encode("utf-8"),
+                ],
+                chain_id,
             )
             is False
         )
 
     def test_malformed_extids(self):
-        key_id = "{}:{}#{}".format(
-            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
-        )
+        chain_id = secrets.token_hex(32)
+        key_id = "{}:{}#{}".format(DID_METHOD_NAME, chain_id, "my-man-key-1")
+
         assert (
-            validate_did_update_ext_ids_v100([b"DIdUpdate", b"1.0.0", key_id, b"af01"])
+            validate_did_update_ext_ids_v100(
+                [b"DIdUpdate", b"1.0.0", key_id.encode("utf-8"), b"af01"], chain_id
+            )
             is False
         )
 
         assert (
-            validate_did_update_ext_ids_v100([b"DIDUpdate", b"1.0.0", b"\xbb", b"af01"])
+            validate_did_update_ext_ids_v100(
+                [b"DIDUpdate", b"1.0.0", b"\xbb", b"af01"], chain_id
+            )
             is False
         )
 
         assert (
-            validate_did_update_ext_ids_v100([b"DIDUpdate", b"1.0.", key_id, b"af01"])
+            validate_did_update_ext_ids_v100(
+                [b"DIDUpdate", b"1.0.", key_id.encode("utf-8"), b"af01"], chain_id
+            )
             is False
         )
 
@@ -174,13 +180,15 @@ class TestDIDUpdateEntryValidation:
                     b"1.0.0",
                     key_id[: key_id.find("#")].encode("utf-8"),
                     b"af01",
-                ]
+                ],
+                chain_id,
             )
             is False
         )
 
     def test_invalid_entry(self):
-        did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
+        chain_id = secrets.token_hex(32)
+        did = "{}:{}".format(DID_METHOD_NAME, chain_id)
 
         # Entry with invalid property names
         with pytest.raises(ValidationError):
@@ -237,11 +245,12 @@ class TestDIDUpdateEntryValidation:
             )
 
     def test_valid_entry(self):
-        did = "{}:{}".format(DID_METHOD_NAME, secrets.token_hex(32))
+        chain_id = secrets.token_hex(32)
+        did = "{}:{}".format(DID_METHOD_NAME, chain_id)
         key_id = "{}#{}".format(did, "my-man-key-1")
 
         validate_did_update_ext_ids_v100(
-            [b"DIDUpdate", b"1.0.0", key_id.encode("utf-8"), b"affe"]
+            [b"DIDUpdate", b"1.0.0", key_id.encode("utf-8"), b"affe"], chain_id
         )
 
         # Entry with only additions should be valid
@@ -338,33 +347,39 @@ class TestDIDMethodVersionUpgradeEntryValidation:
     VALIDATOR = get_schema_validator("did_method_version_upgrade_entry.json")
 
     def test_insufficient_extids(self):
+        chain_id = secrets.token_hex(32)
         assert (
             validate_did_method_version_upgrade_ext_ids_v100(
                 [
                     b"DIDMethodVersionUpgrade",
                     b"1.0.0",
-                    "{}:{}#my-key".format(
-                        DID_METHOD_NAME, secrets.token_hex(32)
-                    ).encode("utf-8"),
-                ]
+                    "{}:{}#my-key".format(DID_METHOD_NAME, chain_id).encode("utf-8"),
+                ],
+                chain_id,
             )
             is False
         )
 
     def test_malformed_extids(self):
-        key_id = "{}:{}#{}".format(
-            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
-        )
+        chain_id = secrets.token_hex(32)
+        key_id = "{}:{}#{}".format(DID_METHOD_NAME, chain_id, "my-man-key-1")
         assert (
             validate_did_method_version_upgrade_ext_ids_v100(
-                [b"DIDMethodVersionsUpgrade", b"1.0.0", key_id.encode("utf-8"), b"af01"]
+                [
+                    b"DIDMethodVersionsUpgrade",
+                    b"1.0.0",
+                    key_id.encode("utf-8"),
+                    b"af01",
+                ],
+                chain_id,
             )
             is False
         )
 
         assert (
             validate_did_method_version_upgrade_ext_ids_v100(
-                [b"DIDMethodVersionUpgrade", b"1.0.", key_id.encode("utf-8"), b"af01"]
+                [b"DIDMethodVersionUpgrade", b"1.0.", key_id.encode("utf-8"), b"af01"],
+                chain_id,
             )
             is False
         )
@@ -376,7 +391,8 @@ class TestDIDMethodVersionUpgradeEntryValidation:
                     b"1.0.0",
                     key_id[: key_id.find("#")].encode("utf-8"),
                     b"0xaf01",
-                ]
+                ],
+                chain_id,
             )
             is False
         )
@@ -399,12 +415,12 @@ class TestDIDMethodVersionUpgradeEntryValidation:
             self.VALIDATOR.validate({"didMethodVersion": "1.0.2", "additional": 1})
 
     def test_valid_entry(self):
-        key_id = "{}:{}#{}".format(
-            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
-        )
+        chain_id = secrets.token_hex(32)
+        key_id = "{}:{}#{}".format(DID_METHOD_NAME, chain_id, "my-man-key-1")
         assert (
             validate_did_method_version_upgrade_ext_ids_v100(
-                [b"DIDMethodVersionUpgrade", b"1.0.0", key_id.encode("utf-8"), b"af01"]
+                [b"DIDMethodVersionUpgrade", b"1.0.0", key_id.encode("utf-8"), b"af01"],
+                chain_id,
             )
             is True
         )
@@ -413,33 +429,32 @@ class TestDIDMethodVersionUpgradeEntryValidation:
 
 class TestDIDDeactivationEntryValidation:
     def test_insufficient_extids(self):
+        chain_id = secrets.token_hex(32)
         assert (
             validate_did_deactivation_ext_ids_v100(
                 [
                     b"DIDDeactivation",
                     b"1.0.0",
-                    "{}:{}#my-key".format(
-                        DID_METHOD_NAME, secrets.token_hex(32)
-                    ).encode("utf-8"),
-                ]
+                    "{}:{}#my-key".format(DID_METHOD_NAME, chain_id).encode("utf-8"),
+                ],
+                chain_id,
             )
             is False
         )
 
     def test_malformed_extids(self):
-        key_id = "{}:{}#{}".format(
-            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
-        )
+        chain_id = secrets.token_hex(32)
+        key_id = "{}:{}#{}".format(DID_METHOD_NAME, chain_id, "my-man-key-1")
         assert (
             validate_did_deactivation_ext_ids_v100(
-                [b"DIDDeactivated", b"1.0.0", key_id.encode("utf-8"), b"af01"]
+                [b"DIDDeactivated", b"1.0.0", key_id.encode("utf-8"), b"af01"], chain_id
             )
             is False
         )
 
         assert (
             validate_did_deactivation_ext_ids_v100(
-                [b"DIDDeactivation", b"1.0.", key_id.encode("utf-8"), b"af01"]
+                [b"DIDDeactivation", b"1.0.", key_id.encode("utf-8"), b"af01"], chain_id
             )
             is False
         )
@@ -451,7 +466,8 @@ class TestDIDDeactivationEntryValidation:
                     b"1.0.0",
                     key_id[: key_id.find("#")].encode("utf-8"),
                     b"af01",
-                ]
+                ],
+                chain_id,
             )
             is False
         )
@@ -461,12 +477,12 @@ class TestDIDDeactivationEntryValidation:
             EmptyEntryContentValidator.validate({"some": "data"})
 
     def test_valid_entry(self):
-        key_id = "{}:{}#{}".format(
-            DID_METHOD_NAME, secrets.token_hex(32), "my-man-key-1"
-        )
+        chain_id = secrets.token_hex(32)
+        key_id = "{}:{}#{}".format(DID_METHOD_NAME, chain_id, "my-man-key-1")
         assert (
             validate_did_deactivation_ext_ids_v100(
-                [b"DIDDeactivation", b"1.0.0", key_id.encode("utf-8"), b"af01"]
+                [b"DIDDeactivation", b"1.0.0", key_id.encode("utf-8"), b"af01"],
+                chain_id,
             )
             is True
         )

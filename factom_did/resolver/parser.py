@@ -178,7 +178,9 @@ def parse_did_chain_entries(entries, chain_id, network=Network.Mainnet):
                     entry_type == EntryType.Create.value
                     or schema_version not in ENTRY_SCHEMA_VALIDATORS
                     or entry_type not in ENTRY_SCHEMA_VALIDATORS[schema_version]
-                    or not ENTRY_EXT_ID_VALIDATORS[schema_version][entry_type](ext_ids)
+                    or not ENTRY_EXT_ID_VALIDATORS[schema_version][entry_type](
+                        ext_ids, chain_id
+                    )
                 ):
                     skipped_entries += 1
                     continue

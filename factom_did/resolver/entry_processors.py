@@ -235,8 +235,6 @@ def process_did_update_entry_v100(
 
     if method_version == DID_METHOD_SPEC_V020:
         key_id = ext_ids[2].decode()
-        if not validate_management_key_id_against_chain_id(key_id, chain_id):
-            return True, method_version, skipped_entries + 1
         signing_key = active_management_keys.get(_get_alias(key_id))
         if (not signing_key) or (
             not validate_signature(ext_ids, binary_content, signing_key)
@@ -247,6 +245,8 @@ def process_did_update_entry_v100(
 
         if "revoke" in parsed_content:
             for key in parsed_content["revoke"].get("managementKey", []):
+                if not validate_management_key_id_against_chain_id(key["id"], chain_id):
+                    return True, method_version, skipped_entries + 1
                 alias = _get_alias(key["id"])
                 # If revocation of a non-existent key or multiple revocations of the same key are attempted,
                 # ignore the entire DIDUpdate entry
@@ -356,7 +356,7 @@ def process_did_update_entry_v100(
 
 
 def process_did_deactivation_entry_v100(
-    chain_id,
+    _chain_id,
     ext_ids,
     binary_content,
     _parsed_content,
@@ -377,8 +377,8 @@ def process_did_deactivation_entry_v100(
 
     Parameters
     ----------
-    chain_id: str
-        The DIDManagement chain ID.
+    _chain_id: str
+        Unused
     ext_ids: list
         The ExtIDs of the entry, as bytes.
     binary_content: bytes
@@ -408,12 +408,8 @@ def process_did_deactivation_entry_v100(
         of skipped entries in the DIDManagement chain.
     """
     if method_version == DID_METHOD_SPEC_V020:
-        # DIDDeactivation entry must be signed by an active management key of priority 0, referenced using a full
-        # key identifier matching the current chain ID
+        # DIDDeactivation entry must be signed by an active management key of priority 0
         key_id = ext_ids[2].decode()
-        if not validate_management_key_id_against_chain_id(key_id, chain_id):
-            print("shit shit")
-            return True, method_version, skipped_entries + 1
         signing_key = active_management_keys.get(_get_alias(key_id))
         if (
             not signing_key
@@ -432,7 +428,7 @@ def process_did_deactivation_entry_v100(
 
 
 def process_did_method_version_upgrade_entry_v100(
-    chain_id,
+    _chain_id,
     ext_ids,
     binary_content,
     parsed_content,
@@ -453,8 +449,8 @@ def process_did_method_version_upgrade_entry_v100(
 
     Parameters
     ----------
-    chain_id: str
-        The DIDManagement chain ID.
+    _chain_id: str
+        Unused
     ext_ids: list
         The ExtIDs of the entry, as bytes.
     binary_content: bytes
@@ -487,8 +483,6 @@ def process_did_method_version_upgrade_entry_v100(
 
     if method_version == DID_METHOD_SPEC_V020:
         key_id = ext_ids[2].decode()
-        if not validate_management_key_id_against_chain_id(key_id, chain_id):
-            return True, method_version, skipped_entries + 1
         signing_key = active_management_keys.get(_get_alias(key_id))
         if (
             signing_key

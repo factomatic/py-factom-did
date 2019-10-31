@@ -39,7 +39,7 @@ def validate_did_management_ext_ids_v100(ext_ids):
         )
 
 
-def validate_did_update_ext_ids_v100(ext_ids):
+def validate_did_update_ext_ids_v100(ext_ids, chain_id):
     """
     Validates the ExtIDs of a DIDUpdate entry.
 
@@ -47,6 +47,8 @@ def validate_did_update_ext_ids_v100(ext_ids):
     ----------
     ext_ids: list of bytes
         The ExtIDs of the entry
+    chain_id: str
+        The chain ID where the DIDUpdate is recorded
 
     Returns
     -------
@@ -58,10 +60,11 @@ def validate_did_update_ext_ids_v100(ext_ids):
         and _validate_entry_type(ext_ids, EntryType.Update)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_full_key_identifier(ext_ids)
+        and validate_management_key_id_against_chain_id(ext_ids[2], chain_id)
     )
 
 
-def validate_did_method_version_upgrade_ext_ids_v100(ext_ids):
+def validate_did_method_version_upgrade_ext_ids_v100(ext_ids, chain_id):
     """
     Validates the ExtIDs of a DIDMethodVersionUpgrade entry.
 
@@ -69,6 +72,8 @@ def validate_did_method_version_upgrade_ext_ids_v100(ext_ids):
     ----------
     ext_ids: list of bytes
         The ExtIDs of the entry
+    chain_id: str
+        The chain ID where the DIDUpdate is recorded
 
     Returns
     -------
@@ -80,10 +85,11 @@ def validate_did_method_version_upgrade_ext_ids_v100(ext_ids):
         and _validate_entry_type(ext_ids, EntryType.VersionUpgrade)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_full_key_identifier(ext_ids)
+        and validate_management_key_id_against_chain_id(ext_ids[2], chain_id)
     )
 
 
-def validate_did_deactivation_ext_ids_v100(ext_ids):
+def validate_did_deactivation_ext_ids_v100(ext_ids, chain_id):
     """
     Validates the ExtIDs of a DIDDeactivation entry.
 
@@ -91,6 +97,8 @@ def validate_did_deactivation_ext_ids_v100(ext_ids):
     ----------
     ext_ids: list of bytes
         The ExtIDs of the entry
+    chain_id: str
+        The chain ID where the DIDUpdate is recorded
 
     Returns
     -------
@@ -102,6 +110,7 @@ def validate_did_deactivation_ext_ids_v100(ext_ids):
         and _validate_entry_type(ext_ids, EntryType.Deactivation)
         and _validate_schema_version(ext_ids, ENTRY_SCHEMA_V100)
         and _validate_full_key_identifier(ext_ids)
+        and validate_management_key_id_against_chain_id(ext_ids[2], chain_id)
     )
 
 
@@ -136,20 +145,26 @@ def validate_management_key_id_against_chain_id(key_id, chain_id):
 
     Parameters
     ----------
-    key_id: str
-        The well-formed partial or full key identifier
+    key_id: bytes or str
+        The partial or full key identifier
     chain_id: str
         The chain ID
+
+    Raises
+    ------
+    UnicodeDecodeError
+        If the key_id cannot be decoded to a Unicode string
 
     Returns
     -------
     bool
     """
     # If the identifier is a full key id, extract the chain and compare it to the provided value
+    if type(key_id) is bytes:
+        key_id = key_id.decode()
     if ":" in key_id:
         key_id_chain = key_id.split(":")[-1].split("#")[0]
         return key_id_chain == chain_id
-    # Otherwise, just return True
     else:
         return True
 

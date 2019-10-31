@@ -587,9 +587,8 @@ class TestDIDDeactivationEntry:
             [entry_1, entry_2], chain_id
         )
 
-        assert False
-        # assert len(management_keys) == 1
-        # assert skipped_entries == 1
+        assert len(management_keys) == 1
+        assert skipped_entries == 1
 
 
 class TestDIDVersionUpgradeEntry:
@@ -1209,6 +1208,27 @@ class TestDIDUpdateEntry:
 
         assert skipped_entries == 1
         assert len(management_keys) == 1
+
+    def test_with_revocation_of_management_key_from_another_chain(
+        self, did, did_2, man_key_1, man_key_5, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_5.to_entry_dict(did),
+                ]
+            }
+        )
+        # We try to revoke the same key added above, but with its chain referencing the chain of did_2
+        content = {"revoke": {"managementKey": [{"id": man_key_5.full_id(did_2)}]}}
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert skipped_entries == 1
+        assert len(management_keys) == 2
 
     def test_with_signature_from_management_key_from_another_chain(
         self, did, did_2, man_key_1, did_key_1, management_entry, update_entry, chain_id
