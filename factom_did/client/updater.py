@@ -74,7 +74,6 @@ class DIDUpdater:
         controller: str, optional
         priority_requirement: int, optional
         """
-
         self.did.did_key(alias, purpose, key_type, controller, priority_requirement)
         return self
 
@@ -180,7 +179,6 @@ class DIDUpdater:
         RuntimeError
             If a management key of sufficient priority is not available to sign the update.
         """
-
         revoked_management_keys, revoked_did_keys, revoked_services = (
             self._get_revoked()
         )
