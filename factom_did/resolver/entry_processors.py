@@ -46,6 +46,7 @@ def _get_alias(full_or_partial_id):
     """
     # Note that this works for identifiers of all types currently described in the spec, i.e.:
     # 1. did:factom:f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b#management-2
+    # 2. did:factom:mainnet:f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b#management-2
     # 2. #inbox
     # 3. management-1
     # The function will return management-2, inbox and management-1, respectively
@@ -233,7 +234,10 @@ def process_did_update_entry_v100(
     new_services = {}
 
     if method_version == DID_METHOD_SPEC_V020:
-        signing_key = active_management_keys.get(_get_alias(ext_ids[2].decode()))
+        key_id = ext_ids[2].decode()
+        if not validate_management_key_id_against_chain_id(key_id, chain_id):
+            return True, method_version, skipped_entries + 1
+        signing_key = active_management_keys.get(_get_alias(key_id))
         if (not signing_key) or (
             not validate_signature(ext_ids, binary_content, signing_key)
         ):
@@ -408,13 +412,12 @@ def process_did_deactivation_entry_v100(
         # key identifier matching the current chain ID
         key_id = ext_ids[2].decode()
         if not validate_management_key_id_against_chain_id(key_id, chain_id):
-            raise MalformedDIDManagementEntry(
-                "Invalid key identifier '{}' for chain ID '{}'".format(key_id, chain_id)
-            )
+            print("shit shit")
+            return True, method_version, skipped_entries + 1
         signing_key = active_management_keys.get(_get_alias(key_id))
         if (
-            (not signing_key)
-            or (signing_key.priority != 0)
+            not signing_key
+            or signing_key.priority != 0
             or (not validate_signature(ext_ids, binary_content, signing_key))
         ):
             return True, method_version, skipped_entries + 1
@@ -485,9 +488,7 @@ def process_did_method_version_upgrade_entry_v100(
     if method_version == DID_METHOD_SPEC_V020:
         key_id = ext_ids[2].decode()
         if not validate_management_key_id_against_chain_id(key_id, chain_id):
-            raise MalformedDIDManagementEntry(
-                "Invalid key identifier '{}' for chain ID '{}'".format(key_id, chain_id)
-            )
+            return True, method_version, skipped_entries + 1
         signing_key = active_management_keys.get(_get_alias(key_id))
         if (
             signing_key

@@ -390,14 +390,16 @@ class TestDIDManagementEntry:
             "Malformed DIDManagement entry: Invalid key identifier"
         )
 
-    def test_with_invalid_key_identifier(
+    def test_with_malformed_key_identifier(
         self, did, man_key_1, management_entry, chain_id
     ):
         entry_1 = management_entry(
             {
                 "managementKey": [
                     {
-                        "id": "did:fatcom:{}#man-key-1".format(chain_id),
+                        "id": "did:fatcom:{}#man-key-1".format(
+                            chain_id
+                        ),  # malformed (fatcom should be factom)
                         "type": "ECDSASecp256k1VerificationKey",
                         "priority": 0,
                         "controller": did,
@@ -534,8 +536,63 @@ class TestDIDDeactivationEntry:
         assert services == {}
         assert skipped_entries == 1
 
+    def test_with_signature_from_management_key_with_partial_id(
+        self, did, man_key_1, management_entry, deactivation_entry, chain_id
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        entry_2 = deactivation_entry(
+            did, man_key_1, ext_ids=["DIDDeactivation", "1.0.0", "#man-key-1"]
+        )
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
 
-class TestDIDVersionUpgrade:
+        assert len(management_keys) == 1
+        assert skipped_entries == 1
+
+    def test_with_malformed_management_key_id(
+        self, did, man_key_1, management_entry, deactivation_entry, chain_id
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        entry_2 = deactivation_entry(
+            did,
+            man_key_1,
+            ext_ids=[
+                "DIDDeactivation",
+                "1.0.0",
+                "did:fatcom:{}#man-key-1".format(chain_id),  # malformed
+            ],
+        )
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert skipped_entries == 1
+
+    def test_with_non_matching_chain_id(
+        self, did, man_key_1, management_entry, deactivation_entry, chain_id, chain_id_2
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        entry_2 = deactivation_entry(
+            did,
+            man_key_1,
+            ext_ids=[
+                "DIDDeactivation",
+                "1.0.0",
+                "did:factom:{}#man-key-1".format(chain_id_2),
+            ],
+        )
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert False
+        # assert len(management_keys) == 1
+        # assert skipped_entries == 1
+
+
+class TestDIDVersionUpgradeEntry:
     def test_with_unknown_method_spec_version(
         self, did, man_key_1, management_entry, version_upgrade_entry, chain_id
     ):
@@ -544,6 +601,28 @@ class TestDIDVersionUpgrade:
         entry_3 = version_upgrade_entry(did, man_key_1, "0.5.0")
         management_keys, _, _, skipped_entries = parse_did_chain_entries(
             [entry_1, entry_2, entry_3], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert skipped_entries == 1
+
+    def test_with_malformed_management_key_id(
+        self, did, man_key_1, management_entry, version_upgrade_entry, chain_id
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        entry_2 = version_upgrade_entry(
+            did,
+            man_key_1,
+            "0.4.0",
+            ext_ids=[
+                "DIDMethodVersionUpgrade",
+                "1.0.0",
+                "did:fatcom:{}#man-key-1".format(chain_id),  # malformed
+            ],
+        )
+
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
         )
 
         assert len(management_keys) == 1
@@ -1130,3 +1209,36 @@ class TestDIDUpdateEntry:
 
         assert skipped_entries == 1
         assert len(management_keys) == 1
+
+    def test_with_signature_from_management_key_from_another_chain(
+        self, did, did_2, man_key_1, did_key_1, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {"add": {"didKey": [did_key_1.to_entry_dict(did)]}}
+        # This will generate a signing from man_key_1, but the key identifier for the management key will reference the
+        # chain ID of did_2. This means that the DIDUpdate entry should be skipped and no DID keys should be added, as
+        # the signature for a DIDUpdate entry must be coming from a management key in the same chain
+        entry_2 = update_entry(did_2, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 0
+        assert skipped_entries == 1
+
+    def test_with_signature_from_management_key_with_partial_id(
+        self, did, man_key_1, did_key_1, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {"add": {"didKey": [did_key_1.to_entry_dict(did)]}}
+        entry_2 = update_entry(
+            did, man_key_1, content, ["DIDUpdate", "1.0.0", "man-key-1"]
+        )
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 0
+        assert skipped_entries == 1
