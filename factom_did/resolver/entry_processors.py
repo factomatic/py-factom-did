@@ -1,40 +1,20 @@
 """Helper functions for parser.py which are used to update the currently active management and DID keys,
 and services."""
 
-import hashlib
 import math
 from packaging import version
 
 from factom_did.client.constants import DID_METHOD_SPEC_V020
+from factom_did.client.enums import Network
 from factom_did.client.keys.did import DIDKey
 from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
 from factom_did.resolver.exceptions import MalformedDIDManagementEntry
-
-
-def _is_valid_signature(ext_ids, content, signing_key):
-    """
-    Checks if the signature contained in the last element of ext_ids is valid.
-
-    The signature is for a DIDUpdate, DIDMethodVersionUpgrade or DIDDeactivation entry and covers the content of the
-    entry + the first 3 ext_ids. For more details on the signatures of these entries, refer to
-    https://github.com/bi-foundation/FIS/blob/feature/DID/FIS/DID.md
-
-    Parameters
-    ----------
-    ext_ids: list of bytes
-    content: bytes
-    signing_key: ManagementKey
-
-    Returns
-    -------
-    bool
-    """
-    signed_data = bytearray()
-    for i in range(3):
-        signed_data.extend(ext_ids[i])
-    signed_data.extend(content)
-    return signing_key.verify(hashlib.sha256(signed_data).digest(), ext_ids[3])
+from factom_did.resolver.validators import (
+    validate_management_key_id_against_chain_id,
+    validate_id_against_network,
+    validate_signature,
+)
 
 
 def _is_method_version_upgrade(current_version, new_version):
@@ -67,6 +47,7 @@ def _get_alias(full_or_partial_id):
     """
     # Note that this works for identifiers of all types currently described in the spec, i.e.:
     # 1. did:factom:f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b#management-2
+    # 2. did:factom:mainnet:f0e4c2f76c58916ec258f246851bea091d14d4247a2fc3e18694461b1816e13b#management-2
     # 2. #inbox
     # 3. management-1
     # The function will return management-2, inbox and management-1, respectively
@@ -102,7 +83,13 @@ def exists_management_key_with_priority_zero(
 
 
 def process_did_management_entry_v100(
-    parsed_content, management_keys, did_keys, services, skipped_entries
+    chain_id,
+    parsed_content,
+    management_keys,
+    did_keys,
+    services,
+    skipped_entries,
+    network,
 ):
     """
     Extracts the management keys, DID keys and services from a DIDManagement entry.
@@ -113,6 +100,8 @@ def process_did_management_entry_v100(
 
     Parameters
     ----------
+    chain_id: str
+        The DIDManagement chain ID.
     parsed_content: dict
         The parsed DIDManagement entry.
     management_keys: dict
@@ -123,6 +112,8 @@ def process_did_management_entry_v100(
         Will be updated to contain the services found in the entry.
     skipped_entries: int
         Will be incremented by one in case the DIDManagement entry is not valid.
+    network: Network
+        The Factom network on which the DID is recorded
 
     Returns
     -------
@@ -147,6 +138,18 @@ def process_did_management_entry_v100(
 
     found_key_with_priority_zero = False
     for key_data in parsed_content["managementKey"]:
+        if not validate_management_key_id_against_chain_id(key_data["id"], chain_id):
+            raise MalformedDIDManagementEntry(
+                "Invalid key identifier '{}' for chain ID '{}'".format(
+                    key_data["id"], chain_id
+                )
+            )
+        if not validate_id_against_network(key_data["id"], network):
+            raise MalformedDIDManagementEntry(
+                "Invalid key identifier '{}' for network ID '{}'".format(
+                    key_data["id"], network.value
+                )
+            )
         alias = _get_alias(key_data["id"])
         if alias in new_management_keys:
             raise MalformedDIDManagementEntry("Duplicate management key found")
@@ -159,11 +162,23 @@ def process_did_management_entry_v100(
         )
 
     for key_data in parsed_content.get("didKey", []):
+        if not validate_id_against_network(key_data["id"], network):
+            raise MalformedDIDManagementEntry(
+                "Invalid key identifier '{}' for network ID '{}'".format(
+                    key_data["id"], network.value
+                )
+            )
         alias = _get_alias(key_data["id"])
         if alias in new_did_keys:
             raise MalformedDIDManagementEntry("Duplicate DID key found")
         new_did_keys[alias] = DIDKey.from_entry_dict(key_data)
     for service_data in parsed_content.get("service", []):
+        if not validate_id_against_network(service_data["id"], network):
+            raise MalformedDIDManagementEntry(
+                "Invalid service identifier '{}' for network ID '{}'".format(
+                    service_data["id"], network.value
+                )
+            )
         alias = _get_alias(service_data["id"])
         if alias in new_services:
             raise MalformedDIDManagementEntry("Duplicate service found")
@@ -178,6 +193,7 @@ def process_did_management_entry_v100(
 
 
 def process_did_update_entry_v100(
+    chain_id,
     ext_ids,
     binary_content,
     parsed_content,
@@ -187,6 +203,7 @@ def process_did_update_entry_v100(
     active_services,
     skipped_entries,
     all_keys,
+    network,
 ):
     """
     Updates the management keys, DID keys and services based on the contents of the entry.
@@ -197,6 +214,8 @@ def process_did_update_entry_v100(
 
     Parameters
     ----------
+    chain_id: str
+        The DIDManagement chain ID.
     ext_ids: list
         The ExtIDs of the entry, as bytes.
     binary_content: bytes
@@ -215,6 +234,8 @@ def process_did_update_entry_v100(
         The current number of skipped entries. Will be incremented by one in case the DIDManagement entry is not valid.
     all_keys: set
         The set of all management and DID keys that have been active at some point for the current DIDManagement chain.
+    network: Network
+        The Factom network on which the DID is recorded
 
     Returns
     -------
@@ -232,9 +253,10 @@ def process_did_update_entry_v100(
     new_services = {}
 
     if method_version == DID_METHOD_SPEC_V020:
-        signing_key = active_management_keys.get(_get_alias(ext_ids[2].decode()))
+        key_id = ext_ids[2].decode()
+        signing_key = active_management_keys.get(_get_alias(key_id))
         if (not signing_key) or (
-            not _is_valid_signature(ext_ids, binary_content, signing_key)
+            not validate_signature(ext_ids, binary_content, signing_key)
         ):
             return True, method_version, skipped_entries + 1
 
@@ -242,6 +264,10 @@ def process_did_update_entry_v100(
 
         if "revoke" in parsed_content:
             for key in parsed_content["revoke"].get("managementKey", []):
+                if not validate_management_key_id_against_chain_id(
+                    key["id"], chain_id
+                ) or not validate_id_against_network(key["id"], network):
+                    return True, method_version, skipped_entries + 1
                 alias = _get_alias(key["id"])
                 # If revocation of a non-existent key or multiple revocations of the same key are attempted,
                 # ignore the entire DIDUpdate entry
@@ -264,9 +290,16 @@ def process_did_update_entry_v100(
 
             for key in parsed_content["revoke"].get("didKey", []):
                 alias = _get_alias(key["id"])
-                # If revocation of a non-existent key or multiple revocations of the same key are attempted,
-                # ignore the entire DIDUpdate entry
-                if alias not in active_did_keys or alias in did_keys_to_revoke:
+                # If:
+                # * revocation of a non-existent key, or
+                # * multiple revocations of the same key, or
+                # * revocations of a DID key with a non-matching network identifier
+                # are attempted ignore the entire DIDUpdate entry
+                if (
+                    alias not in active_did_keys
+                    or alias in did_keys_to_revoke
+                    or not validate_id_against_network(key["id"], network)
+                ):
                     return True, method_version, skipped_entries + 1
                 did_keys_to_revoke.add(alias)
                 if active_did_keys[alias].priority_requirement is not None:
@@ -277,9 +310,16 @@ def process_did_update_entry_v100(
 
             for service in parsed_content["revoke"].get("service", []):
                 alias = _get_alias(service["id"])
-                # If revocation of a non-existent service or multiple revocations of the same service are attempted,
-                # ignore the entire DIDUpdate entry
-                if alias not in active_services or alias in services_to_revoke:
+                # If:
+                # * revocation of a non-existent service, or
+                # * multiple revocations of the same service, or
+                # * revocations of a service with a non-matching network identifier
+                # are attempted ignore the entire DIDUpdate entry
+                if (
+                    alias not in active_services
+                    or alias in services_to_revoke
+                    or not validate_id_against_network(service["id"], network)
+                ):
                     return True, method_version, skipped_entries + 1
                 services_to_revoke.add(alias)
                 if active_services[alias].priority_requirement is not None:
@@ -289,6 +329,10 @@ def process_did_update_entry_v100(
                     )
         if "add" in parsed_content:
             for key_data in parsed_content["add"].get("managementKey", []):
+                if not validate_management_key_id_against_chain_id(
+                    key_data["id"], chain_id
+                ) or not validate_id_against_network(key_data["id"], network):
+                    return True, method_version, skipped_entries + 1
                 alias = _get_alias(key_data["id"])
                 # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
                 if alias in new_management_keys or alias in active_management_keys:
@@ -302,8 +346,13 @@ def process_did_update_entry_v100(
                 )
             for key_data in parsed_content["add"].get("didKey", []):
                 alias = _get_alias(key_data["id"])
-                # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
-                if alias in new_did_keys or alias in active_did_keys:
+                # If double-addition of the same key or addition of a key with a non-matching network identifier is
+                # attempted, ignore the entire DIDUpdate entry
+                if (
+                    alias in new_did_keys
+                    or alias in active_did_keys
+                    or not validate_id_against_network(key_data["id"], network)
+                ):
                     return True, method_version, skipped_entries + 1
                 new_did_key = DIDKey.from_entry_dict(key_data)
                 if new_did_key in all_keys:
@@ -311,8 +360,13 @@ def process_did_update_entry_v100(
                 new_did_keys[alias] = new_did_key
             for service_data in parsed_content["add"].get("service", []):
                 alias = _get_alias(service_data["id"])
-                # If double-addition of the same service is attempted, ignore the entire DIDUpdate entry
-                if alias in new_services or alias in active_services:
+                # If double-addition of the same service or addition of a service with a non-matching network identifier
+                # is attempted, ignore the entire DIDUpdate entry
+                if (
+                    alias in new_services
+                    or alias in active_services
+                    or not validate_id_against_network(service_data["id"], network)
+                ):
                     return True, method_version, skipped_entries + 1
                 new_services[alias] = Service.from_entry_dict(service_data)
 
@@ -347,6 +401,7 @@ def process_did_update_entry_v100(
 
 
 def process_did_deactivation_entry_v100(
+    _chain_id,
     ext_ids,
     binary_content,
     _parsed_content,
@@ -356,6 +411,7 @@ def process_did_deactivation_entry_v100(
     active_services,
     skipped_entries,
     _all_keys,
+    _network,
 ):
     """
     Deactivates the DID by resetting the currently active management and DID keys, and services.
@@ -366,6 +422,8 @@ def process_did_deactivation_entry_v100(
 
     Parameters
     ----------
+    _chain_id: str
+        Unused
     ext_ids: list
         The ExtIDs of the entry, as bytes.
     binary_content: bytes
@@ -384,6 +442,8 @@ def process_did_deactivation_entry_v100(
         The current number of skipped entries. Will be incremented by one in case the DIDManagement entry is not valid.
     _all_keys: set
         Unused
+    _network: Network
+        Unused
 
     Returns
     -------
@@ -394,11 +454,12 @@ def process_did_deactivation_entry_v100(
     """
     if method_version == DID_METHOD_SPEC_V020:
         # DIDDeactivation entry must be signed by an active management key of priority 0
-        signing_key = active_management_keys.get(_get_alias(ext_ids[2].decode()))
+        key_id = ext_ids[2].decode()
+        signing_key = active_management_keys.get(_get_alias(key_id))
         if (
-            (not signing_key)
-            or (signing_key.priority != 0)
-            or (not _is_valid_signature(ext_ids, binary_content, signing_key))
+            not signing_key
+            or signing_key.priority != 0
+            or (not validate_signature(ext_ids, binary_content, signing_key))
         ):
             return True, method_version, skipped_entries + 1
 
@@ -412,6 +473,7 @@ def process_did_deactivation_entry_v100(
 
 
 def process_did_method_version_upgrade_entry_v100(
+    _chain_id,
     ext_ids,
     binary_content,
     parsed_content,
@@ -421,6 +483,7 @@ def process_did_method_version_upgrade_entry_v100(
     _active_services,
     skipped_entries,
     _all_keys,
+    _network,
 ):
     """
     Upgrades the DID method version.
@@ -431,6 +494,8 @@ def process_did_method_version_upgrade_entry_v100(
 
     Parameters
     ----------
+    _chain_id: str
+        Unused
     ext_ids: list
         The ExtIDs of the entry, as bytes.
     binary_content: bytes
@@ -449,6 +514,8 @@ def process_did_method_version_upgrade_entry_v100(
         The current number of skipped entries. Will be incremented by one in case the DIDManagement entry is not valid.
     _all_keys: set
         Unused
+    _network: Network
+        Unused
 
     Returns
     -------
@@ -460,13 +527,14 @@ def process_did_method_version_upgrade_entry_v100(
     new_method_version = method_version
 
     if method_version == DID_METHOD_SPEC_V020:
-        signing_key = active_management_keys.get(_get_alias(ext_ids[2].decode()))
+        key_id = ext_ids[2].decode()
+        signing_key = active_management_keys.get(_get_alias(key_id))
         if (
             signing_key
             and _is_method_version_upgrade(
                 method_version, parsed_content["didMethodVersion"]
             )
-            and _is_valid_signature(ext_ids, binary_content, signing_key)
+            and validate_signature(ext_ids, binary_content, signing_key)
         ):
             new_method_version = parsed_content["didMethodVersion"]
         else:
