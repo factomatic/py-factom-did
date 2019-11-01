@@ -113,6 +113,17 @@ def man_key_5(did_2):
 
 
 @pytest.fixture
+def man_key_6(did):
+    return ManagementKey(
+        alias="man-key-6",
+        priority=1,
+        controller=did,
+        key_type=KeyType.EdDSA,
+        priority_requirement=1,
+    )
+
+
+@pytest.fixture
 def did_key_1(did):
     return DIDKey(
         alias="did-key-1",
@@ -1378,3 +1389,157 @@ class TestDIDUpdateEntry:
         assert len(management_keys) == 1
         assert len(did_keys) == 1
         assert skipped_entries == 0
+
+    def test_implicit_self_revocation(
+        self,
+        did,
+        man_key_1,
+        man_key_3,
+        man_key_6,
+        management_entry,
+        update_entry,
+        chain_id,
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_3.to_entry_dict(did),
+                ]
+            }
+        )
+        content = {"add": {"managementKey": [man_key_6.to_entry_dict(did)]}}
+        entry_2 = update_entry(did, man_key_3, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 2
+        assert "man-key-6" in management_keys and "man-key-1" in management_keys
+        assert skipped_entries == 0
+
+    def test_explicit_self_revocation(
+        self,
+        did,
+        man_key_1,
+        man_key_3,
+        man_key_6,
+        management_entry,
+        update_entry,
+        chain_id,
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_3.to_entry_dict(did),
+                ]
+            }
+        )
+        content = {
+            "add": {"managementKey": [man_key_6.to_entry_dict(did)]},
+            "revoke": {"managementKey": [{"id": man_key_3.alias}]},
+        }
+        entry_2 = update_entry(did, man_key_3, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 2
+        assert "man-key-6" in management_keys and "man-key-1" in management_keys
+        assert skipped_entries == 0
+
+    def test_no_self_revocation_for_priority_zero_keys(
+        self, did, man_key_1, man_key_2, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry({"managementKey": [man_key_1.to_entry_dict(did)]})
+        content = {"add": {"managementKey": [man_key_2.to_entry_dict(did)]}}
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert man_key_1.priority == 0
+        assert len(management_keys) == 2
+        assert "man-key-1" in management_keys and "man-key-2" in management_keys
+        assert skipped_entries == 0
+
+    def test_no_self_revocation_if_only_lower_priority_keys_are_added(
+        self,
+        did,
+        man_key_1,
+        man_key_3,
+        man_key_4,
+        management_entry,
+        update_entry,
+        chain_id,
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_3.to_entry_dict(did),
+                ]
+            }
+        )
+
+        content = {"add": {"managementKey": [man_key_4.to_entry_dict(did)]}}
+        entry_2 = update_entry(did, man_key_3, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert man_key_4.priority > man_key_3.priority
+        assert len(management_keys) == 3
+        assert (
+            "man-key-1" in management_keys
+            and "man-key-3" in management_keys
+            and "man-key-4" in management_keys
+        )
+        assert skipped_entries == 0
+
+    def test_ignore_update_if_multiple_keys_at_same_nonzero_priority_level_are_added(
+        self, did, man_key_1, man_key_3, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [
+                    man_key_1.to_entry_dict(did),
+                    man_key_3.to_entry_dict(did),
+                ]
+            }
+        )
+
+        new_man_key_1 = ManagementKey(
+            alias="new-1",
+            priority=1,
+            controller=did,
+            key_type=KeyType.EdDSA,
+            priority_requirement=1,
+        )
+
+        new_man_key_2 = ManagementKey(
+            alias="new-2",
+            priority=1,
+            controller=did,
+            key_type=KeyType.EdDSA,
+            priority_requirement=1,
+        )
+
+        content = {
+            "add": {
+                "managementKey": [
+                    new_man_key_1.to_entry_dict(did),
+                    new_man_key_2.to_entry_dict(did),
+                ]
+            }
+        }
+        entry_2 = update_entry(did, man_key_3, content)
+        management_keys, _, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert new_man_key_1.priority == man_key_3.priority == new_man_key_2.priority
+        assert skipped_entries == 1
+        assert len(management_keys) == 2
+        assert "man-key-1" in management_keys and "man-key-3" in management_keys

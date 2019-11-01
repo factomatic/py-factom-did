@@ -263,112 +263,66 @@ def process_did_update_entry_v100(
         signing_key_required_priority = math.inf
 
         if "revoke" in parsed_content:
-            for key in parsed_content["revoke"].get("managementKey", []):
-                if not validate_management_key_id_against_chain_id(
-                    key["id"], chain_id
-                ) or not validate_id_against_network(key["id"], network):
-                    return True, method_version, skipped_entries + 1
-                alias = _get_alias(key["id"])
-                # If revocation of a non-existent key or multiple revocations of the same key are attempted,
-                # ignore the entire DIDUpdate entry
-                if (
-                    alias not in active_management_keys
-                    or alias in management_keys_to_revoke
-                ):
-                    return True, method_version, skipped_entries + 1
-                management_keys_to_revoke.add(alias)
-                if active_management_keys[alias].priority_requirement is not None:
-                    signing_key_required_priority = min(
-                        signing_key_required_priority,
-                        active_management_keys[alias].priority_requirement,
-                    )
-                else:
-                    signing_key_required_priority = min(
-                        signing_key_required_priority,
-                        active_management_keys[alias].priority,
-                    )
+            skip_entry, signing_key_required_priority = _process_management_key_revocations(
+                parsed_content,
+                signing_key_required_priority,
+                management_keys_to_revoke,
+                active_management_keys,
+                chain_id,
+                network,
+            )
+            if skip_entry:
+                return True, method_version, skipped_entries + 1
 
-            for key in parsed_content["revoke"].get("didKey", []):
-                alias = _get_alias(key["id"])
-                # If:
-                # * revocation of a non-existent key, or
-                # * multiple revocations of the same key, or
-                # * revocations of a DID key with a non-matching network identifier
-                # are attempted ignore the entire DIDUpdate entry
-                if (
-                    alias not in active_did_keys
-                    or alias in did_keys_to_revoke
-                    or not validate_id_against_network(key["id"], network)
-                ):
-                    return True, method_version, skipped_entries + 1
-                did_keys_to_revoke.add(alias)
-                if active_did_keys[alias].priority_requirement is not None:
-                    signing_key_required_priority = min(
-                        signing_key_required_priority,
-                        active_did_keys[alias].priority_requirement,
-                    )
+            skip_entry, signing_key_required_priority = _process_did_key_revocations(
+                parsed_content,
+                signing_key_required_priority,
+                did_keys_to_revoke,
+                active_did_keys,
+                network,
+            )
+            if skip_entry:
+                return True, method_version, skipped_entries + 1
 
-            for service in parsed_content["revoke"].get("service", []):
-                alias = _get_alias(service["id"])
-                # If:
-                # * revocation of a non-existent service, or
-                # * multiple revocations of the same service, or
-                # * revocations of a service with a non-matching network identifier
-                # are attempted ignore the entire DIDUpdate entry
-                if (
-                    alias not in active_services
-                    or alias in services_to_revoke
-                    or not validate_id_against_network(service["id"], network)
-                ):
-                    return True, method_version, skipped_entries + 1
-                services_to_revoke.add(alias)
-                if active_services[alias].priority_requirement is not None:
-                    signing_key_required_priority = min(
-                        signing_key_required_priority,
-                        active_services[alias].priority_requirement,
-                    )
+            skip_entry, signing_key_required_priority = _process_service_revocations(
+                parsed_content,
+                signing_key_required_priority,
+                services_to_revoke,
+                active_services,
+                network,
+            )
+            if skip_entry:
+                return True, method_version, skipped_entries + 1
+
         if "add" in parsed_content:
-            for key_data in parsed_content["add"].get("managementKey", []):
-                if not validate_management_key_id_against_chain_id(
-                    key_data["id"], chain_id
-                ) or not validate_id_against_network(key_data["id"], network):
-                    return True, method_version, skipped_entries + 1
-                alias = _get_alias(key_data["id"])
-                # If double-addition of the same key is attempted, ignore the entire DIDUpdate entry
-                if alias in new_management_keys or alias in active_management_keys:
-                    return True, method_version, skipped_entries + 1
-                new_management_key = ManagementKey.from_entry_dict(key_data)
-                if new_management_key in all_keys:
-                    return True, method_version, skipped_entries + 1
-                new_management_keys[alias] = new_management_key
-                signing_key_required_priority = min(
-                    signing_key_required_priority, key_data["priority"]
-                )
-            for key_data in parsed_content["add"].get("didKey", []):
-                alias = _get_alias(key_data["id"])
-                # If double-addition of the same key or addition of a key with a non-matching network identifier is
-                # attempted, ignore the entire DIDUpdate entry
-                if (
-                    alias in new_did_keys
-                    or alias in active_did_keys
-                    or not validate_id_against_network(key_data["id"], network)
-                ):
-                    return True, method_version, skipped_entries + 1
-                new_did_key = DIDKey.from_entry_dict(key_data)
-                if new_did_key in all_keys:
-                    return True, method_version, skipped_entries + 1
-                new_did_keys[alias] = new_did_key
-            for service_data in parsed_content["add"].get("service", []):
-                alias = _get_alias(service_data["id"])
-                # If double-addition of the same service or addition of a service with a non-matching network identifier
-                # is attempted, ignore the entire DIDUpdate entry
-                if (
-                    alias in new_services
-                    or alias in active_services
-                    or not validate_id_against_network(service_data["id"], network)
-                ):
-                    return True, method_version, skipped_entries + 1
-                new_services[alias] = Service.from_entry_dict(service_data)
+            skip_entry, signing_key_required_priority = _process_management_key_additions(
+                parsed_content,
+                signing_key_required_priority,
+                new_management_keys,
+                active_management_keys,
+                all_keys,
+                chain_id,
+                network,
+            )
+            if skip_entry:
+                return True, method_version, skipped_entries + 1
+
+            skip_entry, signing_key_required_priority = _process_did_key_additions(
+                parsed_content,
+                signing_key_required_priority,
+                new_did_keys,
+                active_did_keys,
+                all_keys,
+                network,
+            )
+            if skip_entry:
+                return True, method_version, skipped_entries + 1
+
+            skip_entry = _process_service_additions(
+                parsed_content, new_services, active_services, network
+            )
+            if skip_entry:
+                return True, method_version, skipped_entries + 1
 
         # Check that the management key used for the signature is of sufficient priority
         if signing_key.priority > signing_key_required_priority:
@@ -380,6 +334,17 @@ def process_did_update_entry_v100(
             active_management_keys, new_management_keys, management_keys_to_revoke
         ):
             # If not, return without applying the update
+            return True, method_version, skipped_entries + 1
+
+        # If a management key is adding a new management key at the same priority level, it should also be revoking
+        # itself. The exception is priority level 0, where multiple keys can be added without a revocation. Furthermore,
+        # for all priority levels except 0, a management key is allowed to add only one new management key at the same
+        # level. If this rule is violated, the entire DIDUpdate entry is discarded. In addition, if there is no explicit
+        # self-revocation of the management key, the resolver will automagically revoke the signing management key.
+        skip_entry = _apply_self_revocation_rules(
+            signing_key, new_management_keys, management_keys_to_revoke
+        )
+        if skip_entry:
             return True, method_version, skipped_entries + 1
 
         # Apply the updates
@@ -543,3 +508,189 @@ def process_did_method_version_upgrade_entry_v100(
         skipped_entries += 1
 
     return True, new_method_version, skipped_entries
+
+
+def _process_management_key_revocations(
+    entry_content,
+    signing_key_required_priority,
+    keys_to_revoke,
+    active_keys,
+    chain_id,
+    network,
+):
+    for key in entry_content["revoke"].get("managementKey", []):
+        alias = _get_alias(key["id"])
+        if (
+            not validate_management_key_id_against_chain_id(key["id"], chain_id)
+            or not validate_id_against_network(key["id"], network)
+            or alias not in active_keys
+            or alias in keys_to_revoke
+        ):
+            return True, signing_key_required_priority
+
+        keys_to_revoke.add(alias)
+        if active_keys[alias].priority_requirement is not None:
+            signing_key_required_priority = min(
+                signing_key_required_priority, active_keys[alias].priority_requirement
+            )
+        else:
+            signing_key_required_priority = min(
+                signing_key_required_priority, active_keys[alias].priority
+            )
+
+    return False, signing_key_required_priority
+
+
+def _process_did_key_revocations(
+    entry_content, signing_key_required_priority, keys_to_revoke, active_keys, network
+):
+    for key in entry_content["revoke"].get("didKey", []):
+        alias = _get_alias(key["id"])
+        # If:
+        # * revocation of a non-existent key, or
+        # * multiple revocations of the same key, or
+        # * revocations of a DID key with a non-matching network identifier
+        # are attempted ignore the entire DIDUpdate entry
+        if (
+            alias not in active_keys
+            or alias in keys_to_revoke
+            or not validate_id_against_network(key["id"], network)
+        ):
+            return True, signing_key_required_priority
+
+        keys_to_revoke.add(alias)
+        if active_keys[alias].priority_requirement is not None:
+            signing_key_required_priority = min(
+                signing_key_required_priority, active_keys[alias].priority_requirement
+            )
+
+    return False, signing_key_required_priority
+
+
+def _process_service_revocations(
+    entry_content,
+    signing_key_required_priority,
+    services_to_revoke,
+    active_services,
+    network,
+):
+    for service in entry_content["revoke"].get("service", []):
+        alias = _get_alias(service["id"])
+        # If:
+        # * revocation of a non-existent service, or
+        # * multiple revocations of the same service, or
+        # * revocations of a service with a non-matching network identifier
+        # are attempted ignore the entire DIDUpdate entry
+        if (
+            alias not in active_services
+            or alias in services_to_revoke
+            or not validate_id_against_network(service["id"], network)
+        ):
+            return True, signing_key_required_priority
+
+        services_to_revoke.add(alias)
+        if active_services[alias].priority_requirement is not None:
+            signing_key_required_priority = min(
+                signing_key_required_priority,
+                active_services[alias].priority_requirement,
+            )
+
+    return False, signing_key_required_priority
+
+
+def _process_management_key_additions(
+    entry_content,
+    signing_key_required_priority,
+    new_keys,
+    active_keys,
+    all_keys,
+    chain_id,
+    network,
+):
+    for key_data in entry_content["add"].get("managementKey", []):
+        alias = _get_alias(key_data["id"])
+        if (
+            not validate_management_key_id_against_chain_id(key_data["id"], chain_id)
+            or not validate_id_against_network(key_data["id"], network)
+            or alias in new_keys
+            or alias in active_keys
+        ):
+            return True, signing_key_required_priority
+        new_management_key = ManagementKey.from_entry_dict(key_data)
+        if new_management_key in all_keys:
+            return True, signing_key_required_priority
+        new_keys[alias] = new_management_key
+        signing_key_required_priority = min(
+            signing_key_required_priority, key_data["priority"]
+        )
+
+    return False, signing_key_required_priority
+
+
+def _process_did_key_additions(
+    entry_content,
+    signing_key_required_priority,
+    new_keys,
+    active_keys,
+    all_keys,
+    network,
+):
+    for key_data in entry_content["add"].get("didKey", []):
+        alias = _get_alias(key_data["id"])
+        # If double-addition of the same key or addition of a key with a non-matching network identifier is
+        # attempted, ignore the entire DIDUpdate entry
+        if (
+            alias in new_keys
+            or alias in active_keys
+            or not validate_id_against_network(key_data["id"], network)
+        ):
+            return True, signing_key_required_priority
+        new_did_key = DIDKey.from_entry_dict(key_data)
+        if new_did_key in all_keys:
+            return True, signing_key_required_priority
+        new_keys[alias] = new_did_key
+
+    return False, signing_key_required_priority
+
+
+def _process_service_additions(entry_content, new_services, active_services, network):
+    for service_data in entry_content["add"].get("service", []):
+        alias = _get_alias(service_data["id"])
+        # If double-addition of the same service or addition of a service with a non-matching network identifier
+        # is attempted, ignore the entire DIDUpdate entry
+        if (
+            alias in new_services
+            or alias in active_services
+            or not validate_id_against_network(service_data["id"], network)
+        ):
+            return True
+        new_services[alias] = Service.from_entry_dict(service_data)
+
+    return False
+
+
+def _apply_self_revocation_rules(
+    signing_key, new_management_keys, management_keys_to_revoke
+):
+    # A signing key of priority 0 can do whatever the fuck it wants
+    if signing_key.priority == 0:
+        return False
+
+    num_same_priority_keys = len(
+        list(
+            filter(
+                lambda k: k.priority == signing_key.priority,
+                new_management_keys.values(),
+            )
+        )
+    )
+
+    if num_same_priority_keys == 0:
+        return False
+    if num_same_priority_keys > 1:
+        return True
+
+    # num_same_priority_keys is 1
+    if signing_key.alias not in management_keys_to_revoke:
+        management_keys_to_revoke.add(signing_key.alias)
+        return False
