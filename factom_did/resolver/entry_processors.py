@@ -678,7 +678,12 @@ def _apply_self_revocation_rules(
         return False
 
     num_same_priority_keys = len(
-        list(filter(lambda k: k.priority == signing_key.priority, new_management_keys))
+        list(
+            filter(
+                lambda k: k.priority == signing_key.priority,
+                new_management_keys.values(),
+            )
+        )
     )
 
     if num_same_priority_keys == 0:
