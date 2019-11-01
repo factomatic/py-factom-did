@@ -338,10 +338,9 @@ def process_did_update_entry_v100(
 
         # If a management key is adding a new management key at the same priority level, it should also be revoking
         # itself. The exception is priority level 0, where multiple keys can be added without a revocation. Furthermore,
-        # for all priority levels except 0, a management key at the same level is only allowed to add one new management
-        # key at the same level. If this rule is violated, the entire DIDUpdate entry is discarded. In addition, if
-        # there is no explicit self-revocation of the management key, the resolver will automagically revoke the signing
-        # management key.
+        # for all priority levels except 0, a management key is allowed to add only one new management key at the same
+        # level. If this rule is violated, the entire DIDUpdate entry is discarded. In addition, if there is no explicit
+        # self-revocation of the management key, the resolver will automagically revoke the signing management key.
         skip_entry = _apply_self_revocation_rules(
             signing_key, new_management_keys, management_keys_to_revoke
         )
