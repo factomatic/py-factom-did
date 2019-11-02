@@ -40,7 +40,7 @@ class DIDKey(AbstractDIDKey):
         else:
             purpose_l = [purpose]
 
-        assert (
+        assert len(set(purpose_l)) == len(purpose_l) and (
             len(purpose_l) == 1 or len(purpose_l) == 2
         ), "Purpose must contain one or both of {} and {} without repeated values".format(
             DIDKeyPurpose.PublicKey, DIDKeyPurpose.AuthenticationKey

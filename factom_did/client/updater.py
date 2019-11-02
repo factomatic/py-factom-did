@@ -8,6 +8,7 @@ from factom_did.client.blockchain import calculate_entry_size, record_entry
 from factom_did.client.constants import ENTRY_SCHEMA_V100, ENTRY_SIZE_LIMIT
 from factom_did.client.did import KeyType
 from factom_did.client.enums import DIDKeyPurpose, EntryType
+from factom_did.client.keys.did import DIDKey
 
 
 class DIDUpdater:
@@ -27,9 +28,38 @@ class DIDUpdater:
         self.orig_management_keys = set(self.did.management_keys.copy())
         self.orig_did_keys = set(self.did.did_keys.copy())
         self.orig_services = set(self.did.services.copy())
-        self.revoked_did_purposes = {}
+        self.did_key_purposes_to_revoke = {}
 
     def get_updated(self):
+        # Apply revocation of DID key purposes
+        new_did_keys = []
+        for key in self.did.did_keys:
+            revoked = False
+            for (
+                revoked_key_alias,
+                revoked_purpose,
+            ) in self.did_key_purposes_to_revoke.items():
+                if key.alias == revoked_key_alias:
+                    new_did_keys.append(
+                        DIDKey(
+                            key.alias,
+                            key.purpose[1]
+                            if key.purpose[0] == revoked_purpose
+                            else key.purpose[0],
+                            key.key_type,
+                            key.controller,
+                            key.priority_requirement,
+                            key.public_key,
+                            key.private_key,
+                        )
+                    )
+                    revoked = True
+                    break
+            if not revoked:
+                new_did_keys.append(key)
+
+        self.did.did_keys = new_did_keys
+
         return self.did
 
     def add_management_key(
@@ -148,7 +178,8 @@ class DIDUpdater:
             return self.revoke_did_key(alias)
         # If it has multiple purposes, revoke the specified one
         else:
-            self.revoked_did_purposes[alias] = purpose
+            self.did_key_purposes_to_revoke[alias] = purpose
+            return self
 
     def revoke_service(self, alias):
         """
@@ -245,7 +276,7 @@ class DIDUpdater:
             update_key_required_priority = self._get_required_key_priority_for_update(
                 key, update_key_required_priority, lambda k: k.priority_requirement
             )
-        for alias, purpose in self.revoked_did_purposes.items():
+        for alias, purpose in self.did_key_purposes_to_revoke.items():
             revoke_dict["didKey"].append({"id": alias, "purpose": [purpose.value]})
         for service in revoked_services:
             revoke_dict["service"].append({"id": service.alias})
