@@ -8,6 +8,7 @@ from factom_did.client.blockchain import (
     create_chain,
 )
 from factom_did.client.constants import *
+from factom_did.client.deactivator import DIDDeactivator
 from factom_did.client.encryptor import encrypt_keys
 from factom_did.client.enums import DIDKeyPurpose, EntryType, KeyType, Network
 from factom_did.client.keys.did import DIDKey
@@ -15,6 +16,7 @@ from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
 from factom_did.client.updater import DIDUpdater
 from factom_did.client.validators import validate_did
+from factom_did.client.version_upgrader import DIDVersionUpgrader
 
 __all__ = ["DID", "KeyType", "DIDKeyPurpose"]
 
@@ -39,7 +41,14 @@ class DID:
         A list of services
     """
 
-    def __init__(self, did=None, management_keys=None, did_keys=None, services=None):
+    def __init__(
+        self,
+        did=None,
+        management_keys=None,
+        did_keys=None,
+        services=None,
+        spec_version=DID_METHOD_SPEC_V020,
+    ):
         self._id = (
             self._generate_did() if did is None or not self.is_valid_did(did) else did
         )
@@ -47,6 +56,7 @@ class DID:
         self.did_keys = [] if did_keys is None else did_keys
         self.services = [] if services is None else services
         self.network = DID._get_network_from_id(self._id)
+        self.spec_version = spec_version
 
         self.used_key_aliases = set()
         self.used_service_aliases = set()
@@ -94,6 +104,11 @@ class DID:
 
     def update(self):
         """
+        Raises
+        ------
+        RuntimeError
+            If no management keys are available for the DID
+
         Returns
         -------
         DIDUpdater
@@ -102,6 +117,47 @@ class DID:
         if not self.management_keys:
             raise RuntimeError("Cannot update DID without management keys.")
         return DIDUpdater(self)
+
+    def method_spec_version_upgrade(self, new_spec_version):
+        """
+        Parameters
+        ----------
+        new_spec_version: str
+            The new DID Method version
+
+        Raises
+        ------
+        RuntimeError
+            If no management keys are available for the DID
+        ValueError
+            If the new version is not an upgrade on the current version
+
+        Returns
+        -------
+        DIDVersionUpgrader
+        """
+        if not self.management_keys:
+            raise RuntimeError(
+                "Cannot upgrade method spec version for DID without management keys."
+            )
+        return DIDVersionUpgrader(self, new_spec_version)
+
+    def deactivate(self):
+        """
+        Raises
+        ------
+        RuntimeError
+            If no management keys are available for the DID
+
+        Returns
+        -------
+        DIDDeactivator
+        """
+        if not self.management_keys:
+            raise RuntimeError(
+                "Cannot deactivate DID without a management key of priority 0."
+            )
+        return DIDDeactivator(self)
 
     def mainnet(self):
         """
