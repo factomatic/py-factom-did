@@ -15,6 +15,7 @@ from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
 from factom_did.client.updater import DIDUpdater
 from factom_did.client.validators import validate_did
+from factom_did.client.version_upgrader import DIDVersionUpgrader
 
 __all__ = ["DID", "KeyType", "DIDKeyPurpose"]
 
@@ -39,7 +40,14 @@ class DID:
         A list of services
     """
 
-    def __init__(self, did=None, management_keys=None, did_keys=None, services=None):
+    def __init__(
+        self,
+        did=None,
+        management_keys=None,
+        did_keys=None,
+        services=None,
+        spec_version=DID_METHOD_SPEC_V020,
+    ):
         self._id = (
             self._generate_did() if did is None or not self.is_valid_did(did) else did
         )
@@ -47,6 +55,7 @@ class DID:
         self.did_keys = [] if did_keys is None else did_keys
         self.services = [] if services is None else services
         self.network = DID._get_network_from_id(self._id)
+        self.spec_version = spec_version
 
         self.used_key_aliases = set()
         self.used_service_aliases = set()
@@ -102,6 +111,16 @@ class DID:
         if not self.management_keys:
             raise RuntimeError("Cannot update DID without management keys.")
         return DIDUpdater(self)
+
+    def method_spec_version_upgrade(self, new_spec_version):
+        if not self.management_keys:
+            raise RuntimeError(
+                "Cannot upgrade method spec version for DID without management keys."
+            )
+        return DIDVersionUpgrader(new_spec_version)
+
+    def deactivate(self):
+        pass
 
     def mainnet(self):
         """
