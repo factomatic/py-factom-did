@@ -118,7 +118,7 @@ class DID:
             raise RuntimeError(
                 "Cannot upgrade method spec version for DID without management keys."
             )
-        return DIDVersionUpgrader(new_spec_version)
+        return DIDVersionUpgrader(self, new_spec_version)
 
     def deactivate(self):
         if not self.management_keys:

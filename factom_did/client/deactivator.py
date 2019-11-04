@@ -37,7 +37,7 @@ class DIDDeactivator:
         """
         data_to_sign = "".join(
             [
-                EntryType.VersionUpgrade.value,
+                EntryType.Deactivation.value,
                 ENTRY_SCHEMA_V100,
                 self.signing_key.full_id(self.did.id),
             ]
@@ -47,7 +47,7 @@ class DIDDeactivator:
         )
 
         ext_ids = [
-            EntryType.VersionUpgrade.value.encode("utf-8"),
+            EntryType.Deactivation.value.encode("utf-8"),
             ENTRY_SCHEMA_V100.encode("utf-8"),
             self.signing_key.full_id(self.did.id).encode("utf-8"),
             signature,
