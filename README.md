@@ -5,19 +5,29 @@
 
 # py-factom-did
 
-py-factom-did is a Python library, allowing the creation and update of Decentralized Identifiers (DIDs) and
-the exporting of public metadata for them, which can be recorded on the Factom blockchain.
-The library enables:
+`py-factom-did` is a Python library for working with DIDs on the Factom blockchain. It is an implementation
+of the [Factom DID method
+specification](https://github.com/bi-foundation/FIS/blob/feature/DID/FIS/DID.md) and consists of two main modules:
+`factom_did.client` and `factom_did.resolver`.
 
-* creating a new DID
-* adding management key(s) for the DID
-* adding DID key(s) for the DID
-* adding service(s) for the DID
-* exporting public metadata to be recorded on Factom
-* encrypting the newly created keys
-* updating an existing DID: adding/revoking management keys, DID keys and services and producing a signed DID
+The `client` module enables:
+
+* creation of a new DID
+* addition of management key(s) for the DID
+* addition of DID key(s) for the DID
+* addition of service(s) for the DID
+* export of public metadata to be recorded on Factom
+* encryption of the newly created keys
+* update of an existing DID: adding/revoking management keys, DID keys and services and producing a signed DID
 update entry
+* upgrade of the method version of an existing DID
+* deactivaiton of an existing DID
 
+The `resolver` module contains a pure-data library for re-constructing the effective DID Document from a list of DID
+entries. It is a complete implementation of the resolver specification in https://github.com/bi-foundation/FIS/blob/feature/DID/FIS/DID.md
+and contains an extensive unit test suite with 100% test coverage.
+
+## Examples
 You can find an example of the library workflow in the `examples/` directory. In order to run the
 example, please note that it is necessary to:
 
@@ -29,6 +39,9 @@ address to pay the fees for recording the DID on-chain
 ```
 pip install py-factom-did
 ```
+
+## Documentation
+API documentation of the library is available [here](https://py-factom-did.readthedocs.io/en/stable/)
 
 ## Build
 
@@ -59,6 +72,3 @@ pytest
 ```
 python -m examples.example
 ```
-
-## Documentation
-API documentation of the library is available [here](https://py-factom-did.readthedocs.io/en/stable/)
