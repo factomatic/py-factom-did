@@ -360,9 +360,10 @@ def process_did_update_entry_v100(
 
         for alias, revoked_purpose in did_key_purposes_to_revoke.items():
             key = active_did_keys[alias]
-            key.purpose = (
+            new_purpose = (
                 key.purpose[1] if key.purpose[0] == revoked_purpose else key.purpose[0]
             )
+            key.purpose = [new_purpose]
 
         for alias in services_to_revoke:
             del active_services[alias]
@@ -576,20 +577,25 @@ def _process_did_key_revocations(
             # If duplicate purposes are specified, ignore the entry
             if len(purposes) != len(set(purposes)):
                 return True, signing_key_required_priority
-            active_purposes = set(active_keys[alias].purpose)
-            valid_purposes = {DIDKeyPurpose.AuthenticationKey, DIDKeyPurpose.PublicKey}
+            active_purposes = set(map(lambda p: p.value, active_keys[alias].purpose))
+            valid_purposes = {
+                DIDKeyPurpose.AuthenticationKey.value,
+                DIDKeyPurpose.PublicKey.value,
+            }
             for purpose in purposes:
                 if purpose not in valid_purposes or purpose not in active_purposes:
                     return True, signing_key_required_priority
             # If all purposes are revoked, revoke the entire key
-            if set(purposes) == set(active_keys[alias].purpose):
+            if set(purposes) == active_purposes:
                 keys_to_revoke.add(alias)
             # Otherwise, just revoke the specific purpose. Note, that due to the checks above, we should be guaranteed
             # that only a single purpose is being revoked
             else:
                 assert len(purposes) == 1
-                key_purposes_to_revoke[alias] = purposes[0]
+                key_purposes_to_revoke[alias] = DIDKeyPurpose.from_str(purposes[0])
         else:
+            if alias in key_purposes_to_revoke:
+                del key_purposes_to_revoke[alias]
             keys_to_revoke.add(alias)
 
         if active_keys[alias].priority_requirement is not None:

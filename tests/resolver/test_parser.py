@@ -151,7 +151,7 @@ def did_key_2(did):
         alias="did-key-2",
         controller=did,
         key_type=KeyType.EdDSA,
-        purpose=DIDKeyPurpose.PublicKey,
+        purpose=[DIDKeyPurpose.PublicKey, DIDKeyPurpose.AuthenticationKey],
         priority_requirement=2,
     )
 
@@ -1543,3 +1543,203 @@ class TestDIDUpdateEntry:
         assert skipped_entries == 1
         assert len(management_keys) == 2
         assert "man-key-1" in management_keys and "man-key-3" in management_keys
+
+    def test_revocation_of_invalid_did_key_purpose(
+        self, did, man_key_1, did_key_1, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_1.to_entry_dict(did)],
+            }
+        )
+        content = {
+            "revoke": {
+                "didKey": [{"id": did_key_1.alias, "purpose": ["invalid_purpose"]}]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 1
+        assert did_keys[did_key_1.alias].purpose == did_key_1.purpose
+        assert skipped_entries == 1
+
+    def test_revocation_of_nonexistent_did_key_purpose(
+        self, did, man_key_1, did_key_1, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_1.to_entry_dict(did)],
+            }
+        )
+        content = {
+            "revoke": {
+                "didKey": [
+                    # did_key_1 has an authentication key purpose
+                    {"id": did_key_1.alias, "purpose": [DIDKeyPurpose.PublicKey.value]}
+                ]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 1
+        assert did_keys[did_key_1.alias].purpose == did_key_1.purpose
+        assert skipped_entries == 1
+
+    def test_revocation_of_all_did_key_purposes(
+        self, did, man_key_1, did_key_2, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_2.to_entry_dict(did)],
+            }
+        )
+        content = {
+            "revoke": {
+                "didKey": [
+                    {
+                        "id": did_key_2.alias,
+                        "purpose": [
+                            DIDKeyPurpose.AuthenticationKey.value,
+                            DIDKeyPurpose.PublicKey.value,
+                        ],
+                    }
+                ]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 0
+        assert skipped_entries == 0
+
+    def test_revocation_with_duplicate_key_purposes_specified(
+        self, did, man_key_1, did_key_1, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_1.to_entry_dict(did)],
+            }
+        )
+        content = {
+            "revoke": {
+                "didKey": [
+                    {
+                        "id": did_key_1.alias,
+                        "purpose": [
+                            DIDKeyPurpose.AuthenticationKey.value,
+                            DIDKeyPurpose.AuthenticationKey.value,
+                        ],
+                    }
+                ]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 1
+        assert did_keys[did_key_1.alias].purpose == did_key_1.purpose
+        assert skipped_entries == 1
+
+    def test_revocation_of_a_single_did_key_purpose(
+        self, did, man_key_1, did_key_2, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_2.to_entry_dict(did)],
+            }
+        )
+        content = {
+            "revoke": {
+                "didKey": [
+                    {"id": did_key_2.alias, "purpose": [DIDKeyPurpose.PublicKey.value]}
+                ]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 1
+        assert did_keys[did_key_2.alias].purpose == [DIDKeyPurpose.AuthenticationKey]
+        assert skipped_entries == 0
+
+    def test_revocation_of_purpose_and_entire_key_in_same_entry(
+        self, did, man_key_1, did_key_2, management_entry, update_entry, chain_id
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_2.to_entry_dict(did)],
+            }
+        )
+        content = {
+            "revoke": {
+                "didKey": [
+                    {"id": did_key_2.alias, "purpose": [DIDKeyPurpose.PublicKey.value]},
+                    {"id": did_key_2.alias},
+                ]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 0
+        assert skipped_entries == 0
+
+    def test_multiple_did_key_revocations(
+        self,
+        did,
+        man_key_1,
+        did_key_1,
+        did_key_2,
+        management_entry,
+        update_entry,
+        chain_id,
+    ):
+        entry_1 = management_entry(
+            {
+                "managementKey": [man_key_1.to_entry_dict(did)],
+                "didKey": [did_key_1.to_entry_dict(did), did_key_2.to_entry_dict(did)],
+            }
+        )
+        content = {
+            "revoke": {
+                "didKey": [
+                    {"id": did_key_2.alias, "purpose": [DIDKeyPurpose.PublicKey.value]},
+                    {"id": did_key_1.alias},
+                ]
+            }
+        }
+        entry_2 = update_entry(did, man_key_1, content)
+        management_keys, did_keys, _, skipped_entries = parse_did_chain_entries(
+            [entry_1, entry_2], chain_id
+        )
+
+        assert len(management_keys) == 1
+        assert len(did_keys) == 1
+        assert did_keys[did_key_2.alias].purpose == [DIDKeyPurpose.AuthenticationKey]
+        assert skipped_entries == 0
