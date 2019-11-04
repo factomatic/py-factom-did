@@ -101,6 +101,29 @@ class TestDidKeys:
                     priority_requirement,
                 )
 
+    def test_duplicate_purposes_throws_exception(self, did):
+        with pytest.raises(AssertionError):
+            did_key_alias = "did-key-1"
+            did.did_key(
+                did_key_alias,
+                [DIDKeyPurpose.PublicKey, DIDKeyPurpose.PublicKey],
+                KeyType.ECDSA,
+                None,
+            )
+
+        with pytest.raises(AssertionError):
+            did_key_alias = "did-key-1"
+            did.did_key(
+                did_key_alias,
+                [
+                    DIDKeyPurpose.PublicKey,
+                    DIDKeyPurpose.AuthenticationKey,
+                    DIDKeyPurpose.AuthenticationKey,
+                ],
+                KeyType.ECDSA,
+                None,
+            )
+
     def test__repr__method(self, did):
         did_key_alias = "did-key-1"
         did_key_purpose = [DIDKeyPurpose.PublicKey]

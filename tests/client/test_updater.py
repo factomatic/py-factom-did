@@ -136,6 +136,35 @@ class TestDIDKeys:
             assert key.alias is not "did-key2"
             assert key.alias in {"did-key1", "did-key3"}
 
+    def test_did_key_revocation_with_nonexistent_purpose(self, full_did):
+        updated = (
+            full_did.update()
+            .revoke_did_key_purpose("did-key1", DIDKeyPurpose.PublicKey)
+            .get_updated()
+        )
+        assert len(updated.did_keys) == len(full_did.did_keys)
+
+    def test_did_key_revocation_with_a_single_matching_purpose(self, full_did):
+        updated = (
+            full_did.update()
+            .revoke_did_key_purpose("did-key1", DIDKeyPurpose.AuthenticationKey)
+            .get_updated()
+        )
+        assert len(updated.did_keys) == 2
+        for key in updated.did_keys:
+            assert key.alias != "did-key-1"
+
+    def test_did_key_revocation_with_multiple_purposes(self, full_did):
+        updated = (
+            full_did.update()
+            .revoke_did_key_purpose("did-key2", DIDKeyPurpose.AuthenticationKey)
+            .get_updated()
+        )
+        assert len(updated.did_keys) == 3
+        for key in updated.did_keys:
+            if key.alias == "did-key2":
+                assert key.purpose == [DIDKeyPurpose.PublicKey]
+
 
 class TestServices:
     def test_service_addition(self, did):
@@ -305,3 +334,24 @@ class TestExportUpdateEntryData:
     def test_revocation_of_all_mngt_keys_with_priority_zero(self, full_did):
         with pytest.raises(ValueError):
             full_did.update().revoke_management_key("man-key1").export_entry_data()
+
+    def test_revocation_of_did_key_purpose(self, full_did):
+        update_entry = (
+            full_did.update()
+            .revoke_did_key_purpose(
+                "did-key1", DIDKeyPurpose.AuthenticationKey
+            )  # should revoke the entire key
+            .revoke_did_key_purpose(
+                "did-key2", DIDKeyPurpose.PublicKey
+            )  # should revoke only the purpose
+            .revoke_did_key_purpose(
+                "did-key3", DIDKeyPurpose.AuthenticationKey
+            )  # shouldn't have any effect
+            .export_entry_data()
+        )
+        revoked = json.loads(update_entry["content"])["revoke"]
+        assert len(revoked["didKey"]) == 2
+        assert revoked["didKey"][0]["id"] == "did-key1"
+        assert "purpose" not in revoked["didKey"][0]["id"]
+        assert revoked["didKey"][1]["id"] == "did-key2"
+        assert revoked["didKey"][1]["purpose"] == ["publicKey"]
