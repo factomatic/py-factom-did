@@ -5,7 +5,7 @@ import math
 from packaging import version
 
 from factom_did.client.constants import DID_METHOD_SPEC_V020
-from factom_did.client.enums import Network
+from factom_did.client.enums import DIDKeyPurpose, Network
 from factom_did.client.keys.did import DIDKey
 from factom_did.client.keys.management import ManagementKey
 from factom_did.client.service import Service
@@ -246,6 +246,7 @@ def process_did_update_entry_v100(
     """
     management_keys_to_revoke = set()
     did_keys_to_revoke = set()
+    did_key_purposes_to_revoke = dict()
     services_to_revoke = set()
 
     new_management_keys = {}
@@ -278,6 +279,7 @@ def process_did_update_entry_v100(
                 parsed_content,
                 signing_key_required_priority,
                 did_keys_to_revoke,
+                did_key_purposes_to_revoke,
                 active_did_keys,
                 network,
             )
@@ -355,6 +357,12 @@ def process_did_update_entry_v100(
         for alias in did_keys_to_revoke:
             del active_did_keys[alias]
         active_did_keys.update(new_did_keys)
+
+        for alias, revoked_purpose in did_key_purposes_to_revoke.items():
+            key = active_did_keys[alias]
+            key.purpose = (
+                key.purpose[1] if key.purpose[0] == revoked_purpose else key.purpose[0]
+            )
 
         for alias in services_to_revoke:
             del active_services[alias]
@@ -542,10 +550,15 @@ def _process_management_key_revocations(
 
 
 def _process_did_key_revocations(
-    entry_content, signing_key_required_priority, keys_to_revoke, active_keys, network
+    entry_content,
+    signing_key_required_priority,
+    keys_to_revoke,
+    key_purposes_to_revoke,
+    active_keys,
+    network,
 ):
-    for key in entry_content["revoke"].get("didKey", []):
-        alias = _get_alias(key["id"])
+    for key_data in entry_content["revoke"].get("didKey", []):
+        alias = _get_alias(key_data["id"])
         # If:
         # * revocation of a non-existent key, or
         # * multiple revocations of the same key, or
@@ -554,11 +567,31 @@ def _process_did_key_revocations(
         if (
             alias not in active_keys
             or alias in keys_to_revoke
-            or not validate_id_against_network(key["id"], network)
+            or not validate_id_against_network(key_data["id"], network)
         ):
             return True, signing_key_required_priority
 
-        keys_to_revoke.add(alias)
+        if "purpose" in key_data:
+            purposes = key_data["purpose"]
+            # If duplicate purposes are specified, ignore the entry
+            if len(purposes) != len(set(purposes)):
+                return True, signing_key_required_priority
+            active_purposes = set(active_keys[alias].purpose)
+            valid_purposes = {DIDKeyPurpose.AuthenticationKey, DIDKeyPurpose.PublicKey}
+            for purpose in purposes:
+                if purpose not in valid_purposes or purpose not in active_purposes:
+                    return True, signing_key_required_priority
+            # If all purposes are revoked, revoke the entire key
+            if set(purposes) == set(active_keys[alias].purpose):
+                keys_to_revoke.add(alias)
+            # Otherwise, just revoke the specific purpose. Note, that due to the checks above, we should be guaranteed
+            # that only a single purpose is being revoked
+            else:
+                assert len(purposes) == 1
+                key_purposes_to_revoke[alias] = purposes[0]
+        else:
+            keys_to_revoke.add(alias)
+
         if active_keys[alias].priority_requirement is not None:
             signing_key_required_priority = min(
                 signing_key_required_priority, active_keys[alias].priority_requirement
