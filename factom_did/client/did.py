@@ -8,6 +8,7 @@ from factom_did.client.blockchain import (
     create_chain,
 )
 from factom_did.client.constants import *
+from factom_did.client.deactivator import DIDDeactivator
 from factom_did.client.encryptor import encrypt_keys
 from factom_did.client.enums import DIDKeyPurpose, EntryType, KeyType, Network
 from factom_did.client.keys.did import DIDKey
@@ -120,7 +121,11 @@ class DID:
         return DIDVersionUpgrader(new_spec_version)
 
     def deactivate(self):
-        pass
+        if not self.management_keys:
+            raise RuntimeError(
+                "Cannot deactivate DID without a management key of priority 0."
+            )
+        return DIDDeactivator(self)
 
     def mainnet(self):
         """
