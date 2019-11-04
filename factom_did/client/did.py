@@ -104,6 +104,11 @@ class DID:
 
     def update(self):
         """
+        Raises
+        ------
+        RuntimeError
+            If no management keys are available for the DID
+
         Returns
         -------
         DIDUpdater
@@ -114,6 +119,23 @@ class DID:
         return DIDUpdater(self)
 
     def method_spec_version_upgrade(self, new_spec_version):
+        """
+        Parameters
+        ----------
+        new_spec_version: str
+            The new DID Method version
+
+        Raises
+        ------
+        RuntimeError
+            If no management keys are available for the DID
+        ValueError
+            If the new version is not an upgrade on the current version
+
+        Returns
+        -------
+        DIDVersionUpgrader
+        """
         if not self.management_keys:
             raise RuntimeError(
                 "Cannot upgrade method spec version for DID without management keys."
@@ -121,6 +143,16 @@ class DID:
         return DIDVersionUpgrader(self, new_spec_version)
 
     def deactivate(self):
+        """
+        Raises
+        ------
+        RuntimeError
+            If no management keys are available for the DID
+
+        Returns
+        -------
+        DIDDeactivator
+        """
         if not self.management_keys:
             raise RuntimeError(
                 "Cannot deactivate DID without a management key of priority 0."
