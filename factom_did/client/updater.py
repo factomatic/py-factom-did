@@ -18,7 +18,7 @@ class DIDUpdater:
     Provides support for adding and revoking management keys, DID keys and services.
 
     Attributes
-    ==========
+    ----------
     did: client.did.DID
         The DID object to update
     """
