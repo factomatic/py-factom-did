@@ -108,7 +108,14 @@ class DIDUpdater:
         self.did.did_key(alias, purpose, key_type, controller, priority_requirement)
         return self
 
-    def add_service(self, alias, service_type, endpoint, priority_requirement=None):
+    def add_service(
+        self,
+        alias,
+        service_type,
+        endpoint,
+        priority_requirement=None,
+        custom_fields=None,
+    ):
         """
         Adds a service to the DID object.
 
@@ -118,8 +125,11 @@ class DIDUpdater:
         service_type: str
         endpoint: str
         priority_requirement: int, optional
+        custom_fields: dict, optional
         """
-        self.did.service(alias, service_type, endpoint, priority_requirement)
+        self.did.service(
+            alias, service_type, endpoint, priority_requirement, custom_fields
+        )
         return self
 
     def revoke_management_key(self, alias):
@@ -241,9 +251,11 @@ class DIDUpdater:
         RuntimeError
             If a management key of sufficient priority is not available to sign the update.
         """
-        revoked_management_keys, revoked_did_keys, revoked_services = (
-            self._get_revoked()
-        )
+        (
+            revoked_management_keys,
+            revoked_did_keys,
+            revoked_services,
+        ) = self._get_revoked()
         new_management_keys, new_did_keys, new_services = self._get_new()
 
         if not self.exists_management_key_with_priority_zero(
@@ -320,7 +332,7 @@ class DIDUpdater:
         if add_dict:
             entry_content_dict["add"] = add_dict
 
-        entry_content = json.dumps(entry_content_dict).replace(" ", "")
+        entry_content = json.dumps(entry_content_dict)
         data_to_sign = "".join(
             [
                 EntryType.Update.value,

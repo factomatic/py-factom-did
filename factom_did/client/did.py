@@ -246,7 +246,14 @@ class DID:
 
         return self
 
-    def service(self, alias, service_type, endpoint, priority_requirement=None):
+    def service(
+        self,
+        alias,
+        service_type,
+        endpoint,
+        priority_requirement=None,
+        custom_fields=None,
+    ):
         """
         Adds a new service to the DID Document.
 
@@ -265,9 +272,13 @@ class DID:
         priority_requirement: int, optional
             A non-negative integer showing the minimum hierarchical level a key must have in order to remove this
             service.
+        custom_fields: dict, optional
+            A dictionary containing custom fields (e.g "description": "My public social inbox").
         """
 
-        service = Service(alias, service_type, endpoint, priority_requirement)
+        service = Service(
+            alias, service_type, endpoint, priority_requirement, custom_fields
+        )
         self._check_alias_is_unique_and_add_to_used(self.used_service_aliases, alias)
 
         self.services.append(service)
