@@ -170,13 +170,21 @@ class TestServices:
     def test_service_addition(self, did):
         updated = (
             did.update()
-            .add_service("service-1", "email-service", "https://gmail.com")
+            .add_service(
+                "service-1",
+                "email-service",
+                "https://gmail.com",
+                None,
+                {"spamCost": {"amount": "0.50"}},
+            )
             .get_updated()
         )
         assert len(updated.services) == 1
         assert updated.services[0].alias == "service-1"
         assert updated.services[0].service_type == "email-service"
         assert updated.services[0].endpoint == "https://gmail.com"
+        assert updated.services[0].priority_requirement is None
+        assert updated.services[0].custom_fields == {"spamCost": {"amount": "0.50"}}
 
     def test_service_revocation(self, full_did):
         updated = full_did.update().revoke_service("Gmail-service").get_updated()
@@ -288,7 +296,11 @@ class TestExportUpdateEntryData:
             .add_management_key("man-key5", 0)
             .add_did_key("auth-key1", DIDKeyPurpose.AuthenticationKey)
             .add_service(
-                "encrypted-chat", "chat-service", "https://my-chat-service.com"
+                "encrypted-chat",
+                "chat-service",
+                "https://my-chat-service.com",
+                1,
+                {"description": "My chat service"},
             )
             .revoke_management_key("man-key1")
             .revoke_did_key("did-key3")
@@ -330,6 +342,8 @@ class TestExportUpdateEntryData:
         assert added["service"][0]["id"] == "{}#encrypted-chat".format(full_did.id)
         assert added["service"][0]["type"] == "chat-service"
         assert added["service"][0]["serviceEndpoint"] == "https://my-chat-service.com"
+        assert added["service"][0]["priorityRequirement"] == 1
+        assert added["service"][0]["description"] == "My chat service"
 
     def test_revocation_of_all_mngt_keys_with_priority_zero(self, full_did):
         with pytest.raises(ValueError):
