@@ -55,6 +55,11 @@ def create_new_did():
     service_alias = "my-photo-service"
     service_type = "PhotoStreamService"
     service_endpoint = "https://myphoto.com"
+    service_priority_requirement = 1
+    service_custom_fields = {
+        "description": "A photo stream service",
+        "spamCost": {"amount": "0.50", "currency": "USD"},
+    }
 
     new_did = (
         DID()
@@ -76,7 +81,13 @@ def create_new_did():
             did_key_3_controller,
             did_key_3_priority_requirement,
         )
-        .service(service_alias, service_type, service_endpoint)
+        .service(
+            service_alias,
+            service_type,
+            service_endpoint,
+            service_priority_requirement,
+            service_custom_fields,
+        )
     )
 
     return new_did
