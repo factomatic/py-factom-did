@@ -125,6 +125,8 @@ class TestDIDManagementEntryValidation:
                     alias="gmail-service",
                     service_type="email-service",
                     endpoint="https://gmail.com",
+                    priority_requirement=1,
+                    custom_fields={"description": "My email service"},
                 ).to_entry_dict(did)
             ],
         }
@@ -328,6 +330,8 @@ class TestDIDUpdateEntryValidation:
                             alias="gmail-service",
                             service_type="email-service",
                             endpoint="https://gmail.com",
+                            priority_requirement=1,
+                            custom_fields={"description": "My email service"},
                         ).to_entry_dict(did)
                     ],
                 },

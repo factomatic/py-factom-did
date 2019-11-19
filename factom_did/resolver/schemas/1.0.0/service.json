@@ -11,7 +11,7 @@
     "serviceEndpoint": {"type": "string", "format": "uri"},
     "priorityRequirement": {"type": "integer", "minimum":  0}
   },
-  "additionalProperties": false,
+  "additionalProperties": true,
   "required": ["id", "type", "serviceEndpoint"]
 }
 
