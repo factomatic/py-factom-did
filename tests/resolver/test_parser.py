@@ -170,6 +170,7 @@ def service_2(did):
         service_type="some-service-2",
         endpoint="https://myservice-2.com",
         priority_requirement=0,
+        custom_fields={"description": "My awesome service", "subscriptionCost": 100},
     )
 
 

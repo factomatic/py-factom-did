@@ -159,6 +159,12 @@ class TestExportEntryData:
         service_type = "PhotoStreamService"
         service_endpoint = "https://myphoto.com"
         service_priority_requirement = 2
+        service_description = "My photo stream service"
+        service_cost = {"amount": "0.50", "currency": "USD"}
+        service_custom_fields = {
+            "description": service_description,
+            "cost": service_cost,
+        }
         did.mainnet().management_key("my-management-key-1", 0).management_key(
             "my-management-key-2", 2
         ).did_key(
@@ -168,7 +174,11 @@ class TestExportEntryData:
             did_key_controller,
             did_key_priority_requirement,
         ).service(
-            service_alias, service_type, service_endpoint, service_priority_requirement
+            service_alias,
+            service_type,
+            service_endpoint,
+            service_priority_requirement,
+            service_custom_fields,
         )
         entry_data = did.export_entry_data()
         content = json.loads(entry_data["content"])
@@ -193,6 +203,8 @@ class TestExportEntryData:
         assert service_type == service_1["type"]
         assert service_endpoint == service_1["serviceEndpoint"]
         assert service_priority_requirement == service_1["priorityRequirement"]
+        assert service_description == service_1["description"]
+        assert service_cost == service_1["cost"]
 
     def test_exceed_entry_size_throws_error(self, did):
         for x in range(0, 35):
