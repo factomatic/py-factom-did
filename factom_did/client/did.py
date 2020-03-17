@@ -421,7 +421,7 @@ class DID:
         )
 
         did_document = {
-            "didMethodVersion": DID_METHOD_SPEC_V020,
+            "didMethodVersion": self.spec_version,
             "managementKey": management_keys,
         }
 
