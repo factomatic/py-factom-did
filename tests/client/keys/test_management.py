@@ -70,7 +70,7 @@ class TestManagementKeys:
                 did.management_key(alias, 1)
 
     def test_invalid_priority_throws_exception(self, did):
-        test_cases = [-1, -2]
+        test_cases = [-1, -2, 1.5, "one"]
         for priority in test_cases:
             management_key_alias = "management-key-{}".format(str(priority))
             with pytest.raises(ValueError):
