@@ -107,7 +107,7 @@ class TestService:
     def test_invalid_priority_requirement_throws_exception(self, did):
         service_type = "PhotoStreamService"
         service_endpoint = "https://myphoto.com"
-        test_cases = [-1, -2]
+        test_cases = [-1, -2, 1.5, "one"]
         for priority_requirement in test_cases:
             service_alias = "service-{}".format(str(priority_requirement))
             with pytest.raises(ValueError):

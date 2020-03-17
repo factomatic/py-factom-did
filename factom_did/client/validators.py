@@ -43,7 +43,9 @@ def validate_service_endpoint(endpoint):
 
 
 def validate_priority_requirement(priority_requirement):
-    if priority_requirement is not None and priority_requirement < 0:
+    if priority_requirement is not None and (
+        isinstance(priority_requirement, int) is False or priority_requirement < 0
+    ):
         raise ValueError("Priority requirement must be a non-negative integer.")
 
 

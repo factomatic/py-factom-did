@@ -89,7 +89,7 @@ class TestDidKeys:
                 did.did_key(alias, [DIDKeyPurpose.PublicKey], KeyType.EdDSA, controller)
 
     def test_invalid_priority_requirement_throws_exception(self, did):
-        test_cases = [-1, -2]
+        test_cases = [-1, -2, 1.5, "one"]
         for priority_requirement in test_cases:
             did_key_alias = "did-key-{}".format(str(priority_requirement))
             with pytest.raises(ValueError):
