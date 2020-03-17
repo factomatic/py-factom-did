@@ -316,7 +316,9 @@ class DID:
             ENTRY_SCHEMA_V100.encode("utf-8"),
             self.nonce,
         ]
-        entry_content = json.dumps(self._get_did_document()).encode("utf-8")
+        entry_content = json.dumps(
+            self._get_did_document(), separators=(",", ":")
+        ).encode("utf-8")
 
         entry_size = calculate_entry_size(ext_ids, entry_content)
 

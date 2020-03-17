@@ -332,7 +332,7 @@ class DIDUpdater:
         if add_dict:
             entry_content_dict["add"] = add_dict
 
-        entry_content = json.dumps(entry_content_dict)
+        entry_content = json.dumps(entry_content_dict, separators=(",", ":"))
         data_to_sign = "".join(
             [
                 EntryType.Update.value,
