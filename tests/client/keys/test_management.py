@@ -112,6 +112,15 @@ class TestManagementKeys:
             with pytest.raises(ValueError):
                 did.management_key(alias, 1, KeyType.EdDSA, controller)
 
+    def test_invalid_priority_requirement_throws_exception(self, did):
+        test_cases = [-1, -2, 1.5, "one"]
+        for priority_requirement in test_cases:
+            management_key_alias = "management-key-{}".format(str(priority_requirement))
+            with pytest.raises(ValueError):
+                did.management_key(
+                    management_key_alias, 0, KeyType.EdDSA, None, priority_requirement
+                )
+
     def test__repr__method(self, did):
         management_key_alias = "management-key-1"
         management_key_priority = 0
