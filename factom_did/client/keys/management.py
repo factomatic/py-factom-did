@@ -36,7 +36,7 @@ class ManagementKey(AbstractDIDKey):
             alias, key_type, controller, priority_requirement, public_key, private_key
         )
 
-        if priority < 0:
+        if isinstance(priority, int) is False or priority < 0:
             raise ValueError("Priority must be a non-negative integer.")
 
         self.priority = priority

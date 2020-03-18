@@ -50,11 +50,15 @@ class RSAKey:
 
     @property
     def public_key(self):
-        return self.verifying_key.export_key(format="PEM", passphrase=None, pkcs=8)
+        return self.verifying_key.export_key()
 
     @property
     def private_key(self):
-        return self.signing_key.export_key() if self.signing_key is not None else None
+        return (
+            self.signing_key.export_key(format="PEM", passphrase=None, pkcs=8)
+            if self.signing_key is not None
+            else None
+        )
 
     def sign(self, message, hash_f=SHA256.new):
         """
